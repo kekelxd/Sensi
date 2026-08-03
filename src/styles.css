@@ -59,6 +59,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .arena { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .arena-prompt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #737983; font-size: 11px; pointer-events: none; }
 .arena-prompt span { color: #e7e4dd; font-size: clamp(20px, 3vw, 42px); font-weight: 700; letter-spacing: -.04em; margin-bottom: 8px; }
+.arena-countdown { position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%); color: #9097a3; font: 500 10px DM Mono, monospace; letter-spacing: .08em; text-transform: uppercase; pointer-events: none; }
 .lock-prompt { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 1px solid rgba(255,114,81,.4); border-radius: 8px; background: rgba(9,11,16,.88); color: #fff; padding: 11px 16px; }
 
 .round-progress { height: 2px; background: rgba(255,255,255,.07); margin-top: 12px; }
@@ -66,6 +67,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .test-value span, .test-value small { display: block; color: var(--muted); font-size: 10px; }
 .test-value strong { display: block; font: 500 43px DM Mono, monospace; letter-spacing: -.08em; margin: 5px 0; }
 .timer { font: 500 58px DM Mono, monospace; color: var(--accent); letter-spacing: -.1em; }
+.countdown-timer { font-size: 72px; color: var(--mint); }
 .timer small { font-size: 12px; letter-spacing: 0; margin-left: 5px; color: var(--muted); }
 .round-panel p { color: #858b96; font-size: 11px; line-height: 1.7; margin: -13px 0 0; }
 .candidate-list { margin-top: auto; }
@@ -95,7 +97,20 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .modal label { display: block; color: #9ca1aa; font-size: 10px; margin: 13px 0; }
 .modal input { display: block; margin-top: 7px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; color: #f0eee7; background: #0b0e13; font: 500 13px DM Mono, monospace; outline: none; }
 .modal input:focus { border-color: rgba(255,114,81,.6); }
-.conversion { padding: 12px; display: flex; justify-content: space-between; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.modal-close:disabled { opacity: .35; cursor: not-allowed; }
+.setup-modal { width: min(620px, 100%); }
+.option-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.choice-card, .crosshair-option { text-align: left; border: 1px solid var(--line); color: #dcdad4; background: #0b0e13; border-radius: 10px; transition: border-color .18s, background .18s, transform .18s; }
+.choice-card { padding: 14px; }
+.choice-card span, .crosshair-option span { display: block; font-weight: 800; font-size: 12px; }
+.choice-card small, .crosshair-option small { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; margin-top: 5px; }
+.choice-card:hover, .crosshair-option:hover { border-color: rgba(255,114,81,.45); transform: translateY(-1px); }
+.choice-card.selected, .crosshair-option.selected { border-color: rgba(255,114,81,.85); background: rgba(255,114,81,.08); }
+.crosshair-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin: 16px 0; }
+.crosshair-option { min-height: 104px; padding: 12px; }
+.crosshair-option svg { color: var(--accent); margin-bottom: 11px; }
+.conversion { padding: 12px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+.conversion span { display: block; }
 .conversion strong { color: var(--mint); font: 500 12px DM Mono, monospace; }
 .recommendations { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 22px 0; }
 .recommendations div { padding: 17px 8px 17px 0; }
@@ -120,8 +135,10 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .round-panel { border: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
   .round-panel p, .candidate-list { display: none; }
   .timer { font-size: 40px; }
+  .countdown-timer { font-size: 52px; }
   .brand { width: auto; }
   .header-title { display: none; }
   .footer-status, .dpi-status { display: none; }
   footer { justify-content: center; }
+  .option-group, .crosshair-picker { grid-template-columns: 1fr 1fr; }
 }

@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, Crosshair, Info, MousePointer2, Pause, Play, RotateCcw, Settings2, Target, X } from 'lucide-react'
+import { Activity, Circle, Crosshair, Dot, Info, MousePointer2, Pause, Play, Plus, RotateCcw, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, RoundResult, VALORANT_RATIO } from './calibration'
-import { TrackingArena } from './TrackingArena'
+import { CrosshairStyle, TrackingArena } from './TrackingArena'
+
+type Game = 'cs2' | 'valorant'
+type RoundPhase = 'idle' | 'countdown' | 'running'
+
+const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
+  { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
+  { id: 'dot', label: 'Bolinha', description: 'Ponto central limpo', icon: Dot },
+  { id: 'circle', label: 'Circular', description: 'Anel com ponto central', icon: Circle },
+  { id: 'plus', label: 'Cruz cheia', description: 'Mira compacta e direta', icon: Plus },
+]
+
+const GAME_LABEL: Record<Game, string> = {
+  cs2: 'Counter-Strike 2',
+  valorant: 'Valorant',
+}
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
+const toBaseCS = (game: Game, sensitivity: number) => game === 'cs2' ? sensitivity : sensitivity * VALORANT_RATIO
+const fromBaseCS = (game: Game, csSensitivity: number) => game === 'cs2' ? csSensitivity : csSensitivity / VALORANT_RATIO
 
 function Metric({ label, value, suffix, tone }: { label: string, value: string, suffix?: string, tone?: string }) {
   return (
@@ -17,29 +34,64 @@ function Metric({ label, value, suffix, tone }: { label: string, value: string, 
 function App() {
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
-  const [active, setActive] = useState(false)
+  const [phase, setPhase] = useState<RoundPhase>('idle')
   const [paused, setPaused] = useState(false)
   const [remaining, setRemaining] = useState(ROUND_DURATION)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [countdown, setCountdown] = useState(3)
+  const [setupOpen, setSetupOpen] = useState(true)
+  const [setupConfirmed, setSetupConfirmed] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
+  const [selectedGame, setSelectedGame] = useState<Game>('cs2')
+  const [sensitivityInput, setSensitivityInput] = useState(1)
+  const [confirmedGame, setConfirmedGame] = useState<Game>('cs2')
   const [baseCS, setBaseCS] = useState(1)
+  const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [dpi, setDpi] = useState(800)
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
 
+  const active = phase !== 'idle'
+  const tracking = phase === 'running'
   const multiplier = ROUND_MULTIPLIERS[round] ?? 1
   const recommendation = useMemo(() => recommendMultiplier(results), [results])
   const recommendedCS = baseCS * recommendation
   const recommendedValorant = recommendedCS / VALORANT_RATIO
+  const displayedCandidate = fromBaseCS(confirmedGame, baseCS * multiplier)
+  const canStart = sensitivityInput > 0 && !active
 
   useEffect(() => {
-    if (!active || paused) return
+    if (phase !== 'countdown' || paused) return
+    setCountdown(3)
+    const started = Date.now()
+    const timer = window.setInterval(() => {
+      const next = Math.max(0, 3 - Math.floor((Date.now() - started) / 1000))
+      setCountdown(next)
+      if (Date.now() - started >= 3000) {
+        window.clearInterval(timer)
+        setRemaining(ROUND_DURATION)
+        setPhase('running')
+      }
+    }, 100)
+    return () => window.clearInterval(timer)
+  }, [phase, paused, round])
+
+  useEffect(() => {
+    if (phase !== 'running' || paused) return
     setRemaining(ROUND_DURATION)
     const started = Date.now()
     const timer = window.setInterval(() => {
       setRemaining(Math.max(0, ROUND_DURATION - (Date.now() - started) / 1000))
     }, 100)
     return () => window.clearInterval(timer)
-  }, [active, paused, round])
+  }, [phase, paused, round])
+
+  const saveSetup = () => {
+    const cleanSensitivity = Math.max(0.01, sensitivityInput)
+    setSensitivityInput(cleanSensitivity)
+    setConfirmedGame(selectedGame)
+    setBaseCS(toBaseCS(selectedGame, cleanSensitivity))
+    setSetupConfirmed(true)
+    setSetupOpen(false)
+  }
 
   const start = () => {
     if (resultOpen || results.length === ROUND_MULTIPLIERS.length) {
@@ -47,17 +99,19 @@ function App() {
       setRound(0)
       setResultOpen(false)
     }
+    saveSetup()
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
+    setCountdown(3)
     setRemaining(ROUND_DURATION)
     setPaused(false)
-    setActive(true)
+    setPhase('countdown')
   }
 
   const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
     const result = calculateRoundResult(multiplier, distances, speeds, targetRadius)
     const nextResults = [...results, result]
     setResults(nextResults)
-    setActive(false)
+    setPhase('idle')
     setRemaining(ROUND_DURATION)
     document.exitPointerLock?.()
     if (round >= ROUND_MULTIPLIERS.length - 1) {
@@ -68,12 +122,13 @@ function App() {
   }
 
   const reset = () => {
-    setActive(false)
+    setPhase('idle')
     setPaused(false)
     setRound(0)
     setResults([])
     setResultOpen(false)
     setRemaining(ROUND_DURATION)
+    setCountdown(3)
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
     document.exitPointerLock?.()
   }
@@ -85,7 +140,7 @@ function App() {
         <div className="header-title">Calibração de tracking</div>
         <div className="header-actions">
           <span>{results.length}/{ROUND_MULTIPLIERS.length} rodadas</span>
-          <button className="icon-button" onClick={() => setSettingsOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
+          <button className="icon-button" onClick={() => setSetupOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
         </div>
       </header>
 
@@ -95,23 +150,34 @@ function App() {
           <Metric label="Precisão" value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
           <Metric label="Erro médio" value={format(metrics.meanError)} suffix="px" />
           <Metric label="Suavidade" value={format(metrics.smoothness)} suffix="%" />
-          <div className="rail-note"><Info size={14} /> Mantenha a mira no centro do alvo.</div>
+          <div className="rail-note"><Info size={14} /> A pontuação só começa depois do 3, 2, 1.</div>
         </aside>
 
-        <TrackingArena active={active} paused={paused} multiplier={multiplier} onMetrics={setMetrics} onRoundComplete={completeRound} />
+        <TrackingArena
+          active={active}
+          tracking={tracking}
+          paused={paused}
+          multiplier={multiplier}
+          crosshair={crosshair}
+          onMetrics={setMetrics}
+          onRoundComplete={completeRound}
+        />
 
         <aside className="round-panel">
           <div>
             <div className="panel-label">Rodada {Math.min(round + 1, 5)} de 5</div>
-            <div className="round-progress"><i style={{ width: `${((round + (active ? 0.5 : 0)) / 5) * 100}%` }} /></div>
+            <div className="round-progress"><i style={{ width: `${((round + (tracking ? 0.5 : 0)) / 5) * 100}%` }} /></div>
           </div>
           <div className="test-value">
             <span>Sensibilidade em teste</span>
-            <strong>{format(baseCS * multiplier, 3)}</strong>
-            <small>CS2 · {format(multiplier, 2)}× do ponto inicial</small>
+            <strong>{format(displayedCandidate, 3)}</strong>
+            <small>{GAME_LABEL[confirmedGame]} · {format(multiplier, 2)}× do ponto inicial</small>
           </div>
-          <div className="timer">{format(remaining, 1)}<small>s</small></div>
-          <p>Faça movimentos naturais. O alvo muda de direção para medir correções e overshoot.</p>
+          <div className={phase === 'countdown' ? 'timer countdown-timer' : 'timer'}>
+            {phase === 'countdown' ? countdown : phase === 'running' ? format(remaining, 1) : format(ROUND_DURATION, 1)}
+            <small>{phase === 'countdown' ? '' : 's'}</small>
+          </div>
+          <p>{phase === 'countdown' ? 'Prepare a mão. A rodada começa quando a contagem zerar.' : 'Faça movimentos naturais. O alvo muda de direção para medir correções e overshoot.'}</p>
           <div className="candidate-list">
             {ROUND_MULTIPLIERS.map((value, index) => (
               <div key={value} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
@@ -123,26 +189,61 @@ function App() {
       </section>
 
       <footer>
-        <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Mouse capturado · ESC libera o cursor' : 'Pronto para calibrar'}</div>
+        <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Mouse capturado · ESC libera o cursor' : `Base: ${GAME_LABEL[confirmedGame]}`}</div>
         <div className="controls">
           <button className="secondary-button" onClick={reset}><RotateCcw size={16} /> Reiniciar</button>
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
-          <button className="primary-button" onClick={start} disabled={active}><Play size={17} /> {results.length ? 'Próxima rodada' : 'Iniciar teste'}</button>
+          <button className="primary-button" onClick={start} disabled={!canStart}><Play size={17} /> {results.length ? 'Próxima rodada' : 'Iniciar teste'}</button>
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
       </footer>
 
-      {settingsOpen && (
+      {setupOpen && (
         <div className="modal-backdrop">
-          <section className="modal settings-modal">
-            <button className="modal-close" onClick={() => setSettingsOpen(false)}><X size={18} /></button>
+          <section className="modal setup-modal">
+            <button className="modal-close" onClick={() => setSetupOpen(false)} disabled={!setupConfirmed}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
-            <h2>Ponto de partida</h2>
-            <p>Use sua configuração atual. O teste encontra um multiplicador mais controlável a partir dela.</p>
+            <h2>Configurar antes do teste</h2>
+            <p>Escolha o jogo de referência e informe a sensibilidade atual. O resultado será convertido para CS2 e Valorant no final.</p>
+
+            <div className="option-group" role="radiogroup" aria-label="Jogo de referência">
+              {(['cs2', 'valorant'] as Game[]).map((game) => (
+                <button
+                  key={game}
+                  className={selectedGame === game ? 'choice-card selected' : 'choice-card'}
+                  onClick={() => setSelectedGame(game)}
+                  type="button"
+                >
+                  <span>{GAME_LABEL[game]}</span>
+                  <small>Usar sensi do {game === 'cs2' ? 'CS2' : 'Valorant'}</small>
+                </button>
+              ))}
+            </div>
+
+            <label>
+              Sensibilidade atual no {GAME_LABEL[selectedGame]}
+              <input type="number" min="0.01" max="20" step="0.001" value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
+            </label>
             <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
-            <label>Sensibilidade atual no CS2<input type="number" min="0.05" max="10" step="0.05" value={baseCS} onChange={(event) => setBaseCS(Number(event.target.value))} /></label>
-            <div className="conversion">Equivalente atual no Valorant <strong>{format(baseCS / VALORANT_RATIO, 3)}</strong></div>
-            <button className="primary-button wide" onClick={() => setSettingsOpen(false)}>Salvar configuração</button>
+
+            <div className="crosshair-picker" role="radiogroup" aria-label="Tipo de mira">
+              {CROSSHAIRS.map((item) => {
+                const Icon = item.icon
+                return (
+                  <button key={item.id} className={crosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setCrosshair(item.id)} type="button">
+                    <Icon size={18} />
+                    <span>{item.label}</span>
+                    <small>{item.description}</small>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="conversion">
+              <span>Equivalente CS2 <strong>{format(toBaseCS(selectedGame, sensitivityInput), 3)}</strong></span>
+              <span>Equivalente Valorant <strong>{format(toBaseCS(selectedGame, sensitivityInput) / VALORANT_RATIO, 3)}</strong></span>
+            </div>
+            <button className="primary-button wide" onClick={saveSetup}>Salvar e continuar</button>
           </section>
         </div>
       )}

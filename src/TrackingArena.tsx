@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 
+export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
+
 type LiveMetrics = {
   accuracy: number
   meanError: number
@@ -8,19 +10,62 @@ type LiveMetrics = {
 
 type Props = {
   active: boolean
+  tracking: boolean
   paused: boolean
   multiplier: number
+  crosshair: CrosshairStyle
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
 }
 
+const ROUND_DURATION_MS = 12000
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
-export function TrackingArena({ active, paused, multiplier, onMetrics, onRoundComplete }: Props) {
+function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, style: CrosshairStyle, color: string) {
+  ctx.strokeStyle = color
+  ctx.fillStyle = color
+  ctx.lineWidth = style === 'plus' ? 2.2 : 1.5
+
+  if (style === 'dot') {
+    ctx.beginPath()
+    ctx.arc(x, y, 4.2, 0, Math.PI * 2)
+    ctx.fill()
+    return
+  }
+
+  if (style === 'circle') {
+    ctx.beginPath()
+    ctx.arc(x, y, 10, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(x, y, 2.4, 0, Math.PI * 2)
+    ctx.fill()
+    return
+  }
+
+  const gap = style === 'plus' ? 2 : 7
+  const length = style === 'plus' ? 12 : 14
+  ctx.beginPath()
+  ctx.moveTo(x - gap - length, y); ctx.lineTo(x - gap, y)
+  ctx.moveTo(x + gap, y); ctx.lineTo(x + gap + length, y)
+  ctx.moveTo(x, y - gap - length); ctx.lineTo(x, y - gap)
+  ctx.moveTo(x, y + gap); ctx.lineTo(x, y + gap + length)
+  ctx.stroke()
+
+  if (style === 'classic') {
+    ctx.beginPath()
+    ctx.arc(x, y, 2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+}
+
+export function TrackingArena({ active, tracking, paused, multiplier, crosshair, onMetrics, onRoundComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const activeRef = useRef(active)
+  const trackingRef = useRef(tracking)
   const pausedRef = useRef(paused)
   const multiplierRef = useRef(multiplier)
+  const crosshairRef = useRef(crosshair)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
   const stateRef = useRef({
@@ -38,8 +83,10 @@ export function TrackingArena({ active, paused, multiplier, onMetrics, onRoundCo
   })
 
   useEffect(() => { activeRef.current = active }, [active])
+  useEffect(() => { trackingRef.current = tracking }, [tracking])
   useEffect(() => { pausedRef.current = paused }, [paused])
   useEffect(() => { multiplierRef.current = multiplier }, [multiplier])
+  useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onRoundComplete }, [onRoundComplete])
 
@@ -104,7 +151,7 @@ export function TrackingArena({ active, paused, multiplier, onMetrics, onRoundCo
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
       }
 
-      if (activeRef.current && !pausedRef.current) {
+      if (trackingRef.current && !pausedRef.current) {
         if (!state.startTime) state.startTime = time
         const elapsed = (time - state.startTime) / 1000
         const safeW = Math.max(0, width - radius * 3)
@@ -143,17 +190,7 @@ export function TrackingArena({ active, paused, multiplier, onMetrics, onRoundCo
       }
 
       const onTarget = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY) <= radius
-      ctx.strokeStyle = onTarget ? '#8dfbd3' : '#f4f2eb'
-      ctx.lineWidth = 1.5
-      const gap = 7
-      const length = 14
-      ctx.beginPath()
-      ctx.moveTo(state.aimX - gap - length, state.aimY); ctx.lineTo(state.aimX - gap, state.aimY)
-      ctx.moveTo(state.aimX + gap, state.aimY); ctx.lineTo(state.aimX + gap + length, state.aimY)
-      ctx.moveTo(state.aimX, state.aimY - gap - length); ctx.lineTo(state.aimX, state.aimY - gap)
-      ctx.moveTo(state.aimX, state.aimY + gap); ctx.lineTo(state.aimX, state.aimY + gap + length)
-      ctx.stroke()
-      ctx.beginPath(); ctx.arc(state.aimX, state.aimY, 2, 0, Math.PI * 2); ctx.fillStyle = ctx.strokeStyle; ctx.fill()
+      drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
 
       animationFrame = requestAnimationFrame(render)
     }
@@ -194,15 +231,16 @@ export function TrackingArena({ active, paused, multiplier, onMetrics, onRoundCo
   }
 
   useEffect(() => {
-    if (!active || paused) return
-    const timer = window.setTimeout(finishRound, 12000)
+    if (!tracking || paused) return
+    const timer = window.setTimeout(finishRound, ROUND_DURATION_MS)
     return () => window.clearTimeout(timer)
-  }, [active, paused, multiplier])
+  }, [tracking, paused, multiplier])
 
   return (
     <div className="arena-wrap">
       <canvas ref={canvasRef} className="arena" onClick={() => active && canvasRef.current?.requestPointerLock()} />
-      {!active && <div className="arena-prompt"><span>Mova com precisão, não com pressa.</span>Clique em iniciar para capturar o mouse.</div>}
+      {!active && <div className="arena-prompt"><span>Configure sua sensi e sua mira.</span>Depois clique em iniciar para preparar a rodada.</div>}
+      {active && !tracking && <div className="arena-countdown">A rodada ainda não está pontuando.</div>}
       {active && document.pointerLockElement !== canvasRef.current && (
         <button className="lock-prompt" onClick={() => canvasRef.current?.requestPointerLock()}>Clique para retomar o tracking</button>
       )}
