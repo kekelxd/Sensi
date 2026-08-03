@@ -251,7 +251,7 @@ function App() {
                   type="button"
                 >
                   <span>{MODE_LABEL[mode]}</span>
-                  <small>{mode === 'quick' ? '5 rodadas para estimativa rápida' : '10 rodadas com refinamento e alvo mais rápido após a 5ª'}</small>
+                  <small>{mode === 'quick' ? '5 rodadas para estimativa rápida' : '10 rodadas maior refinamento'}</small>
                 </button>
               ))}
             </div>
