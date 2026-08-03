@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -10,17 +10,40 @@ type LiveMetrics = {
 
 type Props = {
   active: boolean
-  tracking: boolean
+  moving: boolean
+  scoring: boolean
   paused: boolean
   multiplier: number
   targetSpeed: number
   crosshair: CrosshairStyle
+  countdownLabel: string
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
 }
 
+export type TrackingArenaHandle = {
+  requestPointerLock: () => void
+}
+
 const ROUND_DURATION_MS = 12000
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
+
+function getRandomTarget(width: number, height: number, radius: number) {
+  return {
+    x: randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8)),
+    y: randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8)),
+  }
+}
+
+function requestCanvasPointerLock(canvas: HTMLCanvasElement | null) {
+  const request = canvas?.requestPointerLock() as unknown as Promise<void> | undefined
+  if (typeof request?.catch === 'function') {
+    request.catch(() => {
+      // The UI keeps showing the resume button when the browser denies pointer lock.
+    })
+  }
+}
 
 function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, style: CrosshairStyle, color: string) {
   ctx.strokeStyle = color
@@ -60,10 +83,15 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
   }
 }
 
-export function TrackingArena({ active, tracking, paused, multiplier, targetSpeed, crosshair, onMetrics, onRoundComplete }: Props) {
+export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function TrackingArena(
+  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, onMetrics, onRoundComplete },
+  ref,
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [pointerLocked, setPointerLocked] = useState(false)
   const activeRef = useRef(active)
-  const trackingRef = useRef(tracking)
+  const movingRef = useRef(moving)
+  const scoringRef = useRef(scoring)
   const pausedRef = useRef(paused)
   const multiplierRef = useRef(multiplier)
   const targetSpeedRef = useRef(targetSpeed)
@@ -75,7 +103,10 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
     aimY: 0,
     targetX: 0,
     targetY: 0,
+    destinationX: 0,
+    destinationY: 0,
     startTime: 0,
+    lastFrame: 0,
     distances: [] as number[],
     speeds: [] as number[],
     lastAimX: 0,
@@ -84,8 +115,15 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
     complete: false,
   })
 
+  useImperativeHandle(ref, () => ({
+    requestPointerLock: () => {
+      requestCanvasPointerLock(canvasRef.current)
+    },
+  }), [])
+
   useEffect(() => { activeRef.current = active }, [active])
-  useEffect(() => { trackingRef.current = tracking }, [tracking])
+  useEffect(() => { movingRef.current = moving }, [moving])
+  useEffect(() => { scoringRef.current = scoring }, [scoring])
   useEffect(() => { pausedRef.current = paused }, [paused])
   useEffect(() => { multiplierRef.current = multiplier }, [multiplier])
   useEffect(() => { targetSpeedRef.current = targetSpeed }, [targetSpeed])
@@ -97,6 +135,7 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
     const canvas = canvasRef.current
     if (!canvas) return
 
+    const updatePointerLock = () => setPointerLocked(document.pointerLockElement === canvas)
     const handleMove = (event: MouseEvent) => {
       if (!activeRef.current || pausedRef.current || document.pointerLockElement !== canvas) return
       const state = stateRef.current
@@ -104,8 +143,13 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
       state.aimY = clamp(state.aimY + event.movementY * multiplierRef.current, 0, canvas.clientHeight)
     }
 
+    document.addEventListener('pointerlockchange', updatePointerLock)
     document.addEventListener('mousemove', handleMove)
-    return () => document.removeEventListener('mousemove', handleMove)
+    updatePointerLock()
+    return () => {
+      document.removeEventListener('pointerlockchange', updatePointerLock)
+      document.removeEventListener('mousemove', handleMove)
+    }
   }, [])
 
   useEffect(() => {
@@ -154,16 +198,34 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
       }
 
-      if (trackingRef.current && !pausedRef.current) {
-        if (!state.startTime) state.startTime = time
-        const elapsed = (time - state.startTime) / 1000
-        const speed = targetSpeedRef.current
-        const safeW = Math.max(0, width - radius * 3)
-        const safeH = Math.max(0, height - radius * 3)
-        state.targetX = radius * 1.5 + safeW * (0.5 + Math.sin(elapsed * 1.16 * speed) * 0.36 + Math.sin(elapsed * 0.37 * speed) * 0.11)
-        state.targetY = radius * 1.5 + safeH * (0.5 + Math.cos(elapsed * 0.91 * speed) * 0.33 + Math.sin(elapsed * 1.73 * speed) * 0.12)
+      if (movingRef.current && !pausedRef.current) {
+        if (!state.lastFrame) state.lastFrame = time
+        const deltaSeconds = Math.min(0.05, (time - state.lastFrame) / 1000)
+        state.lastFrame = time
+        if (!state.destinationX || !state.destinationY) {
+          const destination = getRandomTarget(width, height, radius)
+          state.destinationX = destination.x
+          state.destinationY = destination.y
+        }
 
-        if (time - state.lastSample > 40) {
+        const dx = state.destinationX - state.targetX
+        const dy = state.destinationY - state.targetY
+        const distanceToDestination = Math.hypot(dx, dy)
+        const targetVelocity = Math.min(width, height) * 0.42 * targetSpeedRef.current
+
+        if (distanceToDestination <= Math.max(8, targetVelocity * deltaSeconds)) {
+          state.targetX = state.destinationX
+          state.targetY = state.destinationY
+          const destination = getRandomTarget(width, height, radius)
+          state.destinationX = destination.x
+          state.destinationY = destination.y
+        } else {
+          const step = targetVelocity * deltaSeconds
+          state.targetX += dx / distanceToDestination * step
+          state.targetY += dy / distanceToDestination * step
+        }
+
+        if (scoringRef.current && time - state.lastSample > 40) {
           const distance = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY)
           const speed = Math.hypot(state.aimX - state.lastAimX, state.aimY - state.lastAimY)
           state.distances.push(distance)
@@ -216,14 +278,30 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
       state.aimY = height / 2
       state.targetX = width / 2
       state.targetY = height / 2
+      const radius = Math.max(22, Math.min(width, height) * 0.045)
+      const destination = getRandomTarget(width, height, radius)
+      state.destinationX = destination.x
+      state.destinationY = destination.y
       state.startTime = 0
+      state.lastFrame = 0
       state.distances = []
       state.speeds = []
       state.lastSample = 0
       state.complete = false
-      canvas?.requestPointerLock()
     }
   }, [active, multiplier])
+
+  useEffect(() => {
+    if (scoring) {
+      const state = stateRef.current
+      state.distances = []
+      state.speeds = []
+      state.lastAimX = state.aimX
+      state.lastAimY = state.aimY
+      state.lastSample = 0
+      state.complete = false
+    }
+  }, [scoring, multiplier])
 
   const finishRound = () => {
     const state = stateRef.current
@@ -235,19 +313,24 @@ export function TrackingArena({ active, tracking, paused, multiplier, targetSpee
   }
 
   useEffect(() => {
-    if (!tracking || paused) return
+    if (!scoring || paused) return
     const timer = window.setTimeout(finishRound, ROUND_DURATION_MS)
     return () => window.clearTimeout(timer)
-  }, [tracking, paused, multiplier])
+  }, [scoring, paused, multiplier])
 
   return (
     <div className="arena-wrap">
-      <canvas ref={canvasRef} className="arena" onClick={() => active && canvasRef.current?.requestPointerLock()} />
+      <canvas ref={canvasRef} className="arena" onClick={() => active && requestCanvasPointerLock(canvasRef.current)} />
       {!active && <div className="arena-prompt"><span>Configure sua sensi e sua mira.</span>Depois clique em iniciar para preparar a rodada.</div>}
-      {active && !tracking && <div className="arena-countdown">A rodada ainda não está pontuando.</div>}
-      {active && document.pointerLockElement !== canvasRef.current && (
-        <button className="lock-prompt" onClick={() => canvasRef.current?.requestPointerLock()}>Clique para retomar o tracking</button>
+      {active && !scoring && (
+        <div className="arena-phase-overlay">
+          <strong>{countdownLabel}</strong>
+          <span>A rodada ainda não está pontuando</span>
+        </div>
+      )}
+      {active && !pointerLocked && (
+        <button className="lock-prompt" onClick={() => requestCanvasPointerLock(canvasRef.current)}>Clique para travar o cursor</button>
       )}
     </div>
   )
-}
+})
