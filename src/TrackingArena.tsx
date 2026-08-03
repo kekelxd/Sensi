@@ -28,6 +28,7 @@ export type TrackingArenaHandle = {
 const ROUND_DURATION_MS = 12000
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
+const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
 
 function getRandomTarget(width: number, height: number, radius: number) {
   return {
@@ -37,11 +38,20 @@ function getRandomTarget(width: number, height: number, radius: number) {
 }
 
 function requestCanvasPointerLock(canvas: HTMLCanvasElement | null) {
+  canvas?.focus({ preventScroll: true })
   const request = canvas?.requestPointerLock() as unknown as Promise<void> | undefined
   if (typeof request?.catch === 'function') {
     request.catch(() => {
       // The UI keeps showing the resume button when the browser denies pointer lock.
     })
+  }
+
+  const fullscreenTarget = canvas?.parentElement
+  if (fullscreenTarget && !document.fullscreenElement) {
+    const fullscreenRequest = fullscreenTarget.requestFullscreen?.({ navigationUI: 'hide' } as FullscreenOptions) as Promise<void> | undefined
+    if (typeof fullscreenRequest?.catch === 'function') {
+      fullscreenRequest.catch(() => {})
+    }
   }
 }
 
@@ -183,7 +193,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const width = canvas.clientWidth
       const height = canvas.clientHeight
       const state = stateRef.current
-      const radius = Math.max(22, Math.min(width, height) * 0.045)
+      const radius = getTargetRadius(width, height)
 
       ctx.clearRect(0, 0, width, height)
       ctx.fillStyle = '#0b0e14'
@@ -211,7 +221,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         const dx = state.destinationX - state.targetX
         const dy = state.destinationY - state.targetY
         const distanceToDestination = Math.hypot(dx, dy)
-        const targetVelocity = Math.min(width, height) * 0.42 * targetSpeedRef.current
+        const targetVelocity = Math.min(width, height) * 0.32 * targetSpeedRef.current
 
         if (distanceToDestination <= Math.max(8, targetVelocity * deltaSeconds)) {
           state.targetX = state.destinationX
@@ -278,7 +288,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.aimY = height / 2
       state.targetX = width / 2
       state.targetY = height / 2
-      const radius = Math.max(22, Math.min(width, height) * 0.045)
+      const radius = getTargetRadius(width, height)
       const destination = getRandomTarget(width, height, radius)
       state.destinationX = destination.x
       state.destinationY = destination.y
@@ -307,7 +317,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     const state = stateRef.current
     if (!state.complete) {
       state.complete = true
-      const radius = Math.max(22, Math.min(canvasRef.current?.clientWidth ?? 0, canvasRef.current?.clientHeight ?? 0) * 0.045)
+      const radius = getTargetRadius(canvasRef.current?.clientWidth ?? 0, canvasRef.current?.clientHeight ?? 0)
       onCompleteRef.current(state.distances, state.speeds, radius)
     }
   }
@@ -320,7 +330,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
   return (
     <div className="arena-wrap">
-      <canvas ref={canvasRef} className="arena" onClick={() => active && requestCanvasPointerLock(canvasRef.current)} />
+      <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && requestCanvasPointerLock(canvasRef.current)} />
       {!active && <div className="arena-prompt"><span>Configure sua sensi e sua mira.</span>Depois clique em iniciar para preparar a rodada.</div>}
       {active && !scoring && (
         <div className="arena-phase-overlay">

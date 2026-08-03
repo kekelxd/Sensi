@@ -15,7 +15,7 @@ export const ROUND_WARMUP = 1
 export const VALORANT_RATIO = 3.181818
 
 export function getTargetSpeed(mode: TargetSpeedMode) {
-  return mode === 'fast' ? 1.24 : 1
+  return mode === 'fast' ? 1.12 : 1
 }
 
 export function calculateRoundResult(

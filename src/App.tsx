@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Circle, Crosshair, Dot, Info, MousePointer2, Pause, Play, Plus, RotateCcw, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, Circle, Crosshair, Dot, MousePointer2, Pause, Play, Plus, RotateCcw, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, VALORANT_RATIO } from './calibration'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
@@ -69,7 +69,7 @@ function App() {
   const targetSpeed = getTargetSpeed(speedMode)
   const recommendation = recommendMultiplier(results)
   const recommendedCS = baseCS * recommendation
-  const recommendedValorant = recommendedCS / VALORANT_RATIO
+  const recommendedSelected = fromBaseCS(confirmedGame, recommendedCS)
   const displayedCandidate = fromBaseCS(confirmedGame, baseCS * multiplier)
   const canStart = sensitivityInput > 0 && !active
 
@@ -181,7 +181,6 @@ function App() {
           <Metric label="Precisão" value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
           <Metric label="Erro médio" value={format(metrics.meanError)} suffix="px" />
           <Metric label="Suavidade" value={format(metrics.smoothness)} suffix="%" />
-          <div className="rail-note"><Info size={14} /> A pontuação começa depois do 3, 2, 1 e de 1s de ajuste.</div>
         </aside>
 
         <TrackingArena
@@ -311,9 +310,8 @@ function App() {
             <div className="panel-label">Resultado</div>
             <h2>Sensibilidade recomendada</h2>
             <p>Seu melhor equilíbrio entre precisão, controle e suavidade apareceu em <b>{format(recommendation, 2)}×</b> da configuração inicial com velocidade {SPEED_BADGE[speedMode]}.</p>
-            <div className="recommendations">
-              <div><span>Counter-Strike 2</span><strong>{format(recommendedCS, 3)}</strong></div>
-              <div><span>Valorant</span><strong>{format(recommendedValorant, 3)}</strong></div>
+            <div className="recommendations single-recommendation">
+              <div><span>{GAME_LABEL[confirmedGame]}</span><strong>{format(recommendedSelected, 3)}</strong></div>
             </div>
             <div className="result-bars">
               {[...results].sort((a, b) => b.score - a.score).map((result, index) => (
