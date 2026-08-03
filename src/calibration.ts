@@ -9,8 +9,8 @@ export type RoundResult = {
 
 export type TargetSpeedMode = 'normal' | 'fast'
 
-export const ROUND_MULTIPLIERS = [0.72, 0.82, 0.92, 1, 1.08, 1.18, 1.3, 1.42]
-export const ROUND_DURATION = 12
+export const ROUND_MULTIPLIERS = [0.8, 0.9, 1, 1.1, 1.2]
+export const ROUND_DURATION = 25
 export const ROUND_WARMUP = 1
 export const VALORANT_RATIO = 3.181818
 

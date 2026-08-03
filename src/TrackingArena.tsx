@@ -1,4 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { Play, RotateCcw } from 'lucide-react'
+import { ROUND_DURATION } from './calibration'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -17,6 +19,9 @@ type Props = {
   targetSpeed: number
   crosshair: CrosshairStyle
   countdownLabel: string
+  hasResults: boolean
+  onStart: () => void
+  onReset: () => void
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
 }
@@ -25,7 +30,7 @@ export type TrackingArenaHandle = {
   requestPointerLock: () => void
 }
 
-const ROUND_DURATION_MS = 12000
+const ROUND_DURATION_MS = ROUND_DURATION * 1000
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
@@ -94,7 +99,7 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
 }
 
 export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function TrackingArena(
-  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, onMetrics, onRoundComplete },
+  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, onStart, onReset, onMetrics, onRoundComplete },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -331,7 +336,16 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   return (
     <div className="arena-wrap">
       <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && requestCanvasPointerLock(canvasRef.current)} />
-      {!active && <div className="arena-prompt"><span>Configure sua sensi e sua mira.</span>Depois clique em iniciar para preparar a rodada.</div>}
+      {!active && (
+        <div className="arena-prompt">
+          <span>{hasResults ? 'Rodada concluída' : 'Tudo pronto para calibrar'}</span>
+          <small>{hasResults ? 'Continue quando estiver preparado.' : 'Inicie o teste para preparar a primeira rodada.'}</small>
+          <div className="arena-controls">
+            <button className="secondary-button" onClick={onReset}><RotateCcw size={16} /> Reiniciar</button>
+            <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? 'Próxima rodada' : 'Iniciar teste'}</button>
+          </div>
+        </div>
+      )}
       {active && !scoring && (
         <div className="arena-phase-overlay">
           <strong>{countdownLabel}</strong>

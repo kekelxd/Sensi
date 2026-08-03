@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Circle, Crosshair, Dot, MousePointer2, Pause, Play, Plus, RotateCcw, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, Circle, Crosshair, Dot, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, VALORANT_RATIO } from './calibration'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
@@ -71,8 +71,6 @@ function App() {
   const recommendedCS = baseCS * recommendation
   const recommendedSelected = fromBaseCS(confirmedGame, recommendedCS)
   const displayedCandidate = fromBaseCS(confirmedGame, baseCS * multiplier)
-  const canStart = sensitivityInput > 0 && !active
-
   useEffect(() => {
     if (phase !== 'countdown' || paused) return
     setCountdown(3)
@@ -193,6 +191,9 @@ function App() {
           targetSpeed={targetSpeed}
           crosshair={crosshair}
           countdownLabel={phase === 'countdown' ? String(countdown) : phase === 'warmup' ? 'AJUSTE' : ''}
+          hasResults={results.length > 0}
+          onStart={start}
+          onReset={reset}
           onMetrics={setMetrics}
           onRoundComplete={completeRound}
         />
@@ -231,9 +232,7 @@ function App() {
       <footer>
         <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Tracking ativo · se soltar, clique na arena' : `Base: ${GAME_LABEL[confirmedGame]}`}</div>
         <div className="controls">
-          <button className="secondary-button" onClick={reset}><RotateCcw size={16} /> Reiniciar</button>
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
-          <button className="primary-button" onClick={start} disabled={!canStart}><Play size={17} /> {results.length ? 'Próxima rodada' : 'Iniciar teste'}</button>
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
       </footer>
@@ -244,7 +243,7 @@ function App() {
             <button className="modal-close" onClick={() => setSetupOpen(false)} disabled={!setupConfirmed}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>Configurar antes do teste</h2>
-            <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa 8 rodadas para calibrar a mira.</p>
+            <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa {totalRounds} rodadas de {ROUND_DURATION} segundos para calibrar a mira.</p>
 
             <div className="option-group" role="radiogroup" aria-label="Jogo de referência">
               {(['cs2', 'valorant'] as Game[]).map((game) => (

@@ -57,8 +57,10 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 
 .arena-wrap { min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .arena { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; user-select: none; outline: none; }
-.arena-prompt { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: #737983; font-size: 11px; pointer-events: none; }
+.arena-prompt { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; text-align: center; color: #737983; font-size: 11px; background: rgba(7,9,13,.34); }
 .arena-prompt span { color: #e7e4dd; font-size: clamp(20px, 3vw, 42px); font-weight: 700; letter-spacing: -.04em; margin-bottom: 8px; }
+.arena-prompt small { color: #8a909a; font-size: 11px; }
+.arena-controls { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
 .arena-phase-overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .arena-phase-overlay strong { color: var(--mint); font: 500 clamp(58px, 10vw, 118px) DM Mono, monospace; letter-spacing: -.12em; text-shadow: 0 0 38px rgba(141,251,211,.16); }
 .arena-phase-overlay span { margin-top: 6px; color: #9097a3; font: 500 10px DM Mono, monospace; letter-spacing: .08em; text-transform: uppercase; }
