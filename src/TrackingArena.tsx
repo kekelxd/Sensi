@@ -13,6 +13,7 @@ type Props = {
   tracking: boolean
   paused: boolean
   multiplier: number
+  targetSpeed: number
   crosshair: CrosshairStyle
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
@@ -59,12 +60,13 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
   }
 }
 
-export function TrackingArena({ active, tracking, paused, multiplier, crosshair, onMetrics, onRoundComplete }: Props) {
+export function TrackingArena({ active, tracking, paused, multiplier, targetSpeed, crosshair, onMetrics, onRoundComplete }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const activeRef = useRef(active)
   const trackingRef = useRef(tracking)
   const pausedRef = useRef(paused)
   const multiplierRef = useRef(multiplier)
+  const targetSpeedRef = useRef(targetSpeed)
   const crosshairRef = useRef(crosshair)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
@@ -86,6 +88,7 @@ export function TrackingArena({ active, tracking, paused, multiplier, crosshair,
   useEffect(() => { trackingRef.current = tracking }, [tracking])
   useEffect(() => { pausedRef.current = paused }, [paused])
   useEffect(() => { multiplierRef.current = multiplier }, [multiplier])
+  useEffect(() => { targetSpeedRef.current = targetSpeed }, [targetSpeed])
   useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onRoundComplete }, [onRoundComplete])
@@ -154,10 +157,11 @@ export function TrackingArena({ active, tracking, paused, multiplier, crosshair,
       if (trackingRef.current && !pausedRef.current) {
         if (!state.startTime) state.startTime = time
         const elapsed = (time - state.startTime) / 1000
+        const speed = targetSpeedRef.current
         const safeW = Math.max(0, width - radius * 3)
         const safeH = Math.max(0, height - radius * 3)
-        state.targetX = radius * 1.5 + safeW * (0.5 + Math.sin(elapsed * 1.16) * 0.36 + Math.sin(elapsed * 0.37) * 0.11)
-        state.targetY = radius * 1.5 + safeH * (0.5 + Math.cos(elapsed * 0.91) * 0.33 + Math.sin(elapsed * 1.73) * 0.12)
+        state.targetX = radius * 1.5 + safeW * (0.5 + Math.sin(elapsed * 1.16 * speed) * 0.36 + Math.sin(elapsed * 0.37 * speed) * 0.11)
+        state.targetY = radius * 1.5 + safeH * (0.5 + Math.cos(elapsed * 0.91 * speed) * 0.33 + Math.sin(elapsed * 1.73 * speed) * 0.12)
 
         if (time - state.lastSample > 40) {
           const distance = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY)

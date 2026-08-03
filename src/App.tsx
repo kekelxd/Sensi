@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Activity, Circle, Crosshair, Dot, Info, MousePointer2, Pause, Play, Plus, RotateCcw, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { calculateRoundResult, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, RoundResult, VALORANT_RATIO } from './calibration'
+import { calculateRoundResult, getRoundMultipliers, getTargetSpeed, recommendMultiplier, ROUND_DURATION, RoundResult, TestMode, VALORANT_RATIO } from './calibration'
 import { CrosshairStyle, TrackingArena } from './TrackingArena'
 
 type Game = 'cs2' | 'valorant'
@@ -16,6 +16,11 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string
 const GAME_LABEL: Record<Game, string> = {
   cs2: 'Counter-Strike 2',
   valorant: 'Valorant',
+}
+
+const MODE_LABEL: Record<TestMode, string> = {
+  quick: 'Rápido',
+  extensive: 'Extensivo',
 }
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
@@ -44,6 +49,7 @@ function App() {
   const [selectedGame, setSelectedGame] = useState<Game>('cs2')
   const [sensitivityInput, setSensitivityInput] = useState(1)
   const [confirmedGame, setConfirmedGame] = useState<Game>('cs2')
+  const [testMode, setTestMode] = useState<TestMode>('extensive')
   const [baseCS, setBaseCS] = useState(1)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [dpi, setDpi] = useState(800)
@@ -51,7 +57,10 @@ function App() {
 
   const active = phase !== 'idle'
   const tracking = phase === 'running'
-  const multiplier = ROUND_MULTIPLIERS[round] ?? 1
+  const roundMultipliers = useMemo(() => getRoundMultipliers(testMode, results), [testMode, results])
+  const totalRounds = roundMultipliers.length
+  const multiplier = roundMultipliers[round] ?? 1
+  const targetSpeed = getTargetSpeed(round, testMode)
   const recommendation = useMemo(() => recommendMultiplier(results), [results])
   const recommendedCS = baseCS * recommendation
   const recommendedValorant = recommendedCS / VALORANT_RATIO
@@ -94,7 +103,7 @@ function App() {
   }
 
   const start = () => {
-    if (resultOpen || results.length === ROUND_MULTIPLIERS.length) {
+    if (resultOpen || results.length === totalRounds) {
       setResults([])
       setRound(0)
       setResultOpen(false)
@@ -114,7 +123,7 @@ function App() {
     setPhase('idle')
     setRemaining(ROUND_DURATION)
     document.exitPointerLock?.()
-    if (round >= ROUND_MULTIPLIERS.length - 1) {
+    if (round >= totalRounds - 1) {
       setResultOpen(true)
     } else {
       window.setTimeout(() => setRound((value) => value + 1), 250)
@@ -139,7 +148,7 @@ function App() {
         <div className="brand"><Crosshair size={20} /> SENSI</div>
         <div className="header-title">Calibração de tracking</div>
         <div className="header-actions">
-          <span>{results.length}/{ROUND_MULTIPLIERS.length} rodadas</span>
+          <span>{results.length}/{totalRounds} rodadas</span>
           <button className="icon-button" onClick={() => setSetupOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
         </div>
       </header>
@@ -158,6 +167,7 @@ function App() {
           tracking={tracking}
           paused={paused}
           multiplier={multiplier}
+          targetSpeed={targetSpeed}
           crosshair={crosshair}
           onMetrics={setMetrics}
           onRoundComplete={completeRound}
@@ -165,23 +175,29 @@ function App() {
 
         <aside className="round-panel">
           <div>
-            <div className="panel-label">Rodada {Math.min(round + 1, 5)} de 5</div>
-            <div className="round-progress"><i style={{ width: `${((round + (tracking ? 0.5 : 0)) / 5) * 100}%` }} /></div>
+            <div className="panel-label">Rodada {Math.min(round + 1, totalRounds)} de {totalRounds}</div>
+            <div className="round-progress"><i style={{ width: `${((round + (tracking ? 0.5 : 0)) / totalRounds) * 100}%` }} /></div>
           </div>
           <div className="test-value">
             <span>Sensibilidade em teste</span>
             <strong>{format(displayedCandidate, 3)}</strong>
-            <small>{GAME_LABEL[confirmedGame]} · {format(multiplier, 2)}× do ponto inicial</small>
+            <small>{GAME_LABEL[confirmedGame]} · {format(multiplier, 2)}× · {MODE_LABEL[testMode]}</small>
           </div>
           <div className={phase === 'countdown' ? 'timer countdown-timer' : 'timer'}>
             {phase === 'countdown' ? countdown : phase === 'running' ? format(remaining, 1) : format(ROUND_DURATION, 1)}
             <small>{phase === 'countdown' ? '' : 's'}</small>
           </div>
-          <p>{phase === 'countdown' ? 'Prepare a mão. A rodada começa quando a contagem zerar.' : 'Faça movimentos naturais. O alvo muda de direção para medir correções e overshoot.'}</p>
+          <p>
+            {phase === 'countdown'
+              ? 'Prepare a mão. A rodada começa quando a contagem zerar.'
+              : testMode === 'extensive' && round >= 5
+                ? 'Fase 2 extensiva: o alvo está ligeiramente mais rápido para refinar precisão e reação.'
+                : 'Faça movimentos naturais. O alvo muda de direção para medir correções e overshoot.'}
+          </p>
           <div className="candidate-list">
-            {ROUND_MULTIPLIERS.map((value, index) => (
-              <div key={value} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
-                <span>0{index + 1}</span><i /><b>{format(value, 2)}×</b>
+            {roundMultipliers.map((value, index) => (
+              <div key={`${index}-${value}`} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
+                <span>{String(index + 1).padStart(2, '0')}</span><i /><b>{format(value, 2)}×</b>
               </div>
             ))}
           </div>
@@ -204,7 +220,7 @@ function App() {
             <button className="modal-close" onClick={() => setSetupOpen(false)} disabled={!setupConfirmed}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>Configurar antes do teste</h2>
-            <p>Escolha o jogo de referência e informe a sensibilidade atual. O resultado será convertido para CS2 e Valorant no final.</p>
+            <p>Escolha o jogo, informe sua sensibilidade atual e selecione o tipo de teste. O modo extensivo usa 10 rodadas para refinar melhor o resultado.</p>
 
             <div className="option-group" role="radiogroup" aria-label="Jogo de referência">
               {(['cs2', 'valorant'] as Game[]).map((game) => (
@@ -225,6 +241,20 @@ function App() {
               <input type="number" min="0.01" max="20" step="0.001" value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
             </label>
             <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+
+            <div className="option-group mode-group" role="radiogroup" aria-label="Modo de teste">
+              {(['quick', 'extensive'] as TestMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  className={testMode === mode ? 'choice-card selected' : 'choice-card'}
+                  onClick={() => setTestMode(mode)}
+                  type="button"
+                >
+                  <span>{MODE_LABEL[mode]}</span>
+                  <small>{mode === 'quick' ? '5 rodadas para estimativa rápida' : '10 rodadas com refinamento e alvo mais rápido após a 5ª'}</small>
+                </button>
+              ))}
+            </div>
 
             <div className="crosshair-picker" role="radiogroup" aria-label="Tipo de mira">
               {CROSSHAIRS.map((item) => {
@@ -255,14 +285,14 @@ function App() {
             <Target size={24} className="modal-icon" />
             <div className="panel-label">Resultado</div>
             <h2>Sensibilidade recomendada</h2>
-            <p>Seu melhor equilíbrio entre precisão, controle e suavidade apareceu em <b>{format(recommendation, 2)}×</b> da configuração inicial.</p>
+            <p>Seu melhor equilíbrio entre precisão, controle e suavidade apareceu em <b>{format(recommendation, 2)}×</b> da configuração inicial no modo {MODE_LABEL[testMode]}.</p>
             <div className="recommendations">
               <div><span>Counter-Strike 2</span><strong>{format(recommendedCS, 3)}</strong></div>
               <div><span>Valorant</span><strong>{format(recommendedValorant, 3)}</strong></div>
             </div>
             <div className="result-bars">
-              {[...results].sort((a, b) => b.score - a.score).map((result) => (
-                <div key={result.multiplier}><span>{format(result.multiplier, 2)}×</span><i><b style={{ width: `${result.score}%` }} /></i><strong>{format(result.score)}</strong></div>
+              {[...results].sort((a, b) => b.score - a.score).map((result, index) => (
+                <div key={`${index}-${result.multiplier}`}><span>{format(result.multiplier, 2)}×</span><i><b style={{ width: `${result.score}%` }} /></i><strong>{format(result.score)}</strong></div>
               ))}
             </div>
             <small className="disclaimer">Estimativa baseada nesta sessão. Valide a recomendação no campo de treino do jogo antes de competir.</small>
