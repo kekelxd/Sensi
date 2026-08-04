@@ -1,5 +1,11 @@
 import { GameConfig } from './games'
 
+export function parsePositiveNumberInput(value: string) {
+  if (!value.trim()) return null
+  const parsed = Number(value.replace(',', '.'))
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
 export function convertSensitivity(value: number, source: GameConfig, target: GameConfig, sourceDpi = 800, targetDpi = sourceDpi) {
   if (!Number.isFinite(value) || value <= 0 || !Number.isFinite(sourceDpi) || sourceDpi <= 0 || !Number.isFinite(targetDpi) || targetDpi <= 0 || !source.yaw || !target.yaw) return null
   return value * source.yaw * sourceDpi / (target.yaw * targetDpi)

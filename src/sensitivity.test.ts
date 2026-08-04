@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { GAME_BY_ID } from './games'
-import { convertSensitivity, formatSensitivity, isSensitivityInRange, normalizeSensitivity } from './sensitivity'
+import { convertSensitivity, formatSensitivity, isSensitivityInRange, normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 
 describe('sensitivity conversion', () => {
+  it('keeps an empty input separate from numeric zero', () => {
+    expect(parsePositiveNumberInput('')).toBeNull()
+    expect(parsePositiveNumberInput('   ')).toBeNull()
+    expect(parsePositiveNumberInput('0')).toBeNull()
+    expect(parsePositiveNumberInput('0.23')).toBe(0.23)
+    expect(parsePositiveNumberInput('0,23')).toBe(0.23)
+  })
+
   it('matches known CS2 conversions', () => {
     expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.fortnite)).toBeCloseTo(3.960396, 6)
     expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.valorant)).toBeCloseTo(0.314286, 6)

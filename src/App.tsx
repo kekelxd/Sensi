@@ -5,7 +5,7 @@ import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
-import { normalizeSensitivity } from './sensitivity'
+import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
@@ -59,7 +59,7 @@ function App() {
   const [startAfterSetup, setStartAfterSetup] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
-  const [sensitivityInput, setSensitivityInput] = useState(1)
+  const [sensitivityInput, setSensitivityInput] = useState('1')
   const [confirmedGame, setConfirmedGame] = useState<GameId>('cs2')
   const [speedMode, setSpeedMode] = useState<TargetSpeedMode>('normal')
   const [selectedSpeedMode, setSelectedSpeedMode] = useState<TargetSpeedMode>('normal')
@@ -82,6 +82,8 @@ function App() {
   const displayedCandidate = normalizeSensitivity(baseSensitivity * nominalMultiplier, confirmedGameConfig)
   const multiplier = displayedCandidate / baseSensitivity
   const selectedGameConfig = GAME_BY_ID[selectedGame]
+  const parsedSensitivityInput = parsePositiveNumberInput(sensitivityInput)
+  const sensitivityPreview = parsedSensitivityInput === null ? null : normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
   useEffect(() => {
     if (phase === 'idle' || paused) return
 
@@ -131,12 +133,13 @@ function App() {
   }
 
   const saveSetup = () => {
-    const cleanSensitivity = normalizeSensitivity(sensitivityInput, selectedGameConfig)
+    if (parsedSensitivityInput === null) return
+    const cleanSensitivity = normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
     const configurationChanged = selectedGame !== confirmedGame
       || cleanSensitivity !== baseSensitivity
       || selectedSpeedMode !== speedMode
       || selectedCrosshair !== crosshair
-    setSensitivityInput(cleanSensitivity)
+    setSensitivityInput(String(cleanSensitivity))
     setConfirmedGame(selectedGame)
     setBaseSensitivity(cleanSensitivity)
     setSpeedMode(selectedSpeedMode)
@@ -171,7 +174,7 @@ function App() {
 
   const openSetup = () => {
     setSelectedGame(confirmedGame)
-    setSensitivityInput(baseSensitivity)
+    setSensitivityInput(String(baseSensitivity))
     setSelectedSpeedMode(speedMode)
     setSelectedCrosshair(crosshair)
     setStartAfterSetup(false)
@@ -340,7 +343,7 @@ function App() {
             <div className="setup-fields">
               <label>
                 Sensibilidade atual no {selectedGameConfig.label}
-                <input type="number" min={selectedGameConfig.sensitivityMin} max={selectedGameConfig.sensitivityMax} step={selectedGameConfig.sensitivityStep} value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
+                <input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} />
               </label>
               <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
             </div>
@@ -373,9 +376,9 @@ function App() {
             </div>
 
             <div className="conversion single-conversion">
-              <span>Sensibilidade base em {selectedGameConfig.shortLabel} <strong>{format(sensitivityInput, 3)}</strong></span>
+              <span>Sensibilidade base em {selectedGameConfig.shortLabel} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
             </div>
-            <button className="primary-button wide" onClick={saveSetup}>{startAfterSetup ? 'Salvar e iniciar teste' : 'Salvar configuração'}</button>
+            <button className="primary-button wide" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? 'Salvar e iniciar teste' : 'Salvar configuração'}</button>
           </section>
         </div>
       )}
