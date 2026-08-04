@@ -9,6 +9,7 @@ import type { CrosshairStyle } from './TrackingArena'
 import { WarmupArena, type ArenaHandle, type WarmupMetrics, type WarmupPhase } from './Warmup'
 import { getAdaptiveDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty } from './warmupConfig'
 import { EXERCISES } from './warmupExercises'
+import { createEmptyWarmupMetrics } from './warmupTelemetry'
 
 type SetupStep = 1 | 2 | 3
 
@@ -19,7 +20,7 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: Lucid
   { id: 'plus', label: 'crosshair.plus', icon: Plus },
 ]
 
-const emptyMetrics = (): WarmupMetrics => ({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+const emptyMetrics = (): WarmupMetrics => createEmptyWarmupMetrics(WARMUP_DURATION)
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
 
 export function Routine() {
@@ -243,7 +244,7 @@ export function Routine() {
         </div>
         {!lastStage && <div className="warmup-next-hint">
           {difficulty === 'adaptive'
-            ? t('warmup.adaptiveNextHint', { level: t(`difficulty.${nextAdaptiveLevel}` as TranslationKey) })
+            ? t('warmup.adaptiveNextHint')
             : t('warmup.fixedNextHint', { level: t(`difficulty.${difficulty}` as TranslationKey) })}
         </div>}
         <div className="warmup-result-actions">

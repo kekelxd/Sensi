@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
@@ -8,14 +8,9 @@ import { calculateWarmupAccuracy, getAdaptiveDifficulty, getWarmupPointerGain, W
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { EXERCISES } from './warmupExercises'
+import { buildAimHeatmap, createEmptyWarmupMetrics, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
 
-export type WarmupMetrics = {
-  score: number
-  accuracy: number
-  hits: number
-  shots: number
-  remaining: number
-}
+export type { WarmupMetrics } from './warmupTelemetry'
 
 export type WarmupPhase = 'hub' | 'setup' | 'countdown' | 'playing' | 'result'
 type SetupStep = 1 | 2 | 3
@@ -69,6 +64,104 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
   if (style === 'classic') { ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill() }
 }
 
+function signed(value: number, suffix = '') {
+  const rounded = Math.round(value * 10) / 10
+  return `${rounded > 0 ? '+' : ''}${rounded}${suffix}`
+}
+
+function overshootDirection(metrics: WarmupMetrics): { key: TranslationKey, angle: number } {
+  if (!metrics.overshootCount || Math.hypot(metrics.overshootX, metrics.overshootY) < 0.01) return { key: 'warmup.overshootBalanced', angle: 0 }
+  const x = metrics.overshootX
+  const y = metrics.overshootY
+  const angle = Math.atan2(y, x) * 180 / Math.PI
+  if (Math.abs(x) > Math.abs(y) * 1.25) return { key: x > 0 ? 'warmup.overshootRight' : 'warmup.overshootLeft', angle }
+  if (Math.abs(y) > Math.abs(x) * 1.25) return { key: y > 0 ? 'warmup.overshootDown' : 'warmup.overshootUp', angle }
+  return { key: y > 0 ? 'warmup.overshootDown' : 'warmup.overshootUp', angle }
+}
+
+function AimHeatmap({ metrics }: { metrics: WarmupMetrics }) {
+  const { t } = useI18n()
+  const cells = buildAimHeatmap(metrics.aimSamples)
+  const direction = overshootDirection(metrics)
+  return (
+    <section className="aim-heatmap-panel">
+      <div className="report-section-heading">
+        <div><Target size={15} /><span>{t('warmup.aimHeatmap')}</span></div>
+        <small>{t('warmup.heatmapDescription')}</small>
+      </div>
+      <div className="aim-heatmap" role="img" aria-label={t('warmup.aimHeatmap')}>
+        <svg viewBox="0 0 100 58" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <pattern id="heatmap-grid" width="8.333" height="8.286" patternUnits="userSpaceOnUse">
+              <path d="M 8.333 0 L 0 0 0 8.286" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth=".25" />
+            </pattern>
+          </defs>
+          <rect width="100" height="58" fill="url(#heatmap-grid)" />
+          {cells.map((cell) => (
+            <circle
+              key={`${cell.x}-${cell.y}`}
+              cx={cell.x}
+              cy={cell.y / 100 * 58}
+              r={1.5 + cell.intensity * 4.8}
+              fill={cell.error > 0.48 ? `rgba(255,90,76,${0.2 + cell.intensity * 0.62})` : `rgba(141,251,211,${0.16 + cell.intensity * 0.58})`}
+            />
+          ))}
+          {metrics.missSamples.slice(-80).map((sample, index) => (
+            <g key={`${sample.x}-${sample.y}-${index}`} transform={`translate(${sample.x * 100} ${sample.y * 58})`}>
+              <path d="M -1.2 -1.2 L 1.2 1.2 M 1.2 -1.2 L -1.2 1.2" stroke="#ff7251" strokeWidth=".55" />
+            </g>
+          ))}
+        </svg>
+        {!metrics.aimSamples.length && <span>{t('warmup.noHeatmapData')}</span>}
+      </div>
+      <div className="overshoot-summary">
+        <span>{t('warmup.overshootDirection')}</span>
+        <i style={{ transform: `rotate(${direction.angle}deg)` }}>→</i>
+        <strong>{t(direction.key)}</strong>
+        <small>{metrics.overshootCount}</small>
+      </div>
+    </section>
+  )
+}
+
+function WarmupReport({ metrics, previous, exercise }: { metrics: WarmupMetrics, previous: WarmupSessionSummary | null, exercise: WarmupExercise }) {
+  const { t } = useI18n()
+  const trackingExercise = isTrackingExercise(exercise)
+  const recommendationId = getWarmupRecommendation(metrics, exercise)
+  const recommendation = EXERCISES.find((item) => item.id === recommendationId) ?? EXERCISES[0]
+  const comparison = previous ? [
+    { label: t('common.score'), value: signed(metrics.score - previous.score) },
+    { label: t('common.accuracy'), value: signed(metrics.accuracy - previous.accuracy, '%') },
+    { label: t('warmup.reactionSpeed'), value: metrics.reactionTimeMs && previous.reactionTimeMs ? signed(metrics.reactionTimeMs - previous.reactionTimeMs, 'ms') : '—' },
+  ] : []
+
+  return (
+    <div className="warmup-report">
+      <div className="report-metrics-grid">
+        <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy, 1)}%</strong></div>
+        <div><span>{t('warmup.timeOnTarget')}</span><strong>{format(metrics.onTargetMs / 1000, 1)}s</strong></div>
+        <div><span>{t('warmup.reactionSpeed')}</span><strong>{metrics.reactionTimeMs ? `${format(metrics.reactionTimeMs)}ms` : '—'}</strong></div>
+        <div><span>{t('warmup.clickErrors')}</span><strong>{metrics.clickErrors}</strong></div>
+        <div><span>{t('warmup.bestStreak')}</span><strong>{trackingExercise ? `${format(metrics.bestTrackingStreakMs / 1000, 1)}s` : metrics.bestStreak}</strong></div>
+      </div>
+      <AimHeatmap metrics={metrics} />
+      <div className="report-insights-grid">
+        <section>
+          <div className="report-section-heading"><div><TrendingUp size={15} /><span>{t('warmup.previousComparison')}</span></div></div>
+          {previous ? <div className="session-comparison">
+            {comparison.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
+          </div> : <p>{t('warmup.firstComparison')}</p>}
+        </section>
+        <section className="exercise-recommendation">
+          <div className="report-section-heading"><div><Activity size={15} /><span>{t('warmup.nextRecommendation')}</span></div></div>
+          <strong>{recommendation.name}</strong>
+          <p>{t('warmup.recommendationDescription')}</p>
+        </section>
+      </div>
+    </div>
+  )
+}
+
 type ArenaProps = {
   phase: WarmupPhase
   countdown: number
@@ -110,9 +203,16 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
     targetX: 0, targetY: 0, destinationX: 0, destinationY: 0,
     directionX: 1, directionY: 0, width: 0, height: 0,
     lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
-    onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0,
+    onTargetMs: 0, currentOnTargetStreakMs: 0, bestOnTargetStreakMs: 0,
+    dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0,
     extraTargets: [] as Array<{ x: number, y: number }>, strafeDirection: 1, nextDirectionChangeAt: 0,
     targetTrail: [] as Array<{ x: number, y: number, time: number }>, lastTrailSample: 0,
+    targetVisibleAt: [0, 0, 0], targetAcquired: false,
+    reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
+    aimSamples: [] as Array<{ x: number, y: number, error: number }>,
+    missSamples: [] as Array<{ x: number, y: number, error: number }>, lastAimSampleAt: 0,
+    previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
+    overshootX: 0, overshootY: 0, overshootCount: 0, lastOvershootAt: 0,
     hits: 0, shots: 0, score: 0, complete: false,
   })
 
@@ -141,6 +241,11 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
     }
     if (slot === 0) { state.targetX = next.x; state.targetY = next.y } else state.extraTargets[slot - 1] = next
     state.hiddenUntil = exercise === 'gridshot' ? 0 : time ? time + configRef.current.respawnMs : 0
+    state.targetVisibleAt[slot] = exercise === 'gridshot' ? time : state.hiddenUntil
+    if (slot === 0) {
+      state.targetAcquired = false
+      state.hasPreviousAimOffset = false
+    }
     if (exercise === 'reflex') state.targetExpiresAt = time ? state.hiddenUntil + reflexWindow(configRef.current.targetScale) : 0
     state.dwellMs = 0
   }
@@ -192,10 +297,27 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       state.shots += 1
       const targets = [{ x: state.targetX, y: state.targetY }, ...(exercise === 'gridshot' ? state.extraTargets : [])]
       const hitIndex = targets.findIndex((target) => Math.hypot(state.visualAimX - target.x, state.visualAimY - target.y) <= radius)
-      if (state.hiddenUntil <= performance.now() && hitIndex >= 0) {
+      const now = performance.now()
+      if (state.hiddenUntil <= now && hitIndex >= 0) {
         state.hits += 1
         state.score += 100
-        placeTarget(performance.now(), hitIndex)
+        state.currentStreak += 1
+        state.bestStreak = Math.max(state.bestStreak, state.currentStreak)
+        const visibleAt = state.targetVisibleAt[hitIndex]
+        if (visibleAt > 0) {
+          state.reactionMsTotal += Math.max(0, now - visibleAt)
+          state.reactionCount += 1
+        }
+        placeTarget(now, hitIndex)
+      } else {
+        state.clickErrors += 1
+        state.currentStreak = 0
+        const nearestError = Math.min(...targets.map((target) => Math.hypot(state.visualAimX - target.x, state.visualAimY - target.y)))
+        state.missSamples.push({
+          x: clamp(state.visualAimX / Math.max(1, state.width), 0, 1),
+          y: clamp(state.visualAimY / Math.max(1, state.height), 0, 1),
+          error: clamp(nearestError / Math.max(1, Math.hypot(state.width, state.height) * 0.35), 0, 1),
+        })
       }
     }
     document.addEventListener('pointerlockchange', updateLock)
@@ -266,7 +388,10 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       }
 
       if (phaseRef.current === 'playing' && pointerLockedRef.current) {
-        if (!state.startedAt) state.startedAt = time
+        if (!state.startedAt) {
+          state.startedAt = time
+          state.targetVisibleAt = state.targetVisibleAt.map((visibleAt) => visibleAt || time)
+        }
         if (exercise === 'tracking') {
           if (!state.destinationX || Math.hypot(state.destinationX - state.targetX, state.destinationY - state.targetY) < radius) {
             state.destinationX = randomBetween(radius * 1.6, width - radius * 1.6)
@@ -309,20 +434,60 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
         }
 
         if (exercise === 'reflex' && !state.targetExpiresAt) state.targetExpiresAt = time + reflexWindow(config.targetScale)
-        if (exercise === 'reflex' && time >= state.targetExpiresAt) placeTarget(time)
+        if (exercise === 'reflex' && time >= state.targetExpiresAt) {
+          state.currentStreak = 0
+          placeTarget(time)
+        }
 
         const visible = time >= state.hiddenUntil
         const onTarget = visible && Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius
         if (onTarget) {
           state.onTargetMs += deltaMs
+          state.currentOnTargetStreakMs += deltaMs
+          state.bestOnTargetStreakMs = Math.max(state.bestOnTargetStreakMs, state.currentOnTargetStreakMs)
+          if (!isClickExercise(exercise) && !state.targetAcquired && state.targetVisibleAt[0] > 0) {
+            state.reactionMsTotal += Math.max(0, time - state.targetVisibleAt[0])
+            state.reactionCount += 1
+            state.targetAcquired = true
+          }
           if (exercise === 'switch') {
             state.dwellMs += deltaMs
             if (state.dwellMs >= config.dwellMs) {
-              state.hits += 1; state.shots += 1; state.score += 100
+              state.hits += 1; state.shots += 1; state.score += 100; state.currentStreak += 1
+              state.bestStreak = Math.max(state.bestStreak, state.currentStreak)
               placeTarget(time)
             }
           }
-        } else if (exercise === 'switch') state.dwellMs = 0
+        } else {
+          state.currentOnTargetStreakMs = 0
+          if (exercise === 'switch') state.dwellMs = 0
+        }
+
+        if (time - state.lastAimSampleAt >= 50) {
+          const telemetryTargets = [{ x: state.targetX, y: state.targetY }, ...(exercise === 'gridshot' ? state.extraTargets : [])]
+          const nearestTarget = telemetryTargets.reduce((nearest, target) => (
+            Math.hypot(state.visualAimX - target.x, state.visualAimY - target.y) < Math.hypot(state.visualAimX - nearest.x, state.visualAimY - nearest.y) ? target : nearest
+          ), telemetryTargets[0])
+          const offsetX = (state.visualAimX - nearestTarget.x) / Math.max(1, width)
+          const offsetY = (state.visualAimY - nearestTarget.y) / Math.max(1, height)
+          const error = clamp(Math.hypot(offsetX, offsetY) / 0.35, 0, 1)
+          state.aimSamples.push({ x: clamp(state.visualAimX / width, 0, 1), y: clamp(state.visualAimY / height, 0, 1), error })
+          if (state.aimSamples.length > 1400) state.aimSamples.shift()
+
+          const crossedTarget = state.hasPreviousAimOffset
+            && state.previousAimOffsetX * offsetX + state.previousAimOffsetY * offsetY < 0
+            && time - state.lastOvershootAt > 140
+          if (crossedTarget && Math.hypot(offsetX * width, offsetY * height) > radius * 0.25) {
+            state.overshootX += offsetX
+            state.overshootY += offsetY
+            state.overshootCount += 1
+            state.lastOvershootAt = time
+          }
+          state.previousAimOffsetX = offsetX
+          state.previousAimOffsetY = offsetY
+          state.hasPreviousAimOffset = true
+          state.lastAimSampleAt = time
+        }
 
         const elapsed = time - state.startedAt
         const remaining = Math.max(0, WARMUP_DURATION - elapsed / 1000)
@@ -334,13 +499,23 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           hits: state.hits,
           shots: state.shots,
           remaining,
+          onTargetMs: state.onTargetMs,
+          reactionTimeMs: state.reactionCount ? state.reactionMsTotal / state.reactionCount : 0,
+          clickErrors: state.clickErrors,
+          bestStreak: state.bestStreak,
+          bestTrackingStreakMs: state.bestOnTargetStreakMs,
+          aimSamples: state.aimSamples,
+          missSamples: state.missSamples,
+          overshootX: state.overshootX,
+          overshootY: state.overshootY,
+          overshootCount: state.overshootCount,
         }
         if (time - state.lastMetricsAt >= 100) { state.lastMetricsAt = time; onMetricsRef.current(metrics) }
         if (remaining <= 0 && !state.complete) {
           state.complete = true
           document.exitPointerLock?.()
           if (exitFullscreenOnCompleteRef.current && document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
-          onCompleteRef.current(metrics)
+          onCompleteRef.current({ ...metrics, aimSamples: [...metrics.aimSamples], missSamples: [...metrics.missSamples] })
         }
       }
 
@@ -392,8 +567,13 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       aimX: width / 2, aimY: height / 2, visualAimX: width / 2, visualAimY: height / 2,
       targetX: width / 2, targetY: height / 2, destinationX: 0, destinationY: 0,
       directionX: 1, directionY: 0, lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
-      onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0, extraTargets: [],
+      onTargetMs: 0, currentOnTargetStreakMs: 0, bestOnTargetStreakMs: 0,
+      dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0, extraTargets: [], targetVisibleAt: [0, 0, 0], targetAcquired: false,
       strafeDirection: Math.random() > .5 ? 1 : -1, nextDirectionChangeAt: 0, targetTrail: [], lastTrailSample: 0,
+      reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
+      aimSamples: [], missSamples: [], lastAimSampleAt: 0,
+      previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
+      overshootX: 0, overshootY: 0, overshootCount: 0, lastOvershootAt: 0,
       hits: 0, shots: 0, score: 0, complete: false,
     })
     inputPausedAtRef.current = 0
@@ -438,7 +618,8 @@ export function Warmup() {
   const [countdown, setCountdown] = useState(3)
   const [sessionId, setSessionId] = useState(0)
   const [previewExercise, setPreviewExercise] = useState<WarmupExercise | null>(null)
-  const [metrics, setMetrics] = useState<WarmupMetrics>({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+  const [metrics, setMetrics] = useState<WarmupMetrics>(() => createEmptyWarmupMetrics(WARMUP_DURATION))
+  const [previousSession, setPreviousSession] = useState<WarmupSessionSummary | null>(null)
 
   const game = GAME_BY_ID[selectedGame]
   const parsedSensitivity = parsePositiveNumberInput(sensitivity)
@@ -479,7 +660,7 @@ export function Warmup() {
     setSensitivity(String(normalizedSensitivity))
     setDpi(String(Math.round(parsedDpi)))
     setInputReady(false)
-    setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+    setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
       setSessionId((value) => value + 1)
       setPhase('countdown')
@@ -489,7 +670,7 @@ export function Warmup() {
 
   const repeat = () => {
     setInputReady(false)
-    setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+    setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
       setSessionId((value) => value + 1)
       setPhase('countdown')
@@ -500,12 +681,19 @@ export function Warmup() {
   const playNextRound = () => {
     if (difficulty === 'adaptive') setAdaptiveLevel(nextAdaptiveLevel)
     setInputReady(false)
-    setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+    setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
       setSessionId((value) => value + 1)
       setPhase('countdown')
     })
     arenaRef.current?.requestPointerLock()
+  }
+
+  const completeWarmup = (result: WarmupMetrics) => {
+    setPreviousSession(readWarmupSession(window.localStorage, exercise))
+    writeWarmupSession(window.localStorage, exercise, result)
+    setMetrics(result)
+    setPhase('result')
   }
 
   const exitToHub = () => {
@@ -613,18 +801,14 @@ export function Warmup() {
           <div className="modal-backdrop">
             <section className="modal warmup-result-modal">
               <Sparkles size={22} className="modal-icon" />
-              <div className="panel-label">{t('warmup.complete')}</div>
+              <div className="panel-label">{t('warmup.reportTitle')}</div>
               <h2>{exerciseConfig.name}</h2>
               <p>{difficultyLabel} · {game.label} · {WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
-              <div className="warmup-result-grid">
-                <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}%</strong></div>
-                <div><span>{isTrackingExercise(exercise) ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{isTrackingExercise(exercise) ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
-                <div><span>{t('warmup.difficulty')}</span><strong>{difficultyLabel}</strong></div>
-              </div>
+              <WarmupReport metrics={metrics} previous={previousSession} exercise={exercise} />
               <div className="warmup-next-hint">
                 {difficulty === 'adaptive'
-                  ? t('warmup.adaptiveNextHint', { level: t(`difficulty.${nextAdaptiveLevel}` as TranslationKey) })
+                  ? t('warmup.adaptiveNextHint')
                   : t('warmup.fixedNextHint', { level: t(`difficulty.${difficulty}` as TranslationKey) })}
               </div>
               <div className="warmup-result-actions">
@@ -654,7 +838,7 @@ export function Warmup() {
         instruction={t(exerciseConfig.instruction)}
         metrics={metrics}
         onMetrics={setMetrics}
-        onComplete={(result) => { setMetrics(result); setPhase('result') }}
+        onComplete={completeWarmup}
         onPointerLockChange={setInputReady}
       />
       <aside className="warmup-side-panel">
