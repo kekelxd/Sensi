@@ -29,13 +29,14 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, icon: LucideIcon }>
   { id: 'plus', label: 'Cruz cheia', icon: Plus },
 ]
 
-function ExercisePreview({ exercise }: { exercise: WarmupExercise }) {
+function ExercisePreview({ exercise, name }: { exercise: WarmupExercise, name: string }) {
   return (
     <div className={`warmup-preview warmup-preview-${exercise}`} aria-hidden="true">
       <span className="preview-target preview-target-a" />
       <span className="preview-target preview-target-b" />
       <span className="preview-target preview-target-c" />
       <span className="preview-crosshair" />
+      <div className="preview-meta"><b>{name}</b><small>Prévia ao vivo · clique para configurar</small></div>
     </div>
   )
 }
@@ -332,6 +333,7 @@ export function Warmup() {
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [countdown, setCountdown] = useState(3)
   const [sessionId, setSessionId] = useState(0)
+  const [previewExercise, setPreviewExercise] = useState<WarmupExercise | null>(null)
   const [metrics, setMetrics] = useState<WarmupMetrics>({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
 
   const game = GAME_BY_ID[selectedGame]
@@ -392,13 +394,21 @@ export function Warmup() {
           <p>Escolha um exercício de 30 segundos, ajuste a dificuldade e entre no ritmo com a sensibilidade do seu jogo.</p>
         </div>
         <div className="warmup-exercises">
-          {EXERCISES.map((item, index) => {
+          {EXERCISES.map((item) => {
             const Icon = item.icon
             return (
-              <button key={item.id} type="button" onClick={() => openSetup(item.id)}>
-                <span className="warmup-index">0{index + 1}</span>
+              <button
+                key={item.id}
+                type="button"
+                className={previewExercise === item.id ? 'preview-active' : ''}
+                onPointerEnter={() => setPreviewExercise(item.id)}
+                onPointerLeave={() => setPreviewExercise((current) => current === item.id ? null : current)}
+                onFocus={() => setPreviewExercise(item.id)}
+                onBlur={() => setPreviewExercise((current) => current === item.id ? null : current)}
+                onClick={() => openSetup(item.id)}
+              >
                 <Icon size={26} />
-                <ExercisePreview exercise={item.id} />
+                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={item.name} />}
                 <strong>{item.name}</strong>
                 <small>{item.description}</small>
                 <i>Configurar treino <Play size={13} /></i>
