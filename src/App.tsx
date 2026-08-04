@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
+import { SensitivityConverter } from './SensitivityConverter'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'calibration' | 'polling' | 'buttons'
+type AppView = 'calibration' | 'converter' | 'polling' | 'buttons'
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
   { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
@@ -185,6 +186,7 @@ function App() {
       <header className="app-header">
         <nav className="app-tabs" aria-label="Ferramentas do $ENSI">
           <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração Sensi</button>
+          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> Conversor</button>
           <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
           <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /> Teste de botões</button>
         </nav>
@@ -195,7 +197,7 @@ function App() {
               <span>{results.length}/{totalRounds} rodadas</span>
               <button className="icon-button" onClick={openSetup} aria-label="Abrir configurações"><Settings2 size={17} /></button>
             </>
-          ) : <span>Diagnóstico do mouse</span>}
+          ) : <span>{view === 'converter' ? 'Conversão 360°' : 'Diagnóstico do mouse'}</span>}
         </div>
       </header>
 
@@ -261,7 +263,7 @@ function App() {
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
-      </footer></> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
