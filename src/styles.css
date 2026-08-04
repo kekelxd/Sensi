@@ -47,6 +47,8 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .app-tabs button.active::after { background: var(--accent); }
 .app-tabs button:disabled { cursor: not-allowed; opacity: .5; }
 .header-actions { position: absolute; right: 20px; bottom: 13px; display: flex; align-items: center; gap: 14px; color: var(--muted); font: 500 10px DM Mono, monospace; text-transform: uppercase; }
+.language-switcher { display: flex; align-items: center; gap: 6px; color: #aeb4bf; }
+.language-switcher select { max-width: 92px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 5px 22px 5px 7px; color: #e8e5de; background: #10141b; font: 600 9px DM Mono, monospace; text-transform: none; cursor: pointer; }
 .icon-button, .modal-close { border: 1px solid var(--line); color: #c2c5ca; background: var(--surface-2); border-radius: 8px; display: grid; place-items: center; }
 .icon-button { width: 34px; height: 34px; }
 
@@ -200,9 +202,8 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .preview-target::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,.78); }
 .preview-crosshair { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border: 2px solid rgba(8,12,15,.72); border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 2px rgba(141,251,211,.2), 0 0 12px rgba(141,251,211,.72); animation-play-state: running !important; }
 .preview-meta { position: absolute; z-index: 3; left: 18px; right: 18px; bottom: 16px; }
-.preview-meta b, .preview-meta small { display: block; }
+.preview-meta b { display: block; }
 .preview-meta b { color: #f2f0e9; font-size: 15px; }
-.preview-meta small { margin-top: 4px; color: var(--mint); font: 500 7px DM Mono, monospace; letter-spacing: .03em; }
 .warmup-preview-switch .preview-target-a { left: 18%; top: 19%; animation: preview-switch-a 2.6s steps(1) infinite; }
 .warmup-preview-switch .preview-target-b { right: 16%; top: 48%; opacity: 0; animation: preview-switch-b 2.6s steps(1) infinite; }
 .warmup-preview-switch .preview-target-c { display: none; }

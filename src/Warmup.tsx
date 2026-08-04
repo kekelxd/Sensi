@@ -5,6 +5,7 @@ import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
 import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
+import { useI18n, type TranslationKey } from './i18n'
 
 type WarmupMetrics = {
   score: number
@@ -16,17 +17,17 @@ type WarmupMetrics = {
 
 type WarmupPhase = 'hub' | 'setup' | 'countdown' | 'playing' | 'result'
 
-const EXERCISES: Array<{ id: WarmupExercise, name: string, description: string, instruction: string, icon: LucideIcon }> = [
-  { id: 'switch', name: 'Troca de alvo', description: 'Segure a mira sobre a bola até ela desaparecer e surgir em uma nova posição.', instruction: 'Mantenha a mira no alvo para confirmar cada troca.', icon: Focus },
-  { id: 'tracking', name: 'Tracking contínuo', description: 'Acompanhe uma bola em movimento pelo maior tempo possível sem perder o contato.', instruction: 'Siga o alvo continuamente. Não é necessário clicar.', icon: Gauge },
-  { id: 'flick', name: 'Tiro ao alvo', description: 'Atire nas bolas que aparecem em pontos diferentes da arena antes do tempo acabar.', instruction: 'Use o botão esquerdo para acertar cada alvo.', icon: Target },
+const EXERCISES: Array<{ id: WarmupExercise, name: TranslationKey, description: TranslationKey, instruction: TranslationKey, icon: LucideIcon }> = [
+  { id: 'switch', name: 'warmup.switch.name', description: 'warmup.switch.description', instruction: 'warmup.switch.instruction', icon: Focus },
+  { id: 'tracking', name: 'warmup.tracking.name', description: 'warmup.tracking.description', instruction: 'warmup.tracking.instruction', icon: Gauge },
+  { id: 'flick', name: 'warmup.flick.name', description: 'warmup.flick.description', instruction: 'warmup.flick.instruction', icon: Target },
 ]
 
-const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, icon: LucideIcon }> = [
-  { id: 'classic', label: 'Clássica', icon: Crosshair },
-  { id: 'dot', label: 'Bolinha', icon: Dot },
-  { id: 'circle', label: 'Circular', icon: Circle },
-  { id: 'plus', label: 'Cruz cheia', icon: Plus },
+const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: LucideIcon }> = [
+  { id: 'classic', label: 'crosshair.classic', icon: Crosshair },
+  { id: 'dot', label: 'crosshair.dot', icon: Dot },
+  { id: 'circle', label: 'crosshair.circle', icon: Circle },
+  { id: 'plus', label: 'crosshair.plus', icon: Plus },
 ]
 
 function ExercisePreview({ exercise, name }: { exercise: WarmupExercise, name: string }) {
@@ -36,7 +37,7 @@ function ExercisePreview({ exercise, name }: { exercise: WarmupExercise, name: s
       <span className="preview-target preview-target-b" />
       <span className="preview-target preview-target-c" />
       <span className="preview-crosshair" />
-      <div className="preview-meta"><b>{name}</b><small>Prévia ao vivo · clique para configurar</small></div>
+      <div className="preview-meta"><b>{name}</b></div>
     </div>
   )
 }
@@ -96,6 +97,7 @@ type ArenaProps = {
 type ArenaHandle = { requestPointerLock: () => void }
 
 const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, onMetrics, onComplete }, ref) {
+  const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
   const phaseRef = useRef(phase)
@@ -309,20 +311,21 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       <canvas ref={canvasRef} className="warmup-arena" tabIndex={0} onMouseDown={() => active && requestPointerLock(canvasRef.current)} />
       {active && (
         <div className="warmup-hud">
-          <div><span>Score</span><strong>{metrics.score}</strong></div>
-          <div><span>Precisão</span><strong>{format(metrics.accuracy)}<small>%</small></strong></div>
-          <div><span>Tempo</span><strong>{format(metrics.remaining, 1)}<small>s</small></strong></div>
-          <div><span>Sensibilidade</span><strong>{sensitivityLabel}</strong></div>
+          <div><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
+          <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}<small>%</small></strong></div>
+          <div><span>{t('common.time')}</span><strong>{format(metrics.remaining, 1)}<small>s</small></strong></div>
+          <div><span>{t('common.sensitivity')}</span><strong>{sensitivityLabel}</strong></div>
         </div>
       )}
-      {phase === 'countdown' && <div className="warmup-countdown"><strong>{countdown}</strong><span>Prepare a mira</span></div>}
+      {phase === 'countdown' && <div className="warmup-countdown"><strong>{countdown}</strong><span>{t('warmup.prepareAim')}</span></div>}
       {phase === 'playing' && <div className="warmup-instruction">{instruction}</div>}
-      {active && !pointerLocked && <button className="lock-prompt" onClick={() => requestPointerLock(canvasRef.current)}>Clique para travar o cursor</button>}
+      {active && !pointerLocked && <button className="lock-prompt" onClick={() => requestPointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>}
     </div>
   )
 })
 
 export function Warmup() {
+  const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const [phase, setPhase] = useState<WarmupPhase>('hub')
   const [exercise, setExercise] = useState<WarmupExercise>('switch')
@@ -389,9 +392,9 @@ export function Warmup() {
     return (
       <section className="warmup-workspace">
         <div className="warmup-heading">
-          <div className="panel-label"><Sparkles size={15} /> Aquecimento FPS</div>
-          <h1>Prepare a mira antes da partida</h1>
-          <p>Escolha um exercício de 30 segundos, ajuste a dificuldade e entre no ritmo com a sensibilidade do seu jogo.</p>
+          <div className="panel-label"><Sparkles size={15} /> {t('warmup.kicker')}</div>
+          <h1>{t('warmup.title')}</h1>
+          <p>{t('warmup.subtitle')}</p>
         </div>
         <div className="warmup-exercises">
           {EXERCISES.map((item) => {
@@ -408,10 +411,10 @@ export function Warmup() {
                 onClick={() => openSetup(item.id)}
               >
                 <Icon size={26} />
-                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={item.name} />}
-                <strong>{item.name}</strong>
-                <small>{item.description}</small>
-                <i>Configurar treino <Play size={13} /></i>
+                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={t(item.name)} />}
+                <strong>{t(item.name)}</strong>
+                <small>{t(item.description)}</small>
+                <i>{t('warmup.configure')} <Play size={13} /></i>
               </button>
             )
           })}
@@ -420,11 +423,11 @@ export function Warmup() {
         {phase === 'setup' && (
           <div className="modal-backdrop">
             <section className="modal setup-modal warmup-setup-modal">
-              <button className="modal-close" onClick={() => setPhase('hub')} aria-label="Fechar"><X size={18} /></button>
+              <button className="modal-close" onClick={() => setPhase('hub')} aria-label={t('common.close')}><X size={18} /></button>
               <Settings2 size={20} className="modal-icon" />
-              <h2>Configurar {exerciseConfig.name}</h2>
-              <p>{exerciseConfig.description} A sessão dura {WARMUP_DURATION} segundos.</p>
-              <div className="option-group game-grid" role="radiogroup" aria-label="Jogo de referência">
+              <h2>{t('warmup.configureExercise', { exercise: t(exerciseConfig.name) })}</h2>
+              <p>{t('warmup.sessionDuration', { description: t(exerciseConfig.description), seconds: WARMUP_DURATION })}</p>
+              <div className="option-group game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
                 {GAMES.map((item) => (
                   <button key={item.id} className={selectedGame === item.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(item.id)} type="button">
                     <div className={`game-logo game-logo-${item.id}`}><img src={`./game-icons/${item.iconFile ?? `${item.id}.png`}`} alt="" /></div>
@@ -433,22 +436,22 @@ export function Warmup() {
                 ))}
               </div>
               <div className="setup-fields">
-                <label>Sensibilidade atual no {game.label}<input type="text" inputMode="decimal" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} aria-invalid={parsedSensitivity === null} /></label>
-                <label>DPI do mouse<input type="text" inputMode="numeric" value={dpi} onChange={(event) => setDpi(event.target.value)} aria-invalid={parsedDpi === null} /></label>
+                <label>{t('calibration.currentSensitivity', { game: game.label })}<input type="text" inputMode="decimal" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} aria-invalid={parsedSensitivity === null} /></label>
+                <label>{t('common.mouseDpi')}<input type="text" inputMode="numeric" value={dpi} onChange={(event) => setDpi(event.target.value)} aria-invalid={parsedDpi === null} /></label>
               </div>
-              <div className="warmup-config-label">Dificuldade</div>
-              <div className="warmup-difficulty" role="radiogroup" aria-label="Dificuldade">
+              <div className="warmup-config-label">{t('warmup.difficulty')}</div>
+              <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
                 {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).map((level) => (
                   <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => setDifficulty(level)}>
-                    <strong>{WARMUP_DIFFICULTIES[level].label}</strong><small>{level === 'easy' ? 'Alvo maior e ritmo leve' : level === 'medium' ? 'Equilíbrio de ritmo e precisão' : 'Alvo menor e resposta rápida'}</small>
+                    <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
                   </button>
                 ))}
               </div>
-              <div className="warmup-config-label">Mira</div>
-              <div className="warmup-crosshairs" role="radiogroup" aria-label="Tipo de mira">
-                {CROSSHAIRS.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} className={crosshair === item.id ? 'selected' : ''} onClick={() => setCrosshair(item.id)}><Icon size={16} /><span>{item.label}</span></button> })}
+              <div className="warmup-config-label">{t('warmup.crosshair')}</div>
+              <div className="warmup-crosshairs" role="radiogroup" aria-label={t('calibration.crosshairType')}>
+                {CROSSHAIRS.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} className={crosshair === item.id ? 'selected' : ''} onClick={() => setCrosshair(item.id)}><Icon size={16} /><span>{t(item.label)}</span></button> })}
               </div>
-              <button className="primary-button wide" onClick={start} disabled={!validSetup}>Iniciar aquecimento</button>
+              <button className="primary-button wide" onClick={start} disabled={!validSetup}>{t('warmup.start')}</button>
             </section>
           </div>
         )}
@@ -457,18 +460,18 @@ export function Warmup() {
           <div className="modal-backdrop">
             <section className="modal warmup-result-modal">
               <Sparkles size={22} className="modal-icon" />
-              <div className="panel-label">Aquecimento concluído</div>
-              <h2>{exerciseConfig.name}</h2>
-              <p>{WARMUP_DIFFICULTIES[difficulty].label} · {game.label} · {WARMUP_DURATION} segundos</p>
-              <div className="warmup-result-score"><span>Score</span><strong>{metrics.score}</strong></div>
+              <div className="panel-label">{t('warmup.complete')}</div>
+              <h2>{t(exerciseConfig.name)}</h2>
+              <p>{t(`difficulty.${difficulty}` as TranslationKey)} · {game.label} · {WARMUP_DURATION}s</p>
+              <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
               <div className="warmup-result-grid">
-                <div><span>Precisão</span><strong>{format(metrics.accuracy)}%</strong></div>
-                <div><span>{exercise === 'tracking' ? 'Tempo no alvo' : 'Acertos'}</span><strong>{exercise === 'tracking' ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
-                <div><span>Dificuldade</span><strong>{WARMUP_DIFFICULTIES[difficulty].label}</strong></div>
+                <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}%</strong></div>
+                <div><span>{exercise === 'tracking' ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{exercise === 'tracking' ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
+                <div><span>{t('warmup.difficulty')}</span><strong>{t(`difficulty.${difficulty}` as TranslationKey)}</strong></div>
               </div>
               <div className="warmup-result-actions">
-                <button className="secondary-button" onClick={() => setPhase('hub')}><RotateCcw size={15} /> Escolher treino</button>
-                <button className="primary-button" onClick={repeat}><Play size={15} /> Repetir</button>
+                <button className="secondary-button" onClick={() => setPhase('hub')}><RotateCcw size={15} /> {t('warmup.chooseTraining')}</button>
+                <button className="primary-button" onClick={repeat}><Play size={15} /> {t('warmup.repeat')}</button>
               </div>
             </section>
           </div>
@@ -489,18 +492,18 @@ export function Warmup() {
         pointerGain={pointerGain}
         sessionId={sessionId}
         sensitivityLabel={`${game.shortLabel} ${format(normalizedSensitivity ?? 0, 3)}`}
-        instruction={exerciseConfig.instruction}
+        instruction={t(exerciseConfig.instruction)}
         metrics={metrics}
         onMetrics={setMetrics}
         onComplete={(result) => { setMetrics(result); setPhase('result') }}
       />
       <aside className="warmup-side-panel">
-        <span>{exerciseConfig.name}</span>
+        <span>{t(exerciseConfig.name)}</span>
         <strong>{format(metrics.remaining, 1)}<small>s</small></strong>
-        <div><span>Score</span><b>{metrics.score}</b></div>
-        <div><span>Precisão</span><b>{format(metrics.accuracy)}%</b></div>
-        <div><span>Nível</span><b>{WARMUP_DIFFICULTIES[difficulty].label}</b></div>
-        <p><MousePointer2 size={14} /> {exerciseConfig.instruction}</p>
+        <div><span>{t('common.score')}</span><b>{metrics.score}</b></div>
+        <div><span>{t('common.accuracy')}</span><b>{format(metrics.accuracy)}%</b></div>
+        <div><span>{t('warmup.level')}</span><b>{t(`difficulty.${difficulty}` as TranslationKey)}</b></div>
+        <p><MousePointer2 size={14} /> {t(exerciseConfig.instruction)}</p>
       </aside>
     </section>
   )

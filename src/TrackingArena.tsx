@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
 import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS } from './calibration'
+import { useI18n } from './i18n'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -116,6 +117,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, isComplete, hud, onStart, onReset, onShowResults, onMetrics, onRoundComplete },
   ref,
 ) {
+  const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
   const activeRef = useRef(active)
@@ -417,37 +419,37 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       {active && (
         <div className="arena-hud" aria-live="polite">
           <div className="arena-hud-metrics">
-            <div><span>Precisão</span><strong>{hud.accuracy}<small>%</small></strong></div>
-            <div><span>Erro médio</span><strong>{hud.meanError}<small>px</small></strong></div>
-            <div><span>Sensi em teste</span><strong>{hud.sensitivity}</strong></div>
-            <div><span>Tempo</span><strong>{hud.remaining}<small>s</small></strong></div>
+            <div><span>{t('common.accuracy')}</span><strong>{hud.accuracy}<small>%</small></strong></div>
+            <div><span>{t('common.meanError')}</span><strong>{hud.meanError}<small>px</small></strong></div>
+            <div><span>{t('arena.testSensitivity')}</span><strong>{hud.sensitivity}</strong></div>
+            <div><span>{t('common.time')}</span><strong>{hud.remaining}<small>s</small></strong></div>
           </div>
           <div className="arena-hud-round">
-            <span>Rodada atual</span>
+            <span>{t('arena.currentRound')}</span>
             <strong>{hud.round}<small>/ {hud.totalRounds}</small></strong>
           </div>
         </div>
       )}
       {!active && (
         <div className="arena-prompt">
-          <span>{isComplete ? 'Calibração concluída' : hasResults ? 'Rodada concluída' : 'Tudo pronto para calibrar'}</span>
-          <small>{isComplete ? 'As cinco rodadas foram registradas.' : hasResults ? 'Continue quando estiver preparado.' : 'Inicie o teste para preparar a primeira rodada.'}</small>
+          <span>{isComplete ? t('arena.calibrationComplete') : hasResults ? t('arena.roundComplete') : t('arena.ready')}</span>
+          <small>{isComplete ? t('arena.fiveRounds') : hasResults ? t('arena.continueReady') : t('arena.startHint')}</small>
           <div className="arena-controls">
-            <button className="secondary-button" onClick={onReset}><RotateCcw size={16} /> Reiniciar</button>
+            <button className="secondary-button" onClick={onReset}><RotateCcw size={16} /> {t('common.restart')}</button>
             {isComplete
-              ? <button className="primary-button" onClick={onShowResults}>Ver resultado</button>
-              : <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? 'Próxima rodada' : 'Iniciar teste'}</button>}
+              ? <button className="primary-button" onClick={onShowResults}>{t('arena.viewResult')}</button>
+              : <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? t('arena.nextRound') : t('arena.startTest')}</button>}
           </div>
         </div>
       )}
       {active && !scoring && (
         <div className="arena-phase-overlay">
           <strong>{countdownLabel}</strong>
-          <span>A rodada ainda não está pontuando</span>
+          <span>{t('arena.notScoring')}</span>
         </div>
       )}
       {active && !pointerLocked && (
-        <button className="lock-prompt" onClick={() => requestCanvasPointerLock(canvasRef.current)}>Clique para travar o cursor</button>
+        <button className="lock-prompt" onClick={() => requestCanvasPointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>
       )}
     </div>
   )

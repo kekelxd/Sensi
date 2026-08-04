@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Keyboard, Mouse, RotateCcw } from 'lucide-react'
 import { pressInput, releaseInput } from './inputState'
+import { useI18n, type TranslationKey } from './i18n'
 
 const BUTTONS = [
-  { code: 0, mask: 1, label: 'Esquerdo', short: 'LMB' },
-  { code: 1, mask: 4, label: 'Scroll', short: 'MMB' },
-  { code: 2, mask: 2, label: 'Direito', short: 'RMB' },
-  { code: 3, mask: 8, label: 'Voltar', short: 'M4' },
-  { code: 4, mask: 16, label: 'Avançar', short: 'M5' },
+  { code: 0, mask: 1, label: 'mouse.left' as TranslationKey, short: 'LMB' },
+  { code: 1, mask: 4, label: 'mouse.middle' as TranslationKey, short: 'MMB' },
+  { code: 2, mask: 2, label: 'mouse.right' as TranslationKey, short: 'RMB' },
+  { code: 3, mask: 8, label: 'mouse.back' as TranslationKey, short: 'M4' },
+  { code: 4, mask: 16, label: 'mouse.forward' as TranslationKey, short: 'M5' },
 ]
 
 type KeyboardKey = { code: string, label: string, width?: number }
@@ -54,6 +55,7 @@ type TestDevice = 'mouse' | 'keyboard'
 type WheelDirection = 'up' | 'down' | null
 
 export function MouseButtonTest() {
+  const { t } = useI18n()
   const zoneRef = useRef<HTMLDivElement>(null)
   const wheelTimerRef = useRef<number | null>(null)
   const mousePressedRef = useRef<Set<number>>(new Set())
@@ -175,9 +177,9 @@ export function MouseButtonTest() {
     zoneRef.current?.focus({ preventScroll: true })
   }
 
-  const mouseLabels = BUTTONS.filter((button) => mousePressed.has(button.code)).map((button) => button.label)
-  if (wheelDirection) mouseLabels.push(wheelDirection === 'up' ? 'Scroll para cima' : 'Scroll para baixo')
-  const keyboardLabels = [...keyboardPressed].map((code) => KEY_LABELS.get(code) ?? code)
+  const mouseLabels = BUTTONS.filter((button) => mousePressed.has(button.code)).map((button) => t(button.label))
+  if (wheelDirection) mouseLabels.push(wheelDirection === 'up' ? t('buttons.scrollUp') : t('buttons.scrollDown'))
+  const keyboardLabels = [...keyboardPressed].map((code) => code === 'Space' ? t('key.space') : KEY_LABELS.get(code) ?? code)
   const activeLabels = device === 'mouse' ? mouseLabels : keyboardLabels
   const keyboardTotal = Object.values(keyboardCounts).reduce((total, count) => total + count, 0)
   const testedKeys = Object.values(keyboardCounts).filter((count) => count > 0).length
@@ -185,12 +187,12 @@ export function MouseButtonTest() {
   return (
     <section className="button-test-workspace">
       <div className="button-test-heading">
-        <div className="panel-label">{device === 'mouse' ? <Mouse size={15} /> : <Keyboard size={15} />} Diagnóstico de entrada</div>
-        <h1>Teste de mouse e teclado</h1>
-        <p>Selecione o dispositivo e pressione uma ou várias entradas ao mesmo tempo para conferir o acionamento.</p>
-        <div className="input-device-toggle" role="tablist" aria-label="Dispositivo para teste">
-          <button type="button" role="tab" aria-selected={device === 'mouse'} className={device === 'mouse' ? 'active' : ''} onClick={() => selectDevice('mouse')}><Mouse size={16} /> Mouse</button>
-          <button type="button" role="tab" aria-selected={device === 'keyboard'} className={device === 'keyboard' ? 'active' : ''} onClick={() => selectDevice('keyboard')}><Keyboard size={16} /> Teclado</button>
+        <div className="panel-label">{device === 'mouse' ? <Mouse size={15} /> : <Keyboard size={15} />} {t('buttons.diagnostics')}</div>
+        <h1>{t('buttons.title')}</h1>
+        <p>{t('buttons.subtitle')}</p>
+        <div className="input-device-toggle" role="tablist" aria-label={t('buttons.device')}>
+          <button type="button" role="tab" aria-selected={device === 'mouse'} className={device === 'mouse' ? 'active' : ''} onClick={() => selectDevice('mouse')}><Mouse size={16} /> {t('buttons.mouse')}</button>
+          <button type="button" role="tab" aria-selected={device === 'keyboard'} className={device === 'keyboard' ? 'active' : ''} onClick={() => selectDevice('keyboard')}><Keyboard size={16} /> {t('buttons.keyboard')}</button>
         </div>
       </div>
 
@@ -198,7 +200,7 @@ export function MouseButtonTest() {
         ref={zoneRef}
         className={device === 'keyboard' ? 'button-test-zone keyboard-test-zone' : 'button-test-zone'}
         tabIndex={0}
-        aria-label={device === 'mouse' ? 'Área de teste dos botões do mouse' : 'Área de teste das teclas'}
+        aria-label={device === 'mouse' ? t('buttons.mouseArea') : t('buttons.keyboardArea')}
         onMouseDown={() => device === 'keyboard' && zoneRef.current?.focus({ preventScroll: true })}
       >
         {device === 'mouse' ? (
@@ -220,7 +222,7 @@ export function MouseButtonTest() {
               <div className="keyboard-row" key={rowIndex}>
                 {row.map((key) => (
                   <div key={key.code} className={keyboardPressed.has(key.code) ? 'keyboard-key active' : 'keyboard-key'} style={{ '--key-width': key.width ?? 1 } as CSSProperties}>
-                    <span>{key.label}</span>
+                    <span>{key.code === 'Space' ? t('key.space') : key.label}</span>
                     {keyboardCounts[key.code] > 0 && <small>{keyboardCounts[key.code]}</small>}
                   </div>
                 ))}
@@ -230,8 +232,8 @@ export function MouseButtonTest() {
         )}
 
         <div className={activeLabels.length ? 'pressed-status active' : 'pressed-status'}>
-          <span>{activeLabels.length ? 'Pressionado agora' : 'Aguardando entrada'}</span>
-          <strong>{activeLabels.join(' + ') || (device === 'mouse' ? 'Clique ou role o mouse' : 'Pressione qualquer tecla')}</strong>
+          <span>{activeLabels.length ? t('buttons.pressedNow') : t('buttons.waiting')}</span>
+          <strong>{activeLabels.join(' + ') || (device === 'mouse' ? t('buttons.mousePrompt') : t('buttons.keyboardPrompt'))}</strong>
         </div>
       </div>
 
@@ -239,20 +241,20 @@ export function MouseButtonTest() {
         <div className="button-counters">
           {BUTTONS.map((button) => (
             <div key={button.code} className={mousePressed.has(button.code) ? 'active' : ''}>
-              <span>{button.short}</span><strong>{mouseCounts[button.code] ?? 0}</strong><small>{button.label}</small>
+              <span>{button.short}</span><strong>{mouseCounts[button.code] ?? 0}</strong><small>{t(button.label)}</small>
             </div>
           ))}
-          <div className={wheelDirection ? 'active' : ''}><span>WHEEL</span><strong>{wheelCounts.up + wheelCounts.down}</strong><small>Rolagens</small></div>
+          <div className={wheelDirection ? 'active' : ''}><span>WHEEL</span><strong>{wheelCounts.up + wheelCounts.down}</strong><small>{t('buttons.scrolls')}</small></div>
         </div>
       ) : (
         <div className="button-counters keyboard-counters">
-          <div><span>COBERTURA</span><strong>{testedKeys}</strong><small>Teclas testadas</small></div>
-          <div><span>ACIONAMENTOS</span><strong>{keyboardTotal}</strong><small>Total registrado</small></div>
-          <div className={keyboardPressed.size > 1 ? 'active' : ''}><span>SIMULTÂNEAS</span><strong>{keyboardPressed.size}</strong><small>Pressionadas agora</small></div>
+          <div><span>{t('buttons.coverage')}</span><strong>{testedKeys}</strong><small>{t('buttons.keysTested')}</small></div>
+          <div><span>{t('buttons.actions')}</span><strong>{keyboardTotal}</strong><small>{t('buttons.totalRecorded')}</small></div>
+          <div className={keyboardPressed.size > 1 ? 'active' : ''}><span>{t('buttons.simultaneous')}</span><strong>{keyboardPressed.size}</strong><small>{t('buttons.pressedCount')}</small></div>
         </div>
       )}
 
-      <button className="secondary-button button-test-reset" onClick={reset}><RotateCcw size={16} /> Zerar contadores</button>
+      <button className="secondary-button button-test-reset" onClick={reset}><RotateCcw size={16} /> {t('buttons.reset')}</button>
     </section>
   )
 }

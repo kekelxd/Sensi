@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
@@ -8,26 +8,17 @@ import { SensitivityConverter } from './SensitivityConverter'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 import { Warmup } from './Warmup'
+import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
 type AppView = 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
 
-const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
-  { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
-  { id: 'dot', label: 'Bolinha', description: 'Ponto central limpo', icon: Dot },
-  { id: 'circle', label: 'Circular', description: 'Anel com ponto central', icon: Circle },
-  { id: 'plus', label: 'Cruz cheia', description: 'Mira compacta e direta', icon: Plus },
+const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
+  { id: 'classic', label: 'crosshair.classic', description: 'crosshair.classicDescription', icon: Crosshair },
+  { id: 'dot', label: 'crosshair.dot', description: 'crosshair.dotDescription', icon: Dot },
+  { id: 'circle', label: 'crosshair.circle', description: 'crosshair.circleDescription', icon: Circle },
+  { id: 'plus', label: 'crosshair.plus', description: 'crosshair.plusDescription', icon: Plus },
 ]
-
-const SPEED_LABEL: Record<TargetSpeedMode, string> = {
-  normal: 'Normal',
-  fast: 'Rápido',
-}
-
-const SPEED_BADGE: Record<TargetSpeedMode, string> = {
-  normal: 'Normal',
-  fast: 'Rápida',
-}
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
 
@@ -47,6 +38,7 @@ function Metric({ label, value, suffix, tone }: { label: string, value: string, 
 }
 
 function App() {
+  const { locale, setLocale, t } = useI18n()
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
   const [view, setView] = useState<AppView>('warmup')
@@ -220,30 +212,36 @@ function App() {
   return (
     <main className={view === 'calibration' ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
-        <nav className="app-tabs" aria-label="Ferramentas do $ENSI">
-          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> Aquecimento</button>
-          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração Sensi</button>
-          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> Conversor</button>
+        <nav className="app-tabs" aria-label="$ENSI">
+          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
+          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
+          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
           <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
-          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /> Teste de botões</button>
+          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /> {t('nav.buttons')}</button>
         </nav>
         <div className="brand"><span>$</span>ENSI</div>
         <div className="header-actions">
+          <label className="language-switcher" aria-label={t('language.selector')}>
+            <Languages size={15} />
+            <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)} aria-label={t('language.selector')}>
+              <option value="pt">Português</option><option value="en">English</option><option value="es">Español</option>
+            </select>
+          </label>
           {view === 'calibration' ? (
             <>
-              <span>{results.length}/{totalRounds} rodadas</span>
-              <button className="icon-button" onClick={openSetup} aria-label="Abrir configurações"><Settings2 size={17} /></button>
+              <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
+              <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')}><Settings2 size={17} /></button>
             </>
-          ) : <span>{view === 'warmup' ? 'Treino de mira' : view === 'converter' ? 'Conversão 360°' : view === 'buttons' ? 'Diagnóstico de entrada' : 'Diagnóstico do mouse'}</span>}
+          ) : <span>{view === 'warmup' ? t('header.aimTraining') : view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
       </header>
 
       {view === 'warmup' ? <Warmup /> : view === 'calibration' ? <><section className="workspace">
         <aside className="metrics-rail">
-          <div className="rail-heading"><Activity size={15} /> Ao vivo</div>
-          <Metric label="Precisão" value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
-          <Metric label="Erro médio" value={format(metrics.meanError)} suffix="px" />
-          <Metric label="Suavidade" value={format(metrics.smoothness)} suffix="%" />
+          <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
+          <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
+          <Metric label={t('common.meanError')} value={format(metrics.meanError)} suffix="px" />
+          <Metric label={t('common.smoothness')} value={format(metrics.smoothness)} suffix="%" />
         </aside>
 
         <TrackingArena
@@ -278,13 +276,13 @@ function App() {
 
         <aside className="round-panel">
           <div>
-            <div className="panel-label">Rodada {Math.min(round + 1, totalRounds)} de {totalRounds}</div>
+            <div className="panel-label">{t('calibration.roundOf', { round: Math.min(round + 1, totalRounds), total: totalRounds })}</div>
             <div className="round-progress"><i style={{ width: `${((round + (tracking ? 0.5 : 0)) / totalRounds) * 100}%` }} /></div>
           </div>
           <div className="test-value">
-            <span>Sensibilidade em teste</span>
+            <span>{t('calibration.testSensitivity')}</span>
             <strong>{format(displayedCandidate, 3)}</strong>
-            <small>{GAME_BY_ID[confirmedGame].label} · {format(multiplier, 2)}× · Velocidade {SPEED_BADGE[speedMode]}</small>
+            <small>{GAME_BY_ID[confirmedGame].label} · {format(multiplier, 2)}× · {t('calibration.speed', { speed: speedMode === 'normal' ? t('calibration.normal') : t('calibration.fastBadge') })}</small>
           </div>
           <div className={phase === 'countdown' ? 'timer countdown-timer' : 'timer'}>
             {phase === 'countdown' ? countdown : active ? format(remaining, 1) : format(ROUND_DURATION, 1)}
@@ -292,10 +290,10 @@ function App() {
           </div>
           <p>
             {phase === 'countdown'
-              ? 'Prepare a mão. A rodada ainda não pontua.'
+              ? t('calibration.prepareHand')
               : phase === 'warmup'
-                ? 'A bolinha já está em movimento. Use este segundo para encaixar o tracking.'
-                : 'Faça movimentos naturais. A bolinha segue velocidade fixa com mudanças aleatórias de direção.'}
+                ? t('calibration.warmup')
+                : t('calibration.guidance')}
           </p>
           <div className="candidate-list">
             {ROUND_MULTIPLIERS.map((value, index) => {
@@ -311,9 +309,9 @@ function App() {
       </section>
 
       <footer>
-        <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Tracking ativo · se soltar, clique na arena' : `Base: ${GAME_BY_ID[confirmedGame].label}`}</div>
+        <div className="footer-status"><MousePointer2 size={16} /> {active ? t('calibration.trackingActive') : t('calibration.base', { game: GAME_BY_ID[confirmedGame].label })}</div>
         <div className="controls">
-          {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
+          {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? t('calibration.resume') : t('calibration.pause')}</button>}
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
       </footer></> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
@@ -321,12 +319,12 @@ function App() {
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
           <section className="modal setup-modal">
-            <button className="modal-close" onClick={closeSetup}><X size={18} /></button>
+            <button className="modal-close" onClick={closeSetup} aria-label={t('common.close')}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
-            <h2>Configurar antes do teste</h2>
-            <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa {totalRounds} rodadas de {ROUND_DURATION} segundos para calibrar a mira.</p>
+            <h2>{t('calibration.setupTitle')}</h2>
+            <p>{t('calibration.setupDescription', { rounds: totalRounds, seconds: ROUND_DURATION })}</p>
 
-            <div className="option-group game-grid" role="radiogroup" aria-label="Jogo de referência">
+            <div className="option-group game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
               {GAMES.map((game) => (
                 <button
                   key={game.id}
@@ -344,10 +342,10 @@ function App() {
 
             <div className="setup-fields">
               <label>
-                Sensibilidade atual no {selectedGameConfig.label}
+                {t('calibration.currentSensitivity', { game: selectedGameConfig.label })}
                 <input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} />
               </label>
-              <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+              <label>{t('common.mouseDpi')}<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
             </div>
 
             <div className="option-group mode-group" role="radiogroup" aria-label="Velocidade da bolinha">
@@ -358,29 +356,29 @@ function App() {
                   onClick={() => setSelectedSpeedMode(mode)}
                   type="button"
                 >
-                  <span>{SPEED_LABEL[mode]}</span>
-                  <small>{mode === 'normal' ? 'Velocidade equilibrada para calibração padrão' : 'Bolinha mais rápida para tracking mais exigente'}</small>
+                  <span>{mode === 'normal' ? t('calibration.normal') : t('calibration.fast')}</span>
+                  <small>{mode === 'normal' ? t('calibration.normalDescription') : t('calibration.fastDescription')}</small>
                 </button>
               ))}
             </div>
 
-            <div className="crosshair-picker" role="radiogroup" aria-label="Tipo de mira">
+            <div className="crosshair-picker" role="radiogroup" aria-label={t('calibration.crosshairType')}>
               {CROSSHAIRS.map((item) => {
                 const Icon = item.icon
                 return (
                   <button key={item.id} className={selectedCrosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setSelectedCrosshair(item.id)} type="button">
                     <Icon size={18} />
-                    <span>{item.label}</span>
-                    <small>{item.description}</small>
+                    <span>{t(item.label)}</span>
+                    <small>{t(item.description)}</small>
                   </button>
                 )
               })}
             </div>
 
             <div className="conversion single-conversion">
-              <span>Sensibilidade base em {selectedGameConfig.shortLabel} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
+              <span>{t('calibration.baseSensitivity', { game: selectedGameConfig.shortLabel })} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
             </div>
-            <button className="primary-button wide" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? 'Salvar e iniciar teste' : 'Salvar configuração'}</button>
+            <button className="primary-button wide" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>
           </section>
         </div>
       )}
@@ -388,11 +386,11 @@ function App() {
       {view === 'calibration' && resultOpen && (
         <div className="modal-backdrop">
           <section className="modal result-modal">
-            <button className="modal-close" onClick={() => setResultOpen(false)}><X size={18} /></button>
+            <button className="modal-close" onClick={() => setResultOpen(false)} aria-label={t('common.close')}><X size={18} /></button>
             <Target size={24} className="modal-icon" />
-            <div className="panel-label">Resultado</div>
-            <h2>Sensibilidade recomendada</h2>
-            <p>Seu melhor equilíbrio entre precisão, controle e suavidade apareceu em <b>{format(recommendation, 2)}×</b> da configuração inicial com velocidade {SPEED_BADGE[speedMode]}.</p>
+            <div className="panel-label">{t('common.result')}</div>
+            <h2>{t('calibration.resultTitle')}</h2>
+            <p>{t('calibration.resultDescription', { multiplier: format(recommendation, 2), speed: speedMode === 'normal' ? t('calibration.normal') : t('calibration.fastBadge') })}</p>
             <div className="recommendations single-recommendation">
               <div><span>{GAME_BY_ID[confirmedGame].label}</span><strong>{format(recommendedSelected, 3)}</strong></div>
             </div>
@@ -401,8 +399,8 @@ function App() {
                 <div key={`${index}-${result.multiplier}`}><span>{format(result.multiplier, 2)}×</span><i><b style={{ width: `${result.score}%` }} /></i><strong>{format(result.score)}</strong></div>
               ))}
             </div>
-            <small className="disclaimer">Estimativa baseada nesta sessão. Valide a recomendação no campo de treino do jogo antes de competir.</small>
-            <button className="primary-button wide" onClick={reset}>Refazer calibração</button>
+            <small className="disclaimer">{t('calibration.disclaimer')}</small>
+            <button className="primary-button wide" onClick={reset}>{t('calibration.redo')}</button>
           </section>
         </div>
       )}

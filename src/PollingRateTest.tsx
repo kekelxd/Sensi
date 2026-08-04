@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Gauge, MousePointer2, Play, RotateCcw, ShieldCheck, Zap } from 'lucide-react'
+import { useI18n } from './i18n'
 
 const TEST_DURATION = 8
 const STANDARD_RATES = [125, 250, 500, 1000, 2000, 4000, 8000]
@@ -56,6 +57,7 @@ function calculateStats(intervals: number[]): PollingStats {
 }
 
 export function PollingRateTest() {
+  const { localeTag, t } = useI18n()
   const zoneRef = useRef<HTMLDivElement>(null)
   const intervalsRef = useRef<number[]>([])
   const lastTimestampRef = useRef(0)
@@ -136,12 +138,12 @@ export function PollingRateTest() {
   return (
     <section className="polling-workspace">
       <aside className="polling-info">
-        <div className="rail-heading"><Gauge size={15} /> Diagnóstico</div>
-        <h2>Teste de polling rate</h2>
-        <p>Meça a frequência com que o navegador recebe atualizações do seu mouse.</p>
-        <div className="polling-tip"><MousePointer2 size={17} /><span>Faça movimentos rápidos e circulares durante os 8 segundos.</span></div>
-        <div className="polling-tip"><ShieldCheck size={17} /><span>Feche programas pesados para reduzir interferências no resultado.</span></div>
-        <small>{supportsRawInput ? 'Entrada bruta suportada neste navegador.' : 'Usando modo compatível. Para maior precisão, prefira Chrome ou Edge.'}</small>
+        <div className="rail-heading"><Gauge size={15} /> {t('polling.diagnostics')}</div>
+        <h2>{t('polling.title')}</h2>
+        <p>{t('polling.subtitle')}</p>
+        <div className="polling-tip"><MousePointer2 size={17} /><span>{t('polling.moveTip')}</span></div>
+        <div className="polling-tip"><ShieldCheck size={17} /><span>{t('polling.performanceTip')}</span></div>
+        <small>{supportsRawInput ? t('polling.rawSupported') : t('polling.compatibleMode')}</small>
       </aside>
 
       <div
@@ -151,33 +153,33 @@ export function PollingRateTest() {
       >
         <div className="polling-grid" />
         <div className="polling-center">
-          <div className="polling-kicker"><Zap size={14} /> {status === 'running' ? 'MEDINDO AGORA' : status === 'done' ? 'TESTE CONCLUÍDO' : 'PRONTO PARA MEDIR'}</div>
-          <strong>{displayedRate ? Math.round(displayedRate).toLocaleString('pt-BR') : '--'}</strong>
-          <span>{status === 'done' ? 'Hz prováveis' : 'Hz observados'}</span>
-          {status === 'done' && stats.measured > 0 && <div className="polling-observed">{Math.round(stats.measured).toLocaleString('pt-BR')} Hz observados pelo navegador</div>}
+          <div className="polling-kicker"><Zap size={14} /> {status === 'running' ? t('polling.measuring') : status === 'done' ? t('polling.complete') : t('polling.ready')}</div>
+          <strong>{displayedRate ? Math.round(displayedRate).toLocaleString(localeTag) : '--'}</strong>
+          <span>{status === 'done' ? t('polling.probableHz') : t('polling.observedHz')}</span>
+          {status === 'done' && stats.measured > 0 && <div className="polling-observed">{Math.round(stats.measured).toLocaleString(localeTag)} {t('polling.observedHz')}</div>}
           <div className="polling-progress"><i style={{ width: `${progress}%` }} /></div>
-          <div className="polling-time">{status === 'running' ? `${remaining.toFixed(1)}s restantes` : status === 'done' ? `${stats.samples.toLocaleString('pt-BR')} amostras válidas` : `${TEST_DURATION} segundos de teste`}</div>
+          <div className="polling-time">{status === 'running' ? t('polling.remaining', { seconds: remaining.toFixed(1) }) : status === 'done' ? t('polling.samples', { samples: stats.samples.toLocaleString(localeTag) }) : t('polling.duration', { seconds: TEST_DURATION })}</div>
           <div className="polling-actions">
-            {status !== 'idle' && <button className="secondary-button" onClick={resetTest}><RotateCcw size={16} /> Reiniciar</button>}
-            {status !== 'running' && <button className="primary-button" onClick={startTest}><Play size={17} /> {status === 'done' ? 'Testar novamente' : 'Iniciar teste'}</button>}
+            {status !== 'idle' && <button className="secondary-button" onClick={resetTest}><RotateCcw size={16} /> {t('common.restart')}</button>}
+            {status !== 'running' && <button className="primary-button" onClick={startTest}><Play size={17} /> {status === 'done' ? t('polling.testAgain') : t('polling.start')}</button>}
           </div>
         </div>
       </div>
 
       <aside className="polling-results">
-        <div className="panel-label">Resultado</div>
+        <div className="panel-label">{t('common.result')}</div>
         <div className="polling-primary-result">
-          <span>Taxa observada</span>
-          <strong>{stats.measured ? Math.round(stats.measured).toLocaleString('pt-BR') : '--'}<small>Hz</small></strong>
+          <span>{t('polling.observedHz')}</span>
+          <strong>{stats.measured ? Math.round(stats.measured).toLocaleString(localeTag) : '--'}<small>Hz</small></strong>
         </div>
-        <div className="polling-result-row"><span>Polling rate provável</span><b>{stats.classified ? stats.classified.toLocaleString('pt-BR') : '--'} Hz</b></div>
-        <div className="polling-result-row"><span>Pico observado</span><b>{stats.peak ? Math.round(stats.peak).toLocaleString('pt-BR') : '--'} Hz</b></div>
-        <div className="polling-result-row"><span>Estabilidade</span><b>{stats.samples ? `${stats.stability.toFixed(0)}%` : '--'}</b></div>
-        <div className="polling-result-row"><span>Amostras</span><b>{stats.samples.toLocaleString('pt-BR')}</b></div>
+        <div className="polling-result-row"><span>{t('polling.probableRate')}</span><b>{stats.classified ? stats.classified.toLocaleString(localeTag) : '--'} Hz</b></div>
+        <div className="polling-result-row"><span>{t('polling.observedPeak')}</span><b>{stats.peak ? Math.round(stats.peak).toLocaleString(localeTag) : '--'} Hz</b></div>
+        <div className="polling-result-row"><span>{t('common.stability')}</span><b>{stats.samples ? `${stats.stability.toFixed(0)}%` : '--'}</b></div>
+        <div className="polling-result-row"><span>{t('common.samples')}</span><b>{stats.samples.toLocaleString(localeTag)}</b></div>
         <div className="rate-scale">
           {STANDARD_RATES.map((rate) => <i key={rate} className={stats.classified === rate ? 'selected' : ''}><span>{rate >= 1000 ? `${rate / 1000}K` : rate}</span></i>)}
         </div>
-        <p className="polling-disclaimer">Resultado estimado pelos eventos entregues ao navegador. Sistema operacional, carga da CPU e agrupamento de eventos podem alterar a medição, especialmente em 4K e 8K.</p>
+        <p className="polling-disclaimer">{t('polling.disclaimer')}</p>
       </aside>
     </section>
   )
