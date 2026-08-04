@@ -112,23 +112,18 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .modal-close:disabled { opacity: .35; cursor: not-allowed; }
 .setup-modal { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; }
 .option-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.game-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
 .choice-card, .crosshair-option { text-align: left; border: 1px solid var(--line); color: #dcdad4; background: #0b0e13; border-radius: 10px; transition: border-color .18s, background .18s, transform .18s; }
 .choice-card { padding: 14px; }
-.game-choice { min-height: 104px; padding: 0; overflow: hidden; }
-.game-logo { position: relative; height: 67px; display: flex; align-items: center; justify-content: center; gap: 4px; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,.06); color: #f4f1ea; background: linear-gradient(135deg, #171c24, #0c1016); }
-.game-logo::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,114,81,.09)); }
-.game-logo strong { position: relative; z-index: 1; font-size: 17px; font-weight: 800; letter-spacing: .08em; line-height: 1; }
-.game-logo em { position: relative; z-index: 1; color: var(--accent); font: 800 24px Manrope, sans-serif; line-height: 1; }
-.game-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; opacity: .32; filter: saturate(.72) contrast(1.15); }
-.game-card-name { padding: 11px 12px; text-align: left; }
-.game-logo-cs2 strong { font-size: 22px; letter-spacing: -.04em; }
-.game-logo-valorant strong { letter-spacing: .16em; transform: skewX(-7deg); }
-.game-logo-overwatch2 strong { letter-spacing: -.02em; }
-.game-logo-fortnite strong { font-size: 20px; letter-spacing: -.05em; transform: scaleY(1.08); }
-.game-logo-pubg strong { padding: 4px 7px; border: 2px solid var(--accent); color: var(--accent); letter-spacing: .05em; }
-.game-logo-battlefield6 strong { font-size: 15px; letter-spacing: .12em; }
-.game-logo-blackops7 strong { padding-left: 8px; border-left: 3px solid var(--accent); letter-spacing: .02em; }
-.game-logo-warzone strong { font-size: 20px; letter-spacing: -.03em; transform: scaleX(1.08); }
+.game-choice { position: relative; aspect-ratio: 1; min-height: 0; padding: 0; overflow: hidden; }
+.game-logo { position: absolute; inset: 0; overflow: hidden; background: #090c11; }
+.game-logo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.game-logo-valorant img, .game-logo-overwatch2 img, .game-logo-blackops7 img { object-fit: contain; padding: 18%; }
+.game-logo-valorant { background: #15171d; }
+.game-logo-overwatch2 { background: #11151b; }
+.game-logo-blackops7 { background: #090909; }
+.game-card-name { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 22px 8px 8px; color: #fff; background: linear-gradient(transparent, rgba(3,5,8,.92)); text-align: center; font-size: 9px !important; letter-spacing: .01em; }
+.game-choice.selected::after { content: ''; position: absolute; z-index: 3; inset: 4px; border: 1px solid rgba(255,114,81,.9); border-radius: 6px; pointer-events: none; }
 .choice-card span, .crosshair-option span { display: block; font-weight: 800; font-size: 12px; }
 .choice-card small, .crosshair-option small { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; margin-top: 5px; }
 .choice-card:hover, .crosshair-option:hover { border-color: rgba(255,114,81,.45); transform: translateY(-1px); }

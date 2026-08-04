@@ -271,7 +271,7 @@ function App() {
             <h2>Configurar antes do teste</h2>
             <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa {totalRounds} rodadas de {ROUND_DURATION} segundos para calibrar a mira.</p>
 
-            <div className="option-group" role="radiogroup" aria-label="Jogo de referência">
+            <div className="option-group game-grid" role="radiogroup" aria-label="Jogo de referência">
               {GAMES.map((game) => (
                 <button
                   key={game.id}
@@ -280,11 +280,9 @@ function App() {
                   type="button"
                 >
                   <div className={`game-logo game-logo-${game.id}`}>
-                    {game.id === 'cs2' && <img src="./game-logos/cs2-source.png" alt="" />}
-                    <strong>{game.logoText}</strong>
-                    {game.logoAccent && <em>{game.logoAccent}</em>}
+                    <img src={`./game-icons/${game.id}.png`} alt="" />
                   </div>
-                  <span className="game-card-name">{game.label}</span>
+                  <span className="game-card-name">{game.shortLabel}</span>
                 </button>
               ))}
             </div>
