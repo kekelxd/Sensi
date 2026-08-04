@@ -42,6 +42,8 @@ export type TrackingArenaHandle = {
 
 const ROUND_DURATION_MS = ROUND_DURATION * 1000
 const SAMPLE_INTERVAL_MS = 40
+const METRICS_UPDATE_INTERVAL_MS = 120
+const TARGET_TURN_RATE = 6
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
@@ -132,6 +134,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     targetY: 0,
     destinationX: 0,
     destinationY: 0,
+    directionX: 0,
+    directionY: 0,
     startTime: 0,
     lastFrame: 0,
     distances: [] as number[],
@@ -139,6 +143,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     lastAimX: 0,
     lastAimY: 0,
     lastSample: 0,
+    lastMetricsUpdate: 0,
     complete: false,
   })
 
@@ -235,22 +240,34 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           state.destinationY = destination.y
         }
 
-        const dx = state.destinationX - state.targetX
-        const dy = state.destinationY - state.targetY
-        const distanceToDestination = Math.hypot(dx, dy)
         const targetVelocity = Math.min(width, height) * 0.32 * targetSpeedRef.current
+        let dx = state.destinationX - state.targetX
+        let dy = state.destinationY - state.targetY
+        let distanceToDestination = Math.hypot(dx, dy)
 
-        if (distanceToDestination <= Math.max(8, targetVelocity * deltaSeconds)) {
-          state.targetX = state.destinationX
-          state.targetY = state.destinationY
+        if (distanceToDestination <= Math.max(radius * 0.65, targetVelocity * deltaSeconds * 2)) {
           const destination = getRandomTarget(width, height, radius)
           state.destinationX = destination.x
           state.destinationY = destination.y
-        } else {
-          const step = targetVelocity * deltaSeconds
-          state.targetX += dx / distanceToDestination * step
-          state.targetY += dy / distanceToDestination * step
+          dx = state.destinationX - state.targetX
+          dy = state.destinationY - state.targetY
+          distanceToDestination = Math.hypot(dx, dy)
         }
+
+        const desiredX = distanceToDestination ? dx / distanceToDestination : state.directionX
+        const desiredY = distanceToDestination ? dy / distanceToDestination : state.directionY
+        const turnBlend = 1 - Math.exp(-TARGET_TURN_RATE * deltaSeconds)
+        let directionX = state.directionX + (desiredX - state.directionX) * turnBlend
+        let directionY = state.directionY + (desiredY - state.directionY) * turnBlend
+        const directionLength = Math.hypot(directionX, directionY) || 1
+        directionX /= directionLength
+        directionY /= directionLength
+        state.directionX = directionX
+        state.directionY = directionY
+
+        const step = targetVelocity * deltaSeconds
+        state.targetX = clamp(state.targetX + directionX * step, radius, width - radius)
+        state.targetY = clamp(state.targetY + directionY * step, radius, height - radius)
 
         if (scoringRef.current && time - state.lastSample > SAMPLE_INTERVAL_MS) {
           const sampleSeconds = state.lastSample ? Math.max(0.001, (time - state.lastSample) / 1000) : SAMPLE_INTERVAL_MS / 1000
@@ -261,14 +278,17 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           state.lastAimX = state.aimX
           state.lastAimY = state.aimY
           state.lastSample = time
-          const recentDistances = state.distances.slice(-30)
-          const recentSpeeds = state.speeds.slice(-30)
-          const accuracy = recentDistances.filter((value) => value <= radius).length / recentDistances.length * 100
-          const meanError = recentDistances.reduce((sum, value) => sum + value, 0) / recentDistances.length
-          const changes = recentSpeeds.slice(1).map((value, index) => Math.abs(value - recentSpeeds[index]))
-          const averageChange = changes.reduce((sum, value) => sum + value, 0) / Math.max(1, changes.length)
-          const smoothness = Math.max(0, 100 * (1 - averageChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
-          onMetricsRef.current({ accuracy, meanError, smoothness })
+          if (time - state.lastMetricsUpdate >= METRICS_UPDATE_INTERVAL_MS) {
+            const recentDistances = state.distances.slice(-30)
+            const recentSpeeds = state.speeds.slice(-30)
+            const accuracy = recentDistances.filter((value) => value <= radius).length / recentDistances.length * 100
+            const meanError = recentDistances.reduce((sum, value) => sum + value, 0) / recentDistances.length
+            const changes = recentSpeeds.slice(1).map((value, index) => Math.abs(value - recentSpeeds[index]))
+            const averageChange = changes.reduce((sum, value) => sum + value, 0) / Math.max(1, changes.length)
+            const smoothness = Math.max(0, 100 * (1 - averageChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
+            state.lastMetricsUpdate = time
+            onMetricsRef.current({ accuracy, meanError, smoothness })
+          }
         }
       }
 
@@ -313,11 +333,15 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const destination = getRandomTarget(width, height, radius)
       state.destinationX = destination.x
       state.destinationY = destination.y
+      const initialDistance = Math.hypot(destination.x - state.targetX, destination.y - state.targetY) || 1
+      state.directionX = (destination.x - state.targetX) / initialDistance
+      state.directionY = (destination.y - state.targetY) / initialDistance
       state.startTime = 0
       state.lastFrame = 0
       state.distances = []
       state.speeds = []
       state.lastSample = 0
+      state.lastMetricsUpdate = 0
       state.complete = false
       roundRemainingMsRef.current = ROUND_DURATION_MS
     }
@@ -331,6 +355,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.lastAimX = state.aimX
       state.lastAimY = state.aimY
       state.lastSample = 0
+      state.lastMetricsUpdate = 0
       state.complete = false
     }
   }, [scoring, multiplier])
