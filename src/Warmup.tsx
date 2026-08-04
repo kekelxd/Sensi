@@ -1,10 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Crosshair, Dot, Circle, Plus, Focus, Gauge, Grid3X3, MoveHorizontal, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, Zap, X, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, Focus, Gauge, Grid3X3, LogOut, MoveHorizontal, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, Zap, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
-import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
+import { calculateWarmupAccuracy, getNextWarmupDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 
@@ -17,14 +17,15 @@ type WarmupMetrics = {
 }
 
 type WarmupPhase = 'hub' | 'setup' | 'countdown' | 'playing' | 'result'
+type SetupStep = 1 | 2 | 3
 
-const EXERCISES: Array<{ id: WarmupExercise, name: TranslationKey, description: TranslationKey, instruction: TranslationKey, icon: LucideIcon }> = [
-  { id: 'switch', name: 'warmup.switch.name', description: 'warmup.switch.description', instruction: 'warmup.switch.instruction', icon: Focus },
-  { id: 'tracking', name: 'warmup.tracking.name', description: 'warmup.tracking.description', instruction: 'warmup.tracking.instruction', icon: Gauge },
-  { id: 'flick', name: 'warmup.flick.name', description: 'warmup.flick.description', instruction: 'warmup.flick.instruction', icon: Target },
-  { id: 'reflex', name: 'warmup.reflex.name', description: 'warmup.reflex.description', instruction: 'warmup.reflex.instruction', icon: Zap },
-  { id: 'gridshot', name: 'warmup.gridshot.name', description: 'warmup.gridshot.description', instruction: 'warmup.gridshot.instruction', icon: Grid3X3 },
-  { id: 'strafetrack', name: 'warmup.strafetrack.name', description: 'warmup.strafetrack.description', instruction: 'warmup.strafetrack.instruction', icon: MoveHorizontal },
+const EXERCISES: Array<{ id: WarmupExercise, name: string, description: TranslationKey, instruction: TranslationKey, icon: LucideIcon }> = [
+  { id: 'switch', name: 'Target Switch', description: 'warmup.switch.description', instruction: 'warmup.switch.instruction', icon: Focus },
+  { id: 'tracking', name: 'Tracking', description: 'warmup.tracking.description', instruction: 'warmup.tracking.instruction', icon: Gauge },
+  { id: 'flick', name: 'Target Shooting', description: 'warmup.flick.description', instruction: 'warmup.flick.instruction', icon: Target },
+  { id: 'reflex', name: 'Reflex', description: 'warmup.reflex.description', instruction: 'warmup.reflex.instruction', icon: Zap },
+  { id: 'gridshot', name: 'Gridshot', description: 'warmup.gridshot.description', instruction: 'warmup.gridshot.instruction', icon: Grid3X3 },
+  { id: 'strafetrack', name: 'Strafetrack', description: 'warmup.strafetrack.description', instruction: 'warmup.strafetrack.instruction', icon: MoveHorizontal },
 ]
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: LucideIcon }> = [
@@ -409,6 +410,7 @@ export function Warmup() {
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const [phase, setPhase] = useState<WarmupPhase>('hub')
+  const [setupStep, setSetupStep] = useState<SetupStep>(1)
   const [inputReady, setInputReady] = useState(false)
   const [exercise, setExercise] = useState<WarmupExercise>('switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
@@ -428,6 +430,7 @@ export function Warmup() {
   const normalizedSensitivity = parsedSensitivity === null ? null : normalizeSensitivity(parsedSensitivity, game)
   const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin, parsedDpi ?? 800)
   const exerciseConfig = EXERCISES.find((item) => item.id === exercise) ?? EXERCISES[0]
+  const nextDifficulty = getNextWarmupDifficulty(difficulty)
 
   useEffect(() => {
     if (phase !== 'countdown' || !inputReady) return
@@ -446,6 +449,7 @@ export function Warmup() {
 
   const openSetup = (nextExercise: WarmupExercise) => {
     setExercise(nextExercise)
+    setSetupStep(1)
     setPhase('setup')
   }
 
@@ -472,6 +476,25 @@ export function Warmup() {
     arenaRef.current?.requestPointerLock()
   }
 
+  const playNextRound = () => {
+    setDifficulty(nextDifficulty)
+    setInputReady(false)
+    setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
+    flushSync(() => {
+      setSessionId((value) => value + 1)
+      setPhase('countdown')
+    })
+    arenaRef.current?.requestPointerLock()
+  }
+
+  const exitToHub = () => {
+    document.exitPointerLock?.()
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+    setInputReady(false)
+    setCountdown(3)
+    setPhase('hub')
+  }
+
   if (phase === 'hub' || phase === 'setup' || phase === 'result') {
     return (
       <section className="warmup-workspace">
@@ -495,8 +518,8 @@ export function Warmup() {
                 onClick={() => openSetup(item.id)}
               >
                 <Icon size={26} />
-                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={t(item.name)} />}
-                <strong>{t(item.name)}</strong>
+                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={item.name} />}
+                <strong>{item.name}</strong>
                 <small>{t(item.description)}</small>
                 <i>{t('warmup.configure')} <Play size={13} /></i>
               </button>
@@ -507,35 +530,60 @@ export function Warmup() {
         {phase === 'setup' && (
           <div className="modal-backdrop">
             <section className="modal setup-modal warmup-setup-modal">
-              <button className="modal-close" onClick={() => setPhase('hub')} aria-label={t('common.close')}><X size={18} /></button>
+              <button className="modal-close" onClick={exitToHub} aria-label={t('common.close')}><X size={18} /></button>
               <Settings2 size={20} className="modal-icon" />
-              <h2>{t('warmup.configureExercise', { exercise: t(exerciseConfig.name) })}</h2>
-              <p>{t('warmup.sessionDuration', { description: t(exerciseConfig.description), seconds: WARMUP_DURATION })}</p>
-              <div className="option-group game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
-                {GAMES.map((item) => (
-                  <button key={item.id} className={selectedGame === item.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(item.id)} type="button">
-                    <div className={`game-logo game-logo-${item.id}`}><img src={`./game-icons/${item.iconFile ?? `${item.id}.png`}`} alt="" /></div>
-                    <span className="game-card-name">{item.shortLabel}</span>
-                  </button>
+              <h2>{t('warmup.configureExercise', { exercise: exerciseConfig.name })}</h2>
+              <p>{t(exerciseConfig.description)}</p>
+
+              <div className="warmup-stepper" aria-label={t('warmup.configure')}>
+                {([['warmup.stepGame', 1], ['warmup.stepSettings', 2], ['warmup.stepCrosshair', 3]] as Array<[TranslationKey, SetupStep]>).map(([label, step]) => (
+                  <div key={step} className={setupStep === step ? 'active' : setupStep > step ? 'complete' : ''}><i>{step}</i><span>{t(label)}</span></div>
                 ))}
               </div>
-              <div className="setup-fields">
-                <label>{t('calibration.currentSensitivity', { game: game.label })}<input type="text" inputMode="decimal" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} aria-invalid={parsedSensitivity === null} /></label>
-                <label>{t('common.mouseDpi')}<input type="text" inputMode="numeric" value={dpi} onChange={(event) => setDpi(event.target.value)} aria-invalid={parsedDpi === null} /></label>
+
+              <div className="warmup-step-content">
+                {setupStep === 1 && <>
+                  <h3>{t('warmup.chooseGame')}</h3>
+                  <div className="option-group game-grid warmup-game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
+                    {GAMES.map((item) => (
+                      <button key={item.id} className={selectedGame === item.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(item.id)} type="button">
+                        <div className={`game-logo game-logo-${item.id}`}><img src={`./game-icons/${item.iconFile ?? `${item.id}.png`}`} alt="" /></div>
+                        <span className="game-card-name">{item.shortLabel}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>}
+
+                {setupStep === 2 && <>
+                  <h3>{t('warmup.settingsTitle')}</h3>
+                  <div className="setup-fields">
+                    <label>{t('calibration.currentSensitivity', { game: game.label })}<input type="text" inputMode="decimal" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} aria-invalid={parsedSensitivity === null} /></label>
+                    <label>{t('common.mouseDpi')}<input type="text" inputMode="numeric" value={dpi} onChange={(event) => setDpi(event.target.value)} aria-invalid={parsedDpi === null} /></label>
+                  </div>
+                  <div className="warmup-config-label">{t('warmup.difficulty')}</div>
+                  <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
+                    {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).map((level) => (
+                      <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => setDifficulty(level)}>
+                        <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
+                      </button>
+                    ))}
+                  </div>
+                </>}
+
+                {setupStep === 3 && <>
+                  <h3>{t('warmup.crosshairTitle')}</h3>
+                  <div className="warmup-crosshairs" role="radiogroup" aria-label={t('calibration.crosshairType')}>
+                    {CROSSHAIRS.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} className={crosshair === item.id ? 'selected' : ''} onClick={() => setCrosshair(item.id)}><Icon size={16} /><span>{t(item.label)}</span></button> })}
+                  </div>
+                </>}
               </div>
-              <div className="warmup-config-label">{t('warmup.difficulty')}</div>
-              <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
-                {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).map((level) => (
-                  <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => setDifficulty(level)}>
-                    <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
-                  </button>
-                ))}
+
+              <div className="warmup-wizard-actions">
+                {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as SetupStep)}><ArrowLeft size={15} /> {t('warmup.back')}</button>}
+                {setupStep < 3
+                  ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as SetupStep)} disabled={setupStep === 2 && !validSetup}>{t('warmup.next')} <ArrowRight size={15} /></button>
+                  : <button className="primary-button" onClick={start} disabled={!validSetup}><Play size={15} /> {t('warmup.start')}</button>}
               </div>
-              <div className="warmup-config-label">{t('warmup.crosshair')}</div>
-              <div className="warmup-crosshairs" role="radiogroup" aria-label={t('calibration.crosshairType')}>
-                {CROSSHAIRS.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} className={crosshair === item.id ? 'selected' : ''} onClick={() => setCrosshair(item.id)}><Icon size={16} /><span>{t(item.label)}</span></button> })}
-              </div>
-              <button className="primary-button wide" onClick={start} disabled={!validSetup}>{t('warmup.start')}</button>
             </section>
           </div>
         )}
@@ -545,7 +593,7 @@ export function Warmup() {
             <section className="modal warmup-result-modal">
               <Sparkles size={22} className="modal-icon" />
               <div className="panel-label">{t('warmup.complete')}</div>
-              <h2>{t(exerciseConfig.name)}</h2>
+              <h2>{exerciseConfig.name}</h2>
               <p>{t(`difficulty.${difficulty}` as TranslationKey)} · {game.label} · {WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
               <div className="warmup-result-grid">
@@ -553,9 +601,15 @@ export function Warmup() {
                 <div><span>{isTrackingExercise(exercise) ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{isTrackingExercise(exercise) ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
                 <div><span>{t('warmup.difficulty')}</span><strong>{t(`difficulty.${difficulty}` as TranslationKey)}</strong></div>
               </div>
+              <div className="warmup-next-hint">
+                {difficulty === 'hard'
+                  ? t('warmup.keepHardHint')
+                  : t('warmup.nextLevelHint', { level: t(`difficulty.${nextDifficulty}` as TranslationKey) })}
+              </div>
               <div className="warmup-result-actions">
-                <button className="secondary-button" onClick={() => setPhase('hub')}><RotateCcw size={15} /> {t('warmup.chooseTraining')}</button>
-                <button className="primary-button" onClick={repeat}><Play size={15} /> {t('warmup.repeat')}</button>
+                <button className="secondary-button" onClick={exitToHub}><LogOut size={15} /> {t('warmup.exit')}</button>
+                <button className="secondary-button" onClick={repeat}><RotateCcw size={15} /> {t('warmup.repeat')}</button>
+                <button className="primary-button" onClick={playNextRound}>{t('warmup.nextRound')} <ArrowRight size={15} /></button>
               </div>
             </section>
           </div>
@@ -583,7 +637,7 @@ export function Warmup() {
         onPointerLockChange={setInputReady}
       />
       <aside className="warmup-side-panel">
-        <span>{t(exerciseConfig.name)}</span>
+        <span>{exerciseConfig.name}</span>
         <strong>{format(metrics.remaining, 1)}<small>s</small></strong>
         <div><span>{t('common.score')}</span><b>{metrics.score}</b></div>
         <div><span>{t('common.accuracy')}</span><b>{format(metrics.accuracy)}%</b></div>
