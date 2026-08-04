@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Circle, Crosshair, Dot, Gauge, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, VALORANT_RATIO } from './calibration'
+import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
 type Game = 'cs2' | 'valorant'
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'calibration' | 'polling'
+type AppView = 'calibration' | 'polling' | 'buttons'
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
   { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
@@ -52,8 +53,7 @@ function App() {
   const [paused, setPaused] = useState(false)
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
-  const [setupOpen, setSetupOpen] = useState(true)
-  const [setupConfirmed, setSetupConfirmed] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
   const [selectedGame, setSelectedGame] = useState<Game>('cs2')
   const [sensitivityInput, setSensitivityInput] = useState(1)
@@ -120,7 +120,6 @@ function App() {
     setSensitivityInput(cleanSensitivity)
     setConfirmedGame(selectedGame)
     setBaseCS(toBaseCS(selectedGame, cleanSensitivity))
-    setSetupConfirmed(true)
     setSetupOpen(false)
   }
 
@@ -166,13 +165,14 @@ function App() {
   }
 
   return (
-    <main className={view === 'polling' ? 'app-shell polling-shell' : 'app-shell'}>
-      <header>
-        <div className="brand"><Crosshair size={20} /> SENSI</div>
-        <nav className="app-tabs" aria-label="Ferramentas do SENSI">
-          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração</button>
+    <main className={view === 'calibration' ? 'app-shell' : 'app-shell tool-shell'}>
+      <header className="app-header">
+        <nav className="app-tabs" aria-label="Ferramentas do $ENSI">
+          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração Sensi</button>
           <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
+          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /> Teste de botões</button>
         </nav>
+        <div className="brand"><span>$</span>ENSI</div>
         <div className="header-actions">
           {view === 'calibration' ? (
             <>
@@ -245,12 +245,12 @@ function App() {
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
-      </footer></> : <PollingRateTest />}
+      </footer></> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
           <section className="modal setup-modal">
-            <button className="modal-close" onClick={() => setSetupOpen(false)} disabled={!setupConfirmed}><X size={18} /></button>
+            <button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>Configurar antes do teste</h2>
             <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa {totalRounds} rodadas de {ROUND_DURATION} segundos para calibrar a mira.</p>
