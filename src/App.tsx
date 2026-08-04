@@ -229,7 +229,7 @@ function App() {
               <span>{results.length}/{totalRounds} rodadas</span>
               <button className="icon-button" onClick={openSetup} aria-label="Abrir configurações"><Settings2 size={17} /></button>
             </>
-          ) : <span>{view === 'converter' ? 'Conversão 360°' : 'Diagnóstico do mouse'}</span>}
+          ) : <span>{view === 'converter' ? 'Conversão 360°' : view === 'buttons' ? 'Diagnóstico de entrada' : 'Diagnóstico do mouse'}</span>}
         </div>
       </header>
 
