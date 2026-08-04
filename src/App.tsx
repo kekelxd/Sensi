@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
@@ -7,9 +7,10 @@ import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
+import { Warmup } from './Warmup'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'calibration' | 'converter' | 'polling' | 'buttons'
+type AppView = 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
   { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
@@ -48,7 +49,7 @@ function Metric({ label, value, suffix, tone }: { label: string, value: string, 
 function App() {
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
-  const [view, setView] = useState<AppView>('calibration')
+  const [view, setView] = useState<AppView>('warmup')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
   const [phase, setPhase] = useState<RoundPhase>('idle')
@@ -220,6 +221,7 @@ function App() {
     <main className={view === 'calibration' ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
         <nav className="app-tabs" aria-label="Ferramentas do $ENSI">
+          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> Aquecimento</button>
           <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração Sensi</button>
           <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> Conversor</button>
           <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
@@ -232,11 +234,11 @@ function App() {
               <span>{results.length}/{totalRounds} rodadas</span>
               <button className="icon-button" onClick={openSetup} aria-label="Abrir configurações"><Settings2 size={17} /></button>
             </>
-          ) : <span>{view === 'converter' ? 'Conversão 360°' : view === 'buttons' ? 'Diagnóstico de entrada' : 'Diagnóstico do mouse'}</span>}
+          ) : <span>{view === 'warmup' ? 'Treino de mira' : view === 'converter' ? 'Conversão 360°' : view === 'buttons' ? 'Diagnóstico de entrada' : 'Diagnóstico do mouse'}</span>}
         </div>
       </header>
 
-      {view === 'calibration' ? <><section className="workspace">
+      {view === 'warmup' ? <Warmup /> : view === 'calibration' ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> Ao vivo</div>
           <Metric label="Precisão" value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
