@@ -99,7 +99,6 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .primary-button:disabled { opacity: .45; cursor: not-allowed; }
 .secondary-button { color: #b9bdc4; background: var(--surface-2); border-color: var(--line); }
 .wide { width: 100%; margin-top: 18px; }
-.polling-shortcut { margin-top: 8px; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(3,5,8,.76); backdrop-filter: blur(10px); }
 .modal { width: min(460px, 100%); position: relative; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 28px; background: #11151c; box-shadow: 0 30px 90px rgba(0,0,0,.55); }
@@ -115,6 +114,21 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .option-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
 .choice-card, .crosshair-option { text-align: left; border: 1px solid var(--line); color: #dcdad4; background: #0b0e13; border-radius: 10px; transition: border-color .18s, background .18s, transform .18s; }
 .choice-card { padding: 14px; }
+.game-choice { min-height: 104px; padding: 0; overflow: hidden; }
+.game-logo { position: relative; height: 67px; display: flex; align-items: center; justify-content: center; gap: 4px; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,.06); color: #f4f1ea; background: linear-gradient(135deg, #171c24, #0c1016); }
+.game-logo::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255,114,81,.09)); }
+.game-logo strong { position: relative; z-index: 1; font-size: 17px; font-weight: 800; letter-spacing: .08em; line-height: 1; }
+.game-logo em { position: relative; z-index: 1; color: var(--accent); font: 800 24px Manrope, sans-serif; line-height: 1; }
+.game-logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; opacity: .32; filter: saturate(.72) contrast(1.15); }
+.game-card-name { padding: 11px 12px; text-align: left; }
+.game-logo-cs2 strong { font-size: 22px; letter-spacing: -.04em; }
+.game-logo-valorant strong { letter-spacing: .16em; transform: skewX(-7deg); }
+.game-logo-overwatch2 strong { letter-spacing: -.02em; }
+.game-logo-fortnite strong { font-size: 20px; letter-spacing: -.05em; transform: scaleY(1.08); }
+.game-logo-pubg strong { padding: 4px 7px; border: 2px solid var(--accent); color: var(--accent); letter-spacing: .05em; }
+.game-logo-battlefield6 strong { font-size: 15px; letter-spacing: .12em; }
+.game-logo-blackops7 strong { padding-left: 8px; border-left: 3px solid var(--accent); letter-spacing: .02em; }
+.game-logo-warzone strong { font-size: 20px; letter-spacing: -.03em; transform: scaleX(1.08); }
 .choice-card span, .crosshair-option span { display: block; font-weight: 800; font-size: 12px; }
 .choice-card small, .crosshair-option small { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; margin-top: 5px; }
 .choice-card:hover, .crosshair-option:hover { border-color: rgba(255,114,81,.45); transform: translateY(-1px); }

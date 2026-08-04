@@ -275,12 +275,16 @@ function App() {
               {GAMES.map((game) => (
                 <button
                   key={game.id}
-                  className={selectedGame === game.id ? 'choice-card selected' : 'choice-card'}
+                  className={selectedGame === game.id ? 'choice-card game-choice selected' : 'choice-card game-choice'}
                   onClick={() => setSelectedGame(game.id)}
                   type="button"
                 >
-                  <span>{game.label}</span>
-                  <small>Usar sensibilidade do {game.shortLabel}</small>
+                  <div className={`game-logo game-logo-${game.id}`}>
+                    {game.id === 'cs2' && <img src="./game-logos/cs2-source.png" alt="" />}
+                    <strong>{game.logoText}</strong>
+                    {game.logoAccent && <em>{game.logoAccent}</em>}
+                  </div>
+                  <span className="game-card-name">{game.label}</span>
                 </button>
               ))}
             </div>
@@ -322,7 +326,6 @@ function App() {
               <span>Sensibilidade base em {selectedGameConfig.shortLabel} <strong>{format(sensitivityInput, 3)}</strong></span>
             </div>
             <button className="primary-button wide" onClick={saveSetup}>{startAfterSetup ? 'Salvar e iniciar teste' : 'Salvar configuração'}</button>
-            <button className="secondary-button wide polling-shortcut" onClick={() => { closeSetup(); setView('polling') }}><Gauge size={16} /> Ir para teste de polling rate</button>
           </section>
         </div>
       )}
