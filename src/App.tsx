@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
@@ -8,10 +8,11 @@ import { SensitivityConverter } from './SensitivityConverter'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 import { Warmup } from './Warmup'
+import { Routine } from './Routine'
 import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
+type AppView = 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
 type CalibrationSetupStep = 1 | 2 | 3
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
@@ -42,7 +43,7 @@ function App() {
   const { locale, setLocale, t } = useI18n()
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
-  const [view, setView] = useState<AppView>('warmup')
+  const [view, setView] = useState<AppView>('routine')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
   const [phase, setPhase] = useState<RoundPhase>('idle')
@@ -220,6 +221,7 @@ function App() {
     <main className={view === 'calibration' ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
         <nav className="app-tabs" aria-label="$ENSI">
+          <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
           <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
           <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
           <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
@@ -239,11 +241,11 @@ function App() {
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
               <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')}><Settings2 size={17} /></button>
             </>
-          ) : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
+          ) : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
       </header>
 
-      {view === 'warmup' ? <Warmup /> : view === 'calibration' ? <><section className="workspace">
+      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />

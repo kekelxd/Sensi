@@ -1,14 +1,15 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, Focus, Gauge, Grid3X3, LogOut, MoveHorizontal, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, Zap, X, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
-import { calculateWarmupAccuracy, getNextWarmupDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
+import { calculateWarmupAccuracy, getAdaptiveDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
+import { EXERCISES } from './warmupExercises'
 
-type WarmupMetrics = {
+export type WarmupMetrics = {
   score: number
   accuracy: number
   hits: number
@@ -16,17 +17,8 @@ type WarmupMetrics = {
   remaining: number
 }
 
-type WarmupPhase = 'hub' | 'setup' | 'countdown' | 'playing' | 'result'
+export type WarmupPhase = 'hub' | 'setup' | 'countdown' | 'playing' | 'result'
 type SetupStep = 1 | 2 | 3
-
-const EXERCISES: Array<{ id: WarmupExercise, name: string, description: TranslationKey, instruction: TranslationKey, icon: LucideIcon }> = [
-  { id: 'switch', name: 'Target Switch', description: 'warmup.switch.description', instruction: 'warmup.switch.instruction', icon: Focus },
-  { id: 'tracking', name: 'Tracking', description: 'warmup.tracking.description', instruction: 'warmup.tracking.instruction', icon: Gauge },
-  { id: 'flick', name: 'Target Shooting', description: 'warmup.flick.description', instruction: 'warmup.flick.instruction', icon: Target },
-  { id: 'reflex', name: 'Reflex', description: 'warmup.reflex.description', instruction: 'warmup.reflex.instruction', icon: Zap },
-  { id: 'gridshot', name: 'Gridshot', description: 'warmup.gridshot.description', instruction: 'warmup.gridshot.instruction', icon: Grid3X3 },
-  { id: 'strafetrack', name: 'Strafetrack', description: 'warmup.strafetrack.description', instruction: 'warmup.strafetrack.instruction', icon: MoveHorizontal },
-]
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', icon: Crosshair },
@@ -88,14 +80,17 @@ type ArenaProps = {
   sensitivityLabel: string
   instruction: string
   metrics: WarmupMetrics
+  progressLabel?: string
+  completionOverlay?: ReactNode
+  exitFullscreenOnComplete?: boolean
   onMetrics: (metrics: WarmupMetrics) => void
   onComplete: (metrics: WarmupMetrics) => void
   onPointerLockChange: (locked: boolean) => void
 }
 
-type ArenaHandle = { requestPointerLock: () => void }
+export type ArenaHandle = { requestPointerLock: () => void }
 
-const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, onMetrics, onComplete, onPointerLockChange }, ref) {
+export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, progressLabel, completionOverlay, exitFullscreenOnComplete = true, onMetrics, onComplete, onPointerLockChange }, ref) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
@@ -107,6 +102,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
   const configRef = useRef(WARMUP_DIFFICULTIES[difficulty])
   const gainRef = useRef(pointerGain)
   const crosshairRef = useRef(crosshair)
+  const exitFullscreenOnCompleteRef = useRef(exitFullscreenOnComplete)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onComplete)
   const stateRef = useRef({
@@ -126,6 +122,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
   useEffect(() => { configRef.current = WARMUP_DIFFICULTIES[difficulty] }, [difficulty])
   useEffect(() => { gainRef.current = pointerGain }, [pointerGain])
   useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
+  useEffect(() => { exitFullscreenOnCompleteRef.current = exitFullscreenOnComplete }, [exitFullscreenOnComplete])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
@@ -342,7 +339,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
         if (remaining <= 0 && !state.complete) {
           state.complete = true
           document.exitPointerLock?.()
-          if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+          if (exitFullscreenOnCompleteRef.current && document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
           onCompleteRef.current(metrics)
         }
       }
@@ -418,7 +415,9 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       )}
       {phase === 'countdown' && <div className="warmup-countdown"><strong>{countdown}</strong><span>{t('warmup.prepareAim')}</span></div>}
       {phase === 'playing' && <div className="warmup-instruction">{instruction}</div>}
+      {progressLabel && active && <div className="warmup-progress-badge">{progressLabel}</div>}
       {active && !pointerLocked && <button className="lock-prompt" onClick={() => void requestStablePointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>}
+      {completionOverlay}
     </div>
   )
 })
@@ -431,6 +430,7 @@ export function Warmup() {
   const [inputReady, setInputReady] = useState(false)
   const [exercise, setExercise] = useState<WarmupExercise>('switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
+  const [adaptiveLevel, setAdaptiveLevel] = useState<FixedWarmupDifficulty>('medium')
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
   const [sensitivity, setSensitivity] = useState('1')
   const [dpi, setDpi] = useState('800')
@@ -445,9 +445,13 @@ export function Warmup() {
   const parsedDpi = parsePositiveNumberInput(dpi)
   const validSetup = parsedSensitivity !== null && parsedDpi !== null
   const normalizedSensitivity = parsedSensitivity === null ? null : normalizeSensitivity(parsedSensitivity, game)
+  const effectiveDifficulty: FixedWarmupDifficulty = difficulty === 'adaptive' ? adaptiveLevel : difficulty
   const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin, parsedDpi ?? 800)
   const exerciseConfig = EXERCISES.find((item) => item.id === exercise) ?? EXERCISES[0]
-  const nextDifficulty = getNextWarmupDifficulty(difficulty)
+  const nextAdaptiveLevel = getAdaptiveDifficulty(adaptiveLevel, metrics.accuracy)
+  const difficultyLabel = difficulty === 'adaptive'
+    ? `${t('difficulty.adaptive')} · ${t(`difficulty.${adaptiveLevel}` as TranslationKey)}`
+    : t(`difficulty.${difficulty}` as TranslationKey)
 
   useEffect(() => {
     if (phase !== 'countdown' || !inputReady) return
@@ -494,7 +498,7 @@ export function Warmup() {
   }
 
   const playNextRound = () => {
-    setDifficulty(nextDifficulty)
+    if (difficulty === 'adaptive') setAdaptiveLevel(nextAdaptiveLevel)
     setInputReady(false)
     setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
     flushSync(() => {
@@ -580,7 +584,7 @@ export function Warmup() {
                   <div className="warmup-config-label">{t('warmup.difficulty')}</div>
                   <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
                     {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).map((level) => (
-                      <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => setDifficulty(level)}>
+                      <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => { setDifficulty(level); if (level === 'adaptive') setAdaptiveLevel('medium') }}>
                         <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
                       </button>
                     ))}
@@ -611,17 +615,17 @@ export function Warmup() {
               <Sparkles size={22} className="modal-icon" />
               <div className="panel-label">{t('warmup.complete')}</div>
               <h2>{exerciseConfig.name}</h2>
-              <p>{t(`difficulty.${difficulty}` as TranslationKey)} · {game.label} · {WARMUP_DURATION}s</p>
+              <p>{difficultyLabel} · {game.label} · {WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
               <div className="warmup-result-grid">
                 <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}%</strong></div>
                 <div><span>{isTrackingExercise(exercise) ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{isTrackingExercise(exercise) ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
-                <div><span>{t('warmup.difficulty')}</span><strong>{t(`difficulty.${difficulty}` as TranslationKey)}</strong></div>
+                <div><span>{t('warmup.difficulty')}</span><strong>{difficultyLabel}</strong></div>
               </div>
               <div className="warmup-next-hint">
-                {difficulty === 'hard'
-                  ? t('warmup.keepHardHint')
-                  : t('warmup.nextLevelHint', { level: t(`difficulty.${nextDifficulty}` as TranslationKey) })}
+                {difficulty === 'adaptive'
+                  ? t('warmup.adaptiveNextHint', { level: t(`difficulty.${nextAdaptiveLevel}` as TranslationKey) })
+                  : t('warmup.fixedNextHint', { level: t(`difficulty.${difficulty}` as TranslationKey) })}
               </div>
               <div className="warmup-result-actions">
                 <button className="secondary-button" onClick={exitToHub}><LogOut size={15} /> {t('warmup.exit')}</button>
@@ -642,7 +646,7 @@ export function Warmup() {
         phase={phase}
         countdown={countdown}
         exercise={exercise}
-        difficulty={difficulty}
+        difficulty={effectiveDifficulty}
         crosshair={crosshair}
         pointerGain={pointerGain}
         sessionId={sessionId}
@@ -658,7 +662,7 @@ export function Warmup() {
         <strong>{format(metrics.remaining, 1)}<small>s</small></strong>
         <div><span>{t('common.score')}</span><b>{metrics.score}</b></div>
         <div><span>{t('common.accuracy')}</span><b>{format(metrics.accuracy)}%</b></div>
-        <div><span>{t('warmup.level')}</span><b>{t(`difficulty.${difficulty}` as TranslationKey)}</b></div>
+        <div><span>{t('warmup.level')}</span><b>{difficultyLabel}</b></div>
         <p><MousePointer2 size={14} /> {t(exerciseConfig.instruction)}</p>
       </aside>
     </section>

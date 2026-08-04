@@ -1,6 +1,7 @@
 import { GameConfig } from './games'
 
-export type WarmupDifficulty = 'easy' | 'medium' | 'hard'
+export type WarmupDifficulty = 'easy' | 'medium' | 'hard' | 'adaptive'
+export type FixedWarmupDifficulty = Exclude<WarmupDifficulty, 'adaptive'>
 export type WarmupExercise = 'switch' | 'tracking' | 'flick' | 'reflex' | 'gridshot' | 'strafetrack'
 
 export type WarmupDifficultyConfig = {
@@ -11,12 +12,13 @@ export type WarmupDifficultyConfig = {
   respawnMs: number
 }
 
-export const WARMUP_DURATION = 30
+export const WARMUP_DURATION = 60
 
 export const WARMUP_DIFFICULTIES: Record<WarmupDifficulty, WarmupDifficultyConfig> = {
   easy: { label: 'Fácil', targetScale: 1.18, targetSpeed: 0.24, dwellMs: 650, respawnMs: 220 },
-  medium: { label: 'Médio', targetScale: 0.94, targetSpeed: 0.34, dwellMs: 470, respawnMs: 150 },
+  medium: { label: 'Normal', targetScale: 0.94, targetSpeed: 0.34, dwellMs: 470, respawnMs: 150 },
   hard: { label: 'Difícil', targetScale: 0.72, targetSpeed: 0.46, dwellMs: 320, respawnMs: 90 },
+  adaptive: { label: 'Adaptativa', targetScale: 0.94, targetSpeed: 0.34, dwellMs: 470, respawnMs: 150 },
 }
 
 export function getWarmupPointerGain(game: GameConfig, sensitivity: number, dpi: number) {
@@ -31,8 +33,8 @@ export function calculateWarmupAccuracy(hits: number, shots: number) {
   return shots > 0 ? Math.max(0, Math.min(100, hits / shots * 100)) : 0
 }
 
-export function getNextWarmupDifficulty(difficulty: WarmupDifficulty): WarmupDifficulty {
-  if (difficulty === 'easy') return 'medium'
-  if (difficulty === 'medium') return 'hard'
-  return 'hard'
+export function getAdaptiveDifficulty(current: FixedWarmupDifficulty, accuracy: number): FixedWarmupDifficulty {
+  if (accuracy >= 82) return current === 'easy' ? 'medium' : 'hard'
+  if (accuracy < 58) return current === 'hard' ? 'medium' : 'easy'
+  return current
 }
