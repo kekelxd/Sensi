@@ -46,7 +46,6 @@ export function CalibrationLanding({ rounds, seconds, onStart }: CalibrationLand
   const facts = [
     { value: String(rounds), label: t('calibration.landingRoundsLabel') },
     { value: String(seconds), label: t('calibration.landingSecondsLabel') },
-    { value: 'FPS', label: t('calibration.landingGameResult') },
   ]
   const steps = [
     { title: t('calibration.landingStepConfigure'), description: t('calibration.landingStepConfigureDescription') },
