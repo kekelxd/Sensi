@@ -20,18 +20,31 @@ function percentile(sorted: number[], ratio: number) {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * ratio))] ?? 0
 }
 
+function trimmedAverage(values: number[], trimRatio = 0.05) {
+  if (!values.length) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const trim = Math.min(Math.floor(sorted.length * trimRatio), Math.floor((sorted.length - 1) / 2))
+  const trimmed = sorted.slice(trim, sorted.length - trim)
+  return trimmed.reduce((sum, value) => sum + value, 0) / trimmed.length
+}
+
 function calculateStats(intervals: number[]): PollingStats {
   if (intervals.length < 2) return { ...EMPTY_STATS, samples: intervals.length }
 
-  const sorted = [...intervals].sort((a, b) => a - b)
-  const medianInterval = percentile(sorted, 0.5)
-  const measured = medianInterval > 0 ? 1000 / medianInterval : 0
+  const averageInterval = trimmedAverage(intervals)
+  const measured = averageInterval > 0 ? 1000 / averageInterval : 0
   const classified = STANDARD_RATES.reduce((closest, rate) => (
     Math.abs(Math.log(rate / measured)) < Math.abs(Math.log(closest / measured)) ? rate : closest
   ))
-  const peakInterval = percentile(sorted, 0.1)
-  const peak = peakInterval > 0 ? 1000 / peakInterval : 0
-  const stableSamples = intervals.filter((interval) => Math.abs(interval - medianInterval) <= medianInterval * 0.25).length
+  const windowSize = Math.min(64, Math.max(8, Math.floor(intervals.length / 20)))
+  const windowRates: number[] = []
+  for (let index = 0; index + windowSize <= intervals.length; index += windowSize) {
+    const windowAverage = trimmedAverage(intervals.slice(index, index + windowSize), 0.03)
+    if (windowAverage > 0) windowRates.push(1000 / windowAverage)
+  }
+  const peak = windowRates.length ? percentile(windowRates.sort((a, b) => a - b), 0.9) : measured
+  const stabilityTolerance = Math.max(averageInterval * 0.25, 0.11)
+  const stableSamples = intervals.filter((interval) => Math.abs(interval - averageInterval) <= stabilityTolerance).length
 
   return {
     measured: Math.min(9999, measured),
@@ -80,10 +93,16 @@ export function PollingRateTest() {
     }
 
     document.addEventListener(eventName, handlePointer as EventListener, { passive: true })
+    let lastStatsUpdate = 0
     const timer = window.setInterval(() => {
       const elapsed = (performance.now() - started) / 1000
       setRemaining(Math.max(0, TEST_DURATION - elapsed))
-      setStats(calculateStats(intervalsRef.current))
+      if (elapsed - lastStatsUpdate >= 0.25) {
+        const intervals = intervalsRef.current
+        const liveStats = calculateStats(intervals.slice(-6000))
+        setStats({ ...liveStats, samples: intervals.length })
+        lastStatsUpdate = elapsed
+      }
       if (elapsed >= TEST_DURATION) finishTest()
     }, 100)
 
