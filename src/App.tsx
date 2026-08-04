@@ -46,6 +46,7 @@ function App() {
   const [results, setResults] = useState<RoundResult[]>([])
   const [phase, setPhase] = useState<RoundPhase>('idle')
   const [paused, setPaused] = useState(false)
+  const [inputReady, setInputReady] = useState(false)
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
   const [setupOpen, setSetupOpen] = useState(false)
@@ -78,7 +79,7 @@ function App() {
   const parsedSensitivityInput = parsePositiveNumberInput(sensitivityInput)
   const sensitivityPreview = parsedSensitivityInput === null ? null : normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
   useEffect(() => {
-    if (phase === 'idle' || paused) return
+    if (phase === 'idle' || paused || !inputReady) return
 
     const started = performance.now()
     const initialRemaining = phaseRemainingMsRef.current
@@ -108,7 +109,7 @@ function App() {
       window.clearInterval(timer)
       if (!transitioned) phaseRemainingMsRef.current = Math.max(0, initialRemaining - (performance.now() - started))
     }
-  }, [phase, paused, round])
+  }, [phase, paused, round, inputReady])
 
   const beginRound = () => {
     if (resultOpen || calibrationComplete) {
@@ -121,6 +122,7 @@ function App() {
     setCountdown(3)
     setRemaining(ROUND_DURATION)
     setPaused(false)
+    setInputReady(false)
     arenaRef.current?.requestPointerLock()
     setPhase('countdown')
   }
@@ -199,6 +201,7 @@ function App() {
   const reset = () => {
     setPhase('idle')
     setPaused(false)
+    setInputReady(false)
     setRound(0)
     setResults([])
     setResultOpen(false)
@@ -247,9 +250,9 @@ function App() {
         <TrackingArena
           ref={arenaRef}
           active={active}
-          moving={moving}
-          scoring={tracking}
-          paused={paused}
+          moving={moving && inputReady}
+          scoring={tracking && inputReady}
+          paused={paused || !inputReady}
           multiplier={multiplier}
           targetSpeed={targetSpeed}
           crosshair={crosshair}
@@ -272,6 +275,7 @@ function App() {
           }}
           onMetrics={setMetrics}
           onRoundComplete={completeRound}
+          onPointerLockChange={setInputReady}
         />
 
         <aside className="round-panel">

@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { Play, RotateCcw } from 'lucide-react'
 import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS } from './calibration'
 import { useI18n } from './i18n'
+import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -35,6 +36,7 @@ type Props = {
   onShowResults: () => void
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
+  onPointerLockChange: (locked: boolean) => void
 }
 
 export type TrackingArenaHandle = {
@@ -54,24 +56,6 @@ function getRandomTarget(width: number, height: number, radius: number) {
   return {
     x: randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8)),
     y: randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8)),
-  }
-}
-
-function requestCanvasPointerLock(canvas: HTMLCanvasElement | null) {
-  canvas?.focus({ preventScroll: true })
-  const request = canvas?.requestPointerLock() as unknown as Promise<void> | undefined
-  if (typeof request?.catch === 'function') {
-    request.catch(() => {
-      // The UI keeps showing the resume button when the browser denies pointer lock.
-    })
-  }
-
-  const fullscreenTarget = canvas?.parentElement
-  if (fullscreenTarget && !document.fullscreenElement) {
-    const fullscreenRequest = fullscreenTarget.requestFullscreen?.({ navigationUI: 'hide' } as FullscreenOptions) as Promise<void> | undefined
-    if (typeof fullscreenRequest?.catch === 'function') {
-      fullscreenRequest.catch(() => {})
-    }
   }
 }
 
@@ -114,12 +98,13 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
 }
 
 export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function TrackingArena(
-  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, isComplete, hud, onStart, onReset, onShowResults, onMetrics, onRoundComplete },
+  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, isComplete, hud, onStart, onReset, onShowResults, onMetrics, onRoundComplete, onPointerLockChange },
   ref,
 ) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
+  const pointerLockedAtRef = useRef(0)
   const activeRef = useRef(active)
   const movingRef = useRef(moving)
   const scoringRef = useRef(scoring)
@@ -156,7 +141,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
   useImperativeHandle(ref, () => ({
     requestPointerLock: () => {
-      requestCanvasPointerLock(canvasRef.current)
+      void requestStablePointerLock(canvasRef.current)
     },
   }), [])
 
@@ -174,12 +159,35 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const updatePointerLock = () => setPointerLocked(document.pointerLockElement === canvas)
+    const updatePointerLock = () => {
+      const locked = document.pointerLockElement === canvas
+      if (locked) {
+        const state = stateRef.current
+        state.aimX = canvas.clientWidth / 2
+        state.aimY = canvas.clientHeight / 2
+        state.visualAimX = state.aimX
+        state.visualAimY = state.aimY
+        state.lastAimX = state.aimX
+        state.lastAimY = state.aimY
+        pointerLockedAtRef.current = performance.now()
+      } else pointerLockedAtRef.current = 0
+      setPointerLocked(locked)
+      onPointerLockChange(locked)
+    }
     const handleMove = (event: MouseEvent) => {
       if (!activeRef.current || pausedRef.current || document.pointerLockElement !== canvas) return
       const state = stateRef.current
-      state.aimX = clamp(state.aimX + event.movementX * multiplierRef.current, 0, canvas.clientWidth)
-      state.aimY = clamp(state.aimY + event.movementY * multiplierRef.current, 0, canvas.clientHeight)
+      const movement = sanitizePointerMovement({
+        movementX: event.movementX,
+        movementY: event.movementY,
+        gain: multiplierRef.current,
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+        elapsedSinceLock: performance.now() - pointerLockedAtRef.current,
+      })
+      if (!movement) return
+      state.aimX = clampAimCoordinate(state.aimX + movement.x, canvas.clientWidth)
+      state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
     }
 
     document.addEventListener('pointerlockchange', updatePointerLock)
@@ -189,7 +197,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       document.removeEventListener('pointerlockchange', updatePointerLock)
       document.removeEventListener('mousemove', handleMove)
     }
-  }, [])
+  }, [onPointerLockChange])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -215,6 +223,10 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         state.targetY *= scaleY
         state.destinationX *= scaleX
         state.destinationY *= scaleY
+        state.aimX = clampAimCoordinate(state.aimX, rect.width)
+        state.aimY = clampAimCoordinate(state.aimY, rect.height)
+        state.visualAimX = clampAimCoordinate(state.visualAimX, rect.width)
+        state.visualAimY = clampAimCoordinate(state.visualAimY, rect.height)
       } else {
         state.aimX = rect.width / 2
         state.aimY = rect.height / 2
@@ -415,7 +427,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
   return (
     <div className="arena-wrap">
-      <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && requestCanvasPointerLock(canvasRef.current)} />
+      <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && void requestStablePointerLock(canvasRef.current)} />
       {active && (
         <div className="arena-hud" aria-live="polite">
           <div className="arena-hud-metrics">
@@ -449,7 +461,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         </div>
       )}
       {active && !pointerLocked && (
-        <button className="lock-prompt" onClick={() => requestCanvasPointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>
+        <button className="lock-prompt" onClick={() => void requestStablePointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>
       )}
     </div>
   )

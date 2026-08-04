@@ -6,6 +6,7 @@ import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
 import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
 import { useI18n, type TranslationKey } from './i18n'
+import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 
 type WarmupMetrics = {
   score: number
@@ -53,17 +54,6 @@ const isTrackingExercise = (exercise: WarmupExercise) => exercise === 'tracking'
 const exerciseRadiusScale = (exercise: WarmupExercise) => exercise === 'gridshot' ? 0.78 : exercise === 'reflex' || exercise === 'strafetrack' ? 0.88 : 1
 const reflexWindow = (targetScale: number) => targetScale > 1 ? 1250 : targetScale > 0.8 ? 900 : 650
 
-function requestPointerLock(canvas: HTMLCanvasElement | null) {
-  canvas?.focus({ preventScroll: true })
-  const request = canvas?.requestPointerLock() as unknown as Promise<void> | undefined
-  request?.catch?.(() => {})
-  const fullscreenTarget = canvas?.parentElement
-  if (fullscreenTarget && !document.fullscreenElement) {
-    const fullscreenRequest = fullscreenTarget.requestFullscreen?.({ navigationUI: 'hide' } as FullscreenOptions) as Promise<void> | undefined
-    fullscreenRequest?.catch?.(() => {})
-  }
-}
-
 function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, style: CrosshairStyle, color: string) {
   ctx.strokeStyle = color
   ctx.fillStyle = color
@@ -99,14 +89,18 @@ type ArenaProps = {
   metrics: WarmupMetrics
   onMetrics: (metrics: WarmupMetrics) => void
   onComplete: (metrics: WarmupMetrics) => void
+  onPointerLockChange: (locked: boolean) => void
 }
 
 type ArenaHandle = { requestPointerLock: () => void }
 
-const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, onMetrics, onComplete }, ref) {
+const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, onMetrics, onComplete, onPointerLockChange }, ref) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [pointerLocked, setPointerLocked] = useState(false)
+  const pointerLockedAtRef = useRef(0)
+  const pointerLockedRef = useRef(false)
+  const inputPausedAtRef = useRef(0)
   const phaseRef = useRef(phase)
   const exerciseRef = useRef(exercise)
   const configRef = useRef(WARMUP_DIFFICULTIES[difficulty])
@@ -124,7 +118,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
     hits: 0, shots: 0, score: 0, complete: false,
   })
 
-  useImperativeHandle(ref, () => ({ requestPointerLock: () => requestPointerLock(canvasRef.current) }), [])
+  useImperativeHandle(ref, () => ({ requestPointerLock: () => { void requestStablePointerLock(canvasRef.current) } }), [])
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { exerciseRef.current = exercise }, [exercise])
   useEffect(() => { configRef.current = WARMUP_DIFFICULTIES[difficulty] }, [difficulty])
@@ -155,12 +149,41 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const updateLock = () => setPointerLocked(document.pointerLockElement === canvas)
+    const updateLock = () => {
+      const locked = document.pointerLockElement === canvas
+      if (locked) {
+        const state = stateRef.current
+        const now = performance.now()
+        if (inputPausedAtRef.current && state.startedAt) state.startedAt += now - inputPausedAtRef.current
+        inputPausedAtRef.current = 0
+        state.aimX = canvas.clientWidth / 2
+        state.aimY = canvas.clientHeight / 2
+        state.visualAimX = state.aimX
+        state.visualAimY = state.aimY
+        state.lastFrame = now
+        pointerLockedAtRef.current = now
+      } else {
+        pointerLockedAtRef.current = 0
+        if (pointerLockedRef.current && phaseRef.current === 'playing') inputPausedAtRef.current = performance.now()
+      }
+      pointerLockedRef.current = locked
+      setPointerLocked(locked)
+      onPointerLockChange(locked)
+    }
     const handleMove = (event: MouseEvent) => {
       if ((phaseRef.current !== 'countdown' && phaseRef.current !== 'playing') || document.pointerLockElement !== canvas) return
       const state = stateRef.current
-      state.aimX = clamp(state.aimX + event.movementX * gainRef.current, 0, canvas.clientWidth)
-      state.aimY = clamp(state.aimY + event.movementY * gainRef.current, 0, canvas.clientHeight)
+      const movement = sanitizePointerMovement({
+        movementX: event.movementX,
+        movementY: event.movementY,
+        gain: gainRef.current,
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+        elapsedSinceLock: performance.now() - pointerLockedAtRef.current,
+      })
+      if (!movement) return
+      state.aimX = clampAimCoordinate(state.aimX + movement.x, canvas.clientWidth)
+      state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
     }
     const handleShot = (event: MouseEvent) => {
       if (event.button !== 0 || phaseRef.current !== 'playing' || !isClickExercise(exerciseRef.current) || document.pointerLockElement !== canvas) return
@@ -185,7 +208,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       document.removeEventListener('mousemove', handleMove)
       document.removeEventListener('mousedown', handleShot)
     }
-  }, [])
+  }, [onPointerLockChange])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -207,6 +230,10 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       state.targetX = state.targetX ? state.targetX * rect.width / oldWidth : rect.width / 2
       state.targetY = state.targetY ? state.targetY * rect.height / oldHeight : rect.height / 2
       state.extraTargets = state.extraTargets.map((target) => ({ x: target.x * rect.width / oldWidth, y: target.y * rect.height / oldHeight }))
+      state.aimX = clampAimCoordinate(state.aimX, rect.width)
+      state.aimY = clampAimCoordinate(state.aimY, rect.height)
+      state.visualAimX = clampAimCoordinate(state.visualAimX, rect.width)
+      state.visualAimY = clampAimCoordinate(state.visualAimY, rect.height)
       state.width = rect.width; state.height = rect.height
     }
     const observer = new ResizeObserver(resize)
@@ -232,13 +259,13 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       for (let x = 0; x < width; x += 42) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke() }
       for (let y = 0; y < height; y += 42) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke() }
 
-      if (phaseRef.current === 'countdown' || phaseRef.current === 'playing') {
+      if ((phaseRef.current === 'countdown' || phaseRef.current === 'playing') && pointerLockedRef.current) {
         const aimBlend = 1 - Math.exp(-70 * deltaSeconds)
         state.visualAimX += (state.aimX - state.visualAimX) * aimBlend
         state.visualAimY += (state.aimY - state.visualAimY) * aimBlend
       }
 
-      if (phaseRef.current === 'playing') {
+      if (phaseRef.current === 'playing' && pointerLockedRef.current) {
         if (!state.startedAt) state.startedAt = time
         if (exercise === 'tracking') {
           if (!state.destinationX || Math.hypot(state.destinationX - state.targetX, state.destinationY - state.targetY) < radius) {
@@ -354,6 +381,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0, extraTargets: [],
       strafeDirection: Math.random() > .5 ? 1 : -1, nextDirectionChangeAt: 0, hits: 0, shots: 0, score: 0, complete: false,
     })
+    inputPausedAtRef.current = 0
     placeTarget()
     if (exerciseRef.current === 'gridshot') { placeTarget(0, 1); placeTarget(0, 2) }
   }, [sessionId])
@@ -361,7 +389,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
   const active = phase === 'countdown' || phase === 'playing'
   return (
     <div className="warmup-arena-wrap">
-      <canvas ref={canvasRef} className="warmup-arena" tabIndex={0} onMouseDown={() => active && requestPointerLock(canvasRef.current)} />
+      <canvas ref={canvasRef} className="warmup-arena" tabIndex={0} onMouseDown={() => active && void requestStablePointerLock(canvasRef.current)} />
       {active && (
         <div className="warmup-hud">
           <div><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
@@ -372,7 +400,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       )}
       {phase === 'countdown' && <div className="warmup-countdown"><strong>{countdown}</strong><span>{t('warmup.prepareAim')}</span></div>}
       {phase === 'playing' && <div className="warmup-instruction">{instruction}</div>}
-      {active && !pointerLocked && <button className="lock-prompt" onClick={() => requestPointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>}
+      {active && !pointerLocked && <button className="lock-prompt" onClick={() => void requestStablePointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>}
     </div>
   )
 })
@@ -381,6 +409,7 @@ export function Warmup() {
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const [phase, setPhase] = useState<WarmupPhase>('hub')
+  const [inputReady, setInputReady] = useState(false)
   const [exercise, setExercise] = useState<WarmupExercise>('switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
@@ -401,7 +430,7 @@ export function Warmup() {
   const exerciseConfig = EXERCISES.find((item) => item.id === exercise) ?? EXERCISES[0]
 
   useEffect(() => {
-    if (phase !== 'countdown') return
+    if (phase !== 'countdown' || !inputReady) return
     setCountdown(3)
     const started = performance.now()
     const timer = window.setInterval(() => {
@@ -413,7 +442,7 @@ export function Warmup() {
       }
     }, 50)
     return () => window.clearInterval(timer)
-  }, [phase, sessionId])
+  }, [phase, sessionId, inputReady])
 
   const openSetup = (nextExercise: WarmupExercise) => {
     setExercise(nextExercise)
@@ -424,6 +453,7 @@ export function Warmup() {
     if (!validSetup || normalizedSensitivity === null || parsedDpi === null) return
     setSensitivity(String(normalizedSensitivity))
     setDpi(String(Math.round(parsedDpi)))
+    setInputReady(false)
     setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
     flushSync(() => {
       setSessionId((value) => value + 1)
@@ -433,6 +463,7 @@ export function Warmup() {
   }
 
   const repeat = () => {
+    setInputReady(false)
     setMetrics({ score: 0, accuracy: 0, hits: 0, shots: 0, remaining: WARMUP_DURATION })
     flushSync(() => {
       setSessionId((value) => value + 1)
@@ -549,6 +580,7 @@ export function Warmup() {
         metrics={metrics}
         onMetrics={setMetrics}
         onComplete={(result) => { setMetrics(result); setPhase('result') }}
+        onPointerLockChange={setInputReady}
       />
       <aside className="warmup-side-panel">
         <span>{t(exerciseConfig.name)}</span>
