@@ -29,6 +29,17 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, icon: LucideIcon }>
   { id: 'plus', label: 'Cruz cheia', icon: Plus },
 ]
 
+function ExercisePreview({ exercise }: { exercise: WarmupExercise }) {
+  return (
+    <div className={`warmup-preview warmup-preview-${exercise}`} aria-hidden="true">
+      <span className="preview-target preview-target-a" />
+      <span className="preview-target preview-target-b" />
+      <span className="preview-target preview-target-c" />
+      <span className="preview-crosshair" />
+    </div>
+  )
+}
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
@@ -387,6 +398,7 @@ export function Warmup() {
               <button key={item.id} type="button" onClick={() => openSetup(item.id)}>
                 <span className="warmup-index">0{index + 1}</span>
                 <Icon size={26} />
+                <ExercisePreview exercise={item.id} />
                 <strong>{item.name}</strong>
                 <small>{item.description}</small>
                 <i>Configurar treino <Play size={13} /></i>
