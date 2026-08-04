@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Activity, Circle, Crosshair, Dot, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, Circle, Crosshair, Dot, Gauge, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, VALORANT_RATIO } from './calibration'
+import { PollingRateTest } from './PollingRateTest'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
 type Game = 'cs2' | 'valorant'
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
+type AppView = 'calibration' | 'polling'
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string, icon: LucideIcon }> = [
   { id: 'classic', label: 'Clássica', description: 'Linhas finas com centro aberto', icon: Crosshair },
@@ -43,6 +45,7 @@ function Metric({ label, value, suffix, tone }: { label: string, value: string, 
 
 function App() {
   const arenaRef = useRef<TrackingArenaHandle>(null)
+  const [view, setView] = useState<AppView>('calibration')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
   const [phase, setPhase] = useState<RoundPhase>('idle')
@@ -163,17 +166,24 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={view === 'polling' ? 'app-shell polling-shell' : 'app-shell'}>
       <header>
         <div className="brand"><Crosshair size={20} /> SENSI</div>
-        <div className="header-title">Calibração de tracking</div>
+        <nav className="app-tabs" aria-label="Ferramentas do SENSI">
+          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> Calibração</button>
+          <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
+        </nav>
         <div className="header-actions">
-          <span>{results.length}/{totalRounds} rodadas</span>
-          <button className="icon-button" onClick={() => setSetupOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
+          {view === 'calibration' ? (
+            <>
+              <span>{results.length}/{totalRounds} rodadas</span>
+              <button className="icon-button" onClick={() => setSetupOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
+            </>
+          ) : <span>Diagnóstico do mouse</span>}
         </div>
       </header>
 
-      <section className="workspace">
+      {view === 'calibration' ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> Ao vivo</div>
           <Metric label="Precisão" value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
@@ -235,9 +245,9 @@ function App() {
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
-      </footer>
+      </footer></> : <PollingRateTest />}
 
-      {setupOpen && (
+      {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
           <section className="modal setup-modal">
             <button className="modal-close" onClick={() => setSetupOpen(false)} disabled={!setupConfirmed}><X size={18} /></button>
@@ -297,11 +307,12 @@ function App() {
               <span>Equivalente Valorant <strong>{format(toBaseCS(selectedGame, sensitivityInput) / VALORANT_RATIO, 3)}</strong></span>
             </div>
             <button className="primary-button wide" onClick={saveSetup}>Salvar e continuar</button>
+            <button className="secondary-button wide polling-shortcut" onClick={() => { setSetupOpen(false); setView('polling') }}><Gauge size={16} /> Ir para teste de polling rate</button>
           </section>
         </div>
       )}
 
-      {resultOpen && (
+      {view === 'calibration' && resultOpen && (
         <div className="modal-backdrop">
           <section className="modal result-modal">
             <button className="modal-close" onClick={() => setResultOpen(false)}><X size={18} /></button>
