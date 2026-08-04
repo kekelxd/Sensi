@@ -1,7 +1,7 @@
 import { GameConfig } from './games'
 
 export type WarmupDifficulty = 'easy' | 'medium' | 'hard'
-export type WarmupExercise = 'switch' | 'tracking' | 'flick'
+export type WarmupExercise = 'switch' | 'tracking' | 'flick' | 'reflex' | 'gridshot' | 'strafetrack'
 
 export type WarmupDifficultyConfig = {
   label: string

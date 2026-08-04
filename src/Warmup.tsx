@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Crosshair, Dot, Circle, Plus, Focus, Gauge, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, X, type LucideIcon } from 'lucide-react'
+import { Crosshair, Dot, Circle, Plus, Focus, Gauge, Grid3X3, MoveHorizontal, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, Zap, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
@@ -21,6 +21,9 @@ const EXERCISES: Array<{ id: WarmupExercise, name: TranslationKey, description: 
   { id: 'switch', name: 'warmup.switch.name', description: 'warmup.switch.description', instruction: 'warmup.switch.instruction', icon: Focus },
   { id: 'tracking', name: 'warmup.tracking.name', description: 'warmup.tracking.description', instruction: 'warmup.tracking.instruction', icon: Gauge },
   { id: 'flick', name: 'warmup.flick.name', description: 'warmup.flick.description', instruction: 'warmup.flick.instruction', icon: Target },
+  { id: 'reflex', name: 'warmup.reflex.name', description: 'warmup.reflex.description', instruction: 'warmup.reflex.instruction', icon: Zap },
+  { id: 'gridshot', name: 'warmup.gridshot.name', description: 'warmup.gridshot.description', instruction: 'warmup.gridshot.instruction', icon: Grid3X3 },
+  { id: 'strafetrack', name: 'warmup.strafetrack.name', description: 'warmup.strafetrack.description', instruction: 'warmup.strafetrack.instruction', icon: MoveHorizontal },
 ]
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: LucideIcon }> = [
@@ -45,6 +48,10 @@ function ExercisePreview({ exercise, name }: { exercise: WarmupExercise, name: s
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
+const isClickExercise = (exercise: WarmupExercise) => exercise === 'flick' || exercise === 'reflex' || exercise === 'gridshot'
+const isTrackingExercise = (exercise: WarmupExercise) => exercise === 'tracking' || exercise === 'strafetrack'
+const exerciseRadiusScale = (exercise: WarmupExercise) => exercise === 'gridshot' ? 0.78 : exercise === 'reflex' || exercise === 'strafetrack' ? 0.88 : 1
+const reflexWindow = (targetScale: number) => targetScale > 1 ? 1250 : targetScale > 0.8 ? 900 : 650
 
 function requestPointerLock(canvas: HTMLCanvasElement | null) {
   canvas?.focus({ preventScroll: true })
@@ -112,7 +119,8 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
     targetX: 0, targetY: 0, destinationX: 0, destinationY: 0,
     directionX: 1, directionY: 0, width: 0, height: 0,
     lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
-    onTargetMs: 0, dwellMs: 0, hiddenUntil: 0,
+    onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0,
+    extraTargets: [] as Array<{ x: number, y: number }>, strafeDirection: 1, nextDirectionChangeAt: 0,
     hits: 0, shots: 0, score: 0, complete: false,
   })
 
@@ -125,12 +133,22 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
-  const placeTarget = (time = 0) => {
+  const placeTarget = (time = 0, slot = 0) => {
     const state = stateRef.current
-    const radius = Math.max(18, Math.min(state.width, state.height) * 0.048 * configRef.current.targetScale)
-    state.targetX = randomBetween(radius * 1.7, Math.max(radius * 1.7, state.width - radius * 1.7))
-    state.targetY = randomBetween(radius * 1.7, Math.max(radius * 1.7, state.height - radius * 1.7))
-    state.hiddenUntil = time ? time + configRef.current.respawnMs : 0
+    const exercise = exerciseRef.current
+    const radius = Math.max(16, Math.min(state.width, state.height) * 0.048 * configRef.current.targetScale * exerciseRadiusScale(exercise))
+    const existing = [{ x: state.targetX, y: state.targetY }, ...state.extraTargets].filter((_, index) => index !== slot)
+    let next = { x: state.width / 2, y: state.height / 2 }
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      next = {
+        x: randomBetween(radius * 1.7, Math.max(radius * 1.7, state.width - radius * 1.7)),
+        y: randomBetween(radius * 1.7, Math.max(radius * 1.7, state.height - radius * 1.7)),
+      }
+      if (existing.every((target) => !target.x || Math.hypot(target.x - next.x, target.y - next.y) > radius * 3.2)) break
+    }
+    if (slot === 0) { state.targetX = next.x; state.targetY = next.y } else state.extraTargets[slot - 1] = next
+    state.hiddenUntil = exercise === 'gridshot' ? 0 : time ? time + configRef.current.respawnMs : 0
+    if (exercise === 'reflex') state.targetExpiresAt = time ? state.hiddenUntil + reflexWindow(configRef.current.targetScale) : 0
     state.dwellMs = 0
   }
 
@@ -145,14 +163,17 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       state.aimY = clamp(state.aimY + event.movementY * gainRef.current, 0, canvas.clientHeight)
     }
     const handleShot = (event: MouseEvent) => {
-      if (event.button !== 0 || phaseRef.current !== 'playing' || exerciseRef.current !== 'flick' || document.pointerLockElement !== canvas) return
+      if (event.button !== 0 || phaseRef.current !== 'playing' || !isClickExercise(exerciseRef.current) || document.pointerLockElement !== canvas) return
       const state = stateRef.current
-      const radius = Math.max(18, Math.min(state.width, state.height) * 0.048 * configRef.current.targetScale)
+      const exercise = exerciseRef.current
+      const radius = Math.max(16, Math.min(state.width, state.height) * 0.048 * configRef.current.targetScale * exerciseRadiusScale(exercise))
       state.shots += 1
-      if (state.hiddenUntil <= performance.now() && Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius) {
+      const targets = [{ x: state.targetX, y: state.targetY }, ...(exercise === 'gridshot' ? state.extraTargets : [])]
+      const hitIndex = targets.findIndex((target) => Math.hypot(state.visualAimX - target.x, state.visualAimY - target.y) <= radius)
+      if (state.hiddenUntil <= performance.now() && hitIndex >= 0) {
         state.hits += 1
         state.score += 100
-        placeTarget(performance.now())
+        placeTarget(performance.now(), hitIndex)
       }
     }
     document.addEventListener('pointerlockchange', updateLock)
@@ -185,6 +206,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       state.visualAimY = state.visualAimY ? state.visualAimY * rect.height / oldHeight : state.aimY
       state.targetX = state.targetX ? state.targetX * rect.width / oldWidth : rect.width / 2
       state.targetY = state.targetY ? state.targetY * rect.height / oldHeight : rect.height / 2
+      state.extraTargets = state.extraTargets.map((target) => ({ x: target.x * rect.width / oldWidth, y: target.y * rect.height / oldHeight }))
       state.width = rect.width; state.height = rect.height
     }
     const observer = new ResizeObserver(resize)
@@ -197,7 +219,8 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       const width = canvas.clientWidth
       const height = canvas.clientHeight
       const config = configRef.current
-      const radius = Math.max(18, Math.min(width, height) * 0.048 * config.targetScale)
+      const exercise = exerciseRef.current
+      const radius = Math.max(16, Math.min(width, height) * 0.048 * config.targetScale * exerciseRadiusScale(exercise))
       if (!state.lastFrame) state.lastFrame = time
       const deltaMs = Math.min(50, Math.max(0, time - state.lastFrame))
       const deltaSeconds = deltaMs / 1000
@@ -217,7 +240,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
 
       if (phaseRef.current === 'playing') {
         if (!state.startedAt) state.startedAt = time
-        if (exerciseRef.current === 'tracking') {
+        if (exercise === 'tracking') {
           if (!state.destinationX || Math.hypot(state.destinationX - state.targetX, state.destinationY - state.targetY) < radius) {
             state.destinationX = randomBetween(radius * 1.6, width - radius * 1.6)
             state.destinationY = randomBetween(radius * 1.6, height - radius * 1.6)
@@ -237,25 +260,43 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
           state.targetY = clamp(state.targetY + state.directionY * speed * deltaSeconds, radius, height - radius)
         }
 
+        if (exercise === 'strafetrack') {
+          if (!state.nextDirectionChangeAt) state.nextDirectionChangeAt = time + randomBetween(900, 1800)
+          if (time >= state.nextDirectionChangeAt) {
+            state.strafeDirection *= -1
+            state.nextDirectionChangeAt = time + randomBetween(850, 1750)
+          }
+          const speed = Math.min(width, height) * config.targetSpeed * 1.05
+          state.targetX += state.strafeDirection * speed * deltaSeconds
+          if (state.targetX <= radius || state.targetX >= width - radius) {
+            state.targetX = clamp(state.targetX, radius, width - radius)
+            state.strafeDirection *= -1
+            state.nextDirectionChangeAt = time + randomBetween(850, 1750)
+          }
+        }
+
+        if (exercise === 'reflex' && !state.targetExpiresAt) state.targetExpiresAt = time + reflexWindow(config.targetScale)
+        if (exercise === 'reflex' && time >= state.targetExpiresAt) placeTarget(time)
+
         const visible = time >= state.hiddenUntil
         const onTarget = visible && Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius
         if (onTarget) {
           state.onTargetMs += deltaMs
-          if (exerciseRef.current === 'switch') {
+          if (exercise === 'switch') {
             state.dwellMs += deltaMs
             if (state.dwellMs >= config.dwellMs) {
               state.hits += 1; state.shots += 1; state.score += 100
               placeTarget(time)
             }
           }
-        } else if (exerciseRef.current === 'switch') state.dwellMs = 0
+        } else if (exercise === 'switch') state.dwellMs = 0
 
         const elapsed = time - state.startedAt
         const remaining = Math.max(0, WARMUP_DURATION - elapsed / 1000)
         const trackingAccuracy = elapsed > 0 ? state.onTargetMs / elapsed * 100 : 0
-        const trackingBasedAccuracy = exerciseRef.current !== 'flick'
+        const trackingBasedAccuracy = exercise === 'switch' || isTrackingExercise(exercise)
         const metrics: WarmupMetrics = {
-          score: exerciseRef.current === 'tracking' ? Math.round(state.onTargetMs / 10) : state.score,
+          score: isTrackingExercise(exercise) ? Math.round(state.onTargetMs / 10) : state.score,
           accuracy: trackingBasedAccuracy ? clamp(trackingAccuracy, 0, 100) : calculateWarmupAccuracy(state.hits, state.shots),
           hits: state.hits,
           shots: state.shots,
@@ -271,18 +312,28 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       }
 
       const visible = time >= state.hiddenUntil
-      if (state.targetX && visible) {
-        const glow = ctx.createRadialGradient(state.targetX, state.targetY, 0, state.targetX, state.targetY, radius * 2)
+      const drawTarget = (targetX: number, targetY: number) => {
+        const glow = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius * 2)
         glow.addColorStop(0, 'rgba(255,114,81,.28)'); glow.addColorStop(1, 'rgba(255,114,81,0)')
-        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius * 2, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = '#ff7251'; ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius, 0, Math.PI * 2); ctx.fill()
-        ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius * .24, 0, Math.PI * 2); ctx.fill()
-        if (exerciseRef.current === 'switch' && state.dwellMs > 0) {
-          ctx.strokeStyle = '#8dfbd3'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, state.dwellMs / config.dwellMs)); ctx.stroke()
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(targetX, targetY, radius * 2, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = '#ff7251'; ctx.beginPath(); ctx.arc(targetX, targetY, radius, 0, Math.PI * 2); ctx.fill()
+        ctx.fillStyle = 'rgba(255,255,255,.72)'; ctx.beginPath(); ctx.arc(targetX, targetY, radius * .24, 0, Math.PI * 2); ctx.fill()
+        if (exercise === 'switch' && state.dwellMs > 0) {
+          ctx.strokeStyle = '#8dfbd3'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(targetX, targetY, radius + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, state.dwellMs / config.dwellMs)); ctx.stroke()
+        }
+        if (exercise === 'reflex') {
+          const progress = clamp((state.targetExpiresAt - time) / reflexWindow(config.targetScale), 0, 1)
+          ctx.strokeStyle = progress > .35 ? '#8dfbd3' : '#ff7251'; ctx.lineWidth = 3
+          ctx.beginPath(); ctx.arc(targetX, targetY, radius + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); ctx.stroke()
         }
       }
+      if (state.targetX && visible) {
+        drawTarget(state.targetX, state.targetY)
+        if (exercise === 'gridshot') state.extraTargets.forEach((target) => drawTarget(target.x, target.y))
+      }
       if (phaseRef.current === 'countdown' || phaseRef.current === 'playing') {
-        const onTarget = visible && Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius
+        const targets = [{ x: state.targetX, y: state.targetY }, ...(exercise === 'gridshot' ? state.extraTargets : [])]
+        const onTarget = visible && targets.some((target) => Math.hypot(state.visualAimX - target.x, state.visualAimY - target.y) <= radius)
         drawCrosshair(ctx, state.visualAimX, state.visualAimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
       }
       frame = requestAnimationFrame(render)
@@ -300,9 +351,11 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       aimX: width / 2, aimY: height / 2, visualAimX: width / 2, visualAimY: height / 2,
       targetX: width / 2, targetY: height / 2, destinationX: 0, destinationY: 0,
       directionX: 1, directionY: 0, lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
-      onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, hits: 0, shots: 0, score: 0, complete: false,
+      onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0, extraTargets: [],
+      strafeDirection: Math.random() > .5 ? 1 : -1, nextDirectionChangeAt: 0, hits: 0, shots: 0, score: 0, complete: false,
     })
     placeTarget()
+    if (exerciseRef.current === 'gridshot') { placeTarget(0, 1); placeTarget(0, 2) }
   }, [sessionId])
 
   const active = phase === 'countdown' || phase === 'playing'
@@ -466,7 +519,7 @@ export function Warmup() {
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
               <div className="warmup-result-grid">
                 <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}%</strong></div>
-                <div><span>{exercise === 'tracking' ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{exercise === 'tracking' ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
+                <div><span>{isTrackingExercise(exercise) ? t('warmup.timeOnTarget') : t('warmup.hits')}</span><strong>{isTrackingExercise(exercise) ? `${format(metrics.accuracy)}%` : metrics.hits}</strong></div>
                 <div><span>{t('warmup.difficulty')}</span><strong>{t(`difficulty.${difficulty}` as TranslationKey)}</strong></div>
               </div>
               <div className="warmup-result-actions">
