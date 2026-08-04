@@ -465,7 +465,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .report-section-heading svg { color: var(--accent); }
 .report-section-heading small { color: #6f7681; font-size: 8px; }
 .report-insights-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; margin-top: 8px; }
-.report-insights-grid > section { min-width: 0; min-height: 82px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: #0b0e13; }
+.report-insights-grid > section, .report-insights-grid > button { min-width: 0; min-height: 82px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: #0b0e13; }
 .report-insights-grid p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
 .session-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .session-comparison > div { padding-right: 8px; border-right: 1px solid var(--line); }
@@ -473,7 +473,9 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .session-comparison span, .session-comparison strong { display: block; }
 .session-comparison span { color: var(--muted); font-size: 7px; }
 .session-comparison strong { margin-top: 4px; color: var(--mint); font: 500 11px DM Mono, monospace; }
-.exercise-recommendation > strong { display: block; color: var(--mint); font-size: 14px; }
+.exercise-recommendation { color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.exercise-recommendation:hover, .exercise-recommendation:focus-visible { border-color: rgba(141,251,211,.42); background: rgba(141,251,211,.055); transform: translateY(-1px); outline: none; }
+.exercise-recommendation > strong { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--mint); font-size: 14px; }
 .exercise-recommendation > p { margin-top: 4px; }
 
 .polling-workspace { display: grid; grid-template-columns: 250px minmax(420px, 1fr) 280px; min-height: 0; }
@@ -677,7 +679,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .report-metrics-grid strong { font-size: 13px; }
   .report-section-heading { margin-bottom: 5px; }
   .report-insights-grid { margin-top: 6px; }
-  .report-insights-grid > section { min-height: 62px; padding: 8px 10px; }
+  .report-insights-grid > section, .report-insights-grid > button { min-height: 62px; padding: 8px 10px; }
   .warmup-next-hint { margin-top: 6px; padding: 6px 10px; }
   .warmup-result-actions { margin-top: 8px; }
   .calibration-result-modal { padding: 12px 16px; }

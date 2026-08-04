@@ -4,7 +4,7 @@ import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, 
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
-import { calculateWarmupAccuracy, getAdaptiveDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
+import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { EXERCISES } from './warmupExercises'
@@ -69,7 +69,7 @@ function signed(value: number, suffix = '') {
   return `${rounded > 0 ? '+' : ''}${rounded}${suffix}`
 }
 
-function WarmupReport({ metrics, previous, exercise }: { metrics: WarmupMetrics, previous: WarmupSessionSummary | null, exercise: WarmupExercise }) {
+function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: { metrics: WarmupMetrics, previous: WarmupSessionSummary | null, exercise: WarmupExercise, onSelectRecommendation: (exercise: WarmupExercise) => void }) {
   const { t } = useI18n()
   const trackingExercise = isTrackingExercise(exercise)
   const recommendationId = getWarmupRecommendation(metrics, exercise)
@@ -96,11 +96,11 @@ function WarmupReport({ metrics, previous, exercise }: { metrics: WarmupMetrics,
             {comparison.map((item) => <div key={item.label}><span>{item.label}</span><strong>{item.value}</strong></div>)}
           </div> : <p>{t('warmup.firstComparison')}</p>}
         </section>
-        <section className="exercise-recommendation">
+        <button type="button" className="exercise-recommendation" onClick={() => onSelectRecommendation(recommendationId)}>
           <div className="report-section-heading"><div><Activity size={15} /><span>{t('warmup.nextRecommendation')}</span></div></div>
-          <strong>{recommendation.name}</strong>
+          <strong>{recommendation.name} <ArrowRight size={15} /></strong>
           <p>{t('warmup.recommendationDescription')}</p>
-        </section>
+        </button>
       </div>
     </div>
   )
@@ -556,7 +556,6 @@ export function Warmup() {
   const effectiveDifficulty: FixedWarmupDifficulty = difficulty === 'adaptive' ? adaptiveLevel : difficulty
   const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin, parsedDpi ?? 800)
   const exerciseConfig = EXERCISES.find((item) => item.id === exercise) ?? EXERCISES[0]
-  const nextAdaptiveLevel = getAdaptiveDifficulty(adaptiveLevel, metrics.accuracy)
   const difficultyLabel = difficulty === 'adaptive'
     ? `${t('difficulty.adaptive')} · ${t(`difficulty.${adaptiveLevel}` as TranslationKey)}`
     : t(`difficulty.${difficulty}` as TranslationKey)
@@ -606,7 +605,6 @@ export function Warmup() {
   }
 
   const playNextRound = () => {
-    if (difficulty === 'adaptive') setAdaptiveLevel(nextAdaptiveLevel)
     setInputReady(false)
     setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
@@ -732,11 +730,9 @@ export function Warmup() {
               <h2>{exerciseConfig.name}</h2>
               <p>{difficultyLabel} · {game.label} · {WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
-              <WarmupReport metrics={metrics} previous={previousSession} exercise={exercise} />
+              <WarmupReport metrics={metrics} previous={previousSession} exercise={exercise} onSelectRecommendation={openSetup} />
               <div className="warmup-next-hint">
-                {difficulty === 'adaptive'
-                  ? t('warmup.adaptiveNextHint')
-                  : t('warmup.fixedNextHint', { level: t(`difficulty.${difficulty}` as TranslationKey) })}
+                {t('warmup.fixedNextHint', { level: difficultyLabel })}
               </div>
               <div className="warmup-result-actions">
                 <button className="secondary-button" onClick={exitToHub}><LogOut size={15} /> {t('warmup.exit')}</button>

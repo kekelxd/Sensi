@@ -32,9 +32,3 @@ export function getWarmupPointerGain(game: GameConfig, sensitivity: number, dpi:
 export function calculateWarmupAccuracy(hits: number, shots: number) {
   return shots > 0 ? Math.max(0, Math.min(100, hits / shots * 100)) : 0
 }
-
-export function getAdaptiveDifficulty(current: FixedWarmupDifficulty, accuracy: number): FixedWarmupDifficulty {
-  if (accuracy >= 82) return current === 'easy' ? 'medium' : 'hard'
-  if (accuracy < 58) return current === 'hard' ? 'medium' : 'easy'
-  return current
-}

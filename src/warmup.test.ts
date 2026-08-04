@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { GAME_BY_ID } from './games'
-import { calculateWarmupAccuracy, getAdaptiveDifficulty, getWarmupPointerGain } from './warmupConfig'
+import { calculateWarmupAccuracy, getWarmupPointerGain } from './warmupConfig'
 
 describe('warmup calculations', () => {
   it('keeps equivalent CS2 and Valorant sensitivities close', () => {
@@ -17,16 +17,5 @@ describe('warmup calculations', () => {
   it('calculates shot accuracy safely', () => {
     expect(calculateWarmupAccuracy(8, 10)).toBe(80)
     expect(calculateWarmupAccuracy(0, 0)).toBe(0)
-  })
-})
-
-describe('warm-up progression', () => {
-  it('adapts difficulty from accuracy without leaving supported bounds', () => {
-    expect(getAdaptiveDifficulty('easy', 90)).toBe('medium')
-    expect(getAdaptiveDifficulty('medium', 90)).toBe('hard')
-    expect(getAdaptiveDifficulty('hard', 90)).toBe('hard')
-    expect(getAdaptiveDifficulty('hard', 40)).toBe('medium')
-    expect(getAdaptiveDifficulty('medium', 40)).toBe('easy')
-    expect(getAdaptiveDifficulty('medium', 70)).toBe('medium')
   })
 })

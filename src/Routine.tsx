@@ -7,7 +7,7 @@ import { ROUTINE_PRESETS, type RoutinePreset } from './routineConfig'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
 import { WarmupArena, type ArenaHandle, type WarmupMetrics, type WarmupPhase } from './Warmup'
-import { getAdaptiveDifficulty, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty } from './warmupConfig'
+import { getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty } from './warmupConfig'
 import { EXERCISES } from './warmupExercises'
 import { createEmptyWarmupMetrics } from './warmupTelemetry'
 
@@ -52,7 +52,6 @@ export function Routine() {
   const exerciseId = preset.exercises[stageIndex]
   const exercise = EXERCISES.find((item) => item.id === exerciseId) ?? EXERCISES[0]
   const nextExercise = EXERCISES.find((item) => item.id === preset.exercises[stageIndex + 1])
-  const nextAdaptiveLevel = getAdaptiveDifficulty(adaptiveLevel, metrics.accuracy)
   const difficultyLabel = difficulty === 'adaptive'
     ? `${t('difficulty.adaptive')} · ${t(`difficulty.${adaptiveLevel}` as TranslationKey)}`
     : t(`difficulty.${difficulty}` as TranslationKey)
@@ -113,7 +112,6 @@ export function Routine() {
 
   const advanceStage = () => {
     if (lastStage) return
-    if (difficulty === 'adaptive') setAdaptiveLevel(nextAdaptiveLevel)
     setStageIndex((value) => value + 1)
     launchStage()
   }
@@ -243,9 +241,7 @@ export function Routine() {
           <div><span>{t('warmup.level')}</span><strong>{difficultyLabel}</strong></div>
         </div>
         {!lastStage && <div className="warmup-next-hint">
-          {difficulty === 'adaptive'
-            ? t('warmup.adaptiveNextHint')
-            : t('warmup.fixedNextHint', { level: t(`difficulty.${difficulty}` as TranslationKey) })}
+          {t('warmup.fixedNextHint', { level: difficultyLabel })}
         </div>}
         <div className="warmup-result-actions">
           <button className="secondary-button" onClick={exitToHub}><LogOut size={15} /> {t('warmup.exit')}</button>
