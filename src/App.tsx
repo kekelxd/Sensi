@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
@@ -9,6 +10,7 @@ import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 import { Warmup } from './Warmup'
 import { Routine } from './Routine'
+import { CalibrationLanding } from './CalibrationLanding'
 import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
@@ -52,6 +54,7 @@ function App() {
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [calibrationStarted, setCalibrationStarted] = useState(false)
   const [setupStep, setSetupStep] = useState<CalibrationSetupStep>(1)
   const [startAfterSetup, setStartAfterSetup] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
@@ -147,10 +150,15 @@ function App() {
       setRound(0)
       setResultOpen(false)
     }
-    setSetupOpen(false)
     if (startAfterSetup) {
-      setStartAfterSetup(false)
+      flushSync(() => {
+        setStartAfterSetup(false)
+        setCalibrationStarted(true)
+        setSetupOpen(false)
+      })
       beginRound()
+    } else {
+      setSetupOpen(false)
     }
   }
 
@@ -210,15 +218,17 @@ function App() {
     setRound(0)
     setResults([])
     setResultOpen(false)
+    setCalibrationStarted(false)
     setRemaining(ROUND_DURATION)
     setCountdown(3)
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
     phaseRemainingMsRef.current = 3000
     document.exitPointerLock?.()
+    leaveFullscreen()
   }
 
   return (
-    <main className={view === 'calibration' ? 'app-shell' : 'app-shell tool-shell'}>
+    <main className={view === 'calibration' && calibrationStarted ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
         <nav className="app-tabs" aria-label="$ENSI">
           <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
@@ -236,16 +246,16 @@ function App() {
               <option value="pt">Português</option><option value="en">English</option><option value="es">Español</option>
             </select>
           </label>
-          {view === 'calibration' ? (
+          {view === 'calibration' && calibrationStarted ? (
             <>
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
               <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')}><Settings2 size={17} /></button>
             </>
-          ) : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
+          ) : view === 'calibration' ? null : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
       </header>
 
-      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <><section className="workspace">
+      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
@@ -324,7 +334,7 @@ function App() {
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? t('calibration.resume') : t('calibration.pause')}</button>}
         </div>
         <div className="dpi-status">DPI <b>{dpi}</b></div>
-      </footer></> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : <CalibrationLanding rounds={totalRounds} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
