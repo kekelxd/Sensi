@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
+import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, writeCalibrationSession, type CalibrationAimSample, type CalibrationSessionSummary } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -11,6 +11,7 @@ import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingAr
 import { Warmup } from './Warmup'
 import { Routine } from './Routine'
 import { CalibrationLanding } from './CalibrationLanding'
+import { CalibrationReportView } from './CalibrationReport'
 import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
@@ -68,6 +69,7 @@ function App() {
   const [selectedCrosshair, setSelectedCrosshair] = useState<CrosshairStyle>('classic')
   const [dpi, setDpi] = useState(800)
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
+  const [previousCalibration, setPreviousCalibration] = useState<CalibrationSessionSummary | null>(null)
 
   const active = phase !== 'idle'
   const tracking = phase === 'running'
@@ -76,7 +78,8 @@ function App() {
   const calibrationComplete = isCalibrationComplete(results.length, totalRounds)
   const nominalMultiplier = ROUND_MULTIPLIERS[round] ?? 1
   const targetSpeed = getTargetSpeed(speedMode)
-  const recommendation = recommendMultiplier(results)
+  const calibrationReport = buildCalibrationReport(results)
+  const recommendation = calibrationReport?.recommendation ?? recommendMultiplier(results)
   const confirmedGameConfig = GAME_BY_ID[confirmedGame]
   const recommendedSelected = normalizeSensitivity(baseSensitivity * recommendation, confirmedGameConfig)
   const displayedCandidate = normalizeSensitivity(baseSensitivity * nominalMultiplier, confirmedGameConfig)
@@ -194,8 +197,8 @@ function App() {
     setSetupOpen(false)
   }
 
-  const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
-    const result = calculateRoundResult(multiplier, distances, speeds, targetRadius)
+  const completeRound = (distances: number[], speeds: number[], targetRadius: number, aimOffsets: CalibrationAimSample[]) => {
+    const result = calculateRoundResult(multiplier, distances, speeds, targetRadius, aimOffsets)
     const nextResults = [...results, result]
     const completed = isCalibrationComplete(nextResults.length, totalRounds)
     setResults(nextResults)
@@ -203,6 +206,12 @@ function App() {
     setRemaining(ROUND_DURATION)
     document.exitPointerLock?.()
     if (completed) {
+      const finalReport = buildCalibrationReport(nextResults)
+      if (finalReport) {
+        const finalSensitivity = normalizeSensitivity(baseSensitivity * finalReport.recommendation, confirmedGameConfig)
+        setPreviousCalibration(readCalibrationSession(window.localStorage, confirmedGame))
+        writeCalibrationSession(window.localStorage, confirmedGame, createCalibrationSessionSummary(finalReport, finalSensitivity))
+      }
       setRound(totalRounds - 1)
       setResultOpen(true)
       leaveFullscreen()
@@ -222,6 +231,7 @@ function App() {
     setRemaining(ROUND_DURATION)
     setCountdown(3)
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
+    setPreviousCalibration(null)
     phaseRemainingMsRef.current = 3000
     document.exitPointerLock?.()
     leaveFullscreen()
@@ -406,22 +416,20 @@ function App() {
 
       {view === 'calibration' && resultOpen && (
         <div className="modal-backdrop">
-          <section className="modal result-modal">
+          <section className="modal result-modal calibration-result-modal">
             <button className="modal-close" onClick={() => setResultOpen(false)} aria-label={t('common.close')}><X size={18} /></button>
             <Target size={24} className="modal-icon" />
             <div className="panel-label">{t('common.result')}</div>
             <h2>{t('calibration.resultTitle')}</h2>
-            <p>{t('calibration.resultDescription', { multiplier: format(recommendation, 2), speed: speedMode === 'normal' ? t('calibration.normal') : t('calibration.fastBadge') })}</p>
-            <div className="recommendations single-recommendation">
-              <div><span>{GAME_BY_ID[confirmedGame].label}</span><strong>{format(recommendedSelected, 3)}</strong></div>
-            </div>
-            <div className="result-bars">
-              {[...results].sort((a, b) => b.score - a.score).map((result, index) => (
-                <div key={`${index}-${result.multiplier}`}><span>{format(result.multiplier, 2)}×</span><i><b style={{ width: `${result.score}%` }} /></i><strong>{format(result.score)}</strong></div>
-              ))}
-            </div>
-            <small className="disclaimer">{t('calibration.disclaimer')}</small>
-            <button className="primary-button wide" onClick={reset}>{t('calibration.redo')}</button>
+            {calibrationReport && <CalibrationReportView
+              report={calibrationReport}
+              results={results}
+              previous={previousCalibration}
+              game={confirmedGameConfig}
+              baseSensitivity={baseSensitivity}
+              recommendedSensitivity={recommendedSelected}
+              onRedo={reset}
+            />}
           </section>
         </div>
       )}

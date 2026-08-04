@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
-import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS } from './calibration'
+import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS, type CalibrationAimSample } from './calibration'
 import { useI18n } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 
@@ -35,7 +35,7 @@ type Props = {
   onReset: () => void
   onShowResults: () => void
   onMetrics: (metrics: LiveMetrics) => void
-  onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
+  onRoundComplete: (distances: number[], speeds: number[], targetRadius: number, aimOffsets: CalibrationAimSample[]) => void
   onPointerLockChange: (locked: boolean) => void
 }
 
@@ -130,6 +130,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     lastFrame: 0,
     distances: [] as number[],
     speeds: [] as number[],
+    aimOffsets: [] as CalibrationAimSample[],
     lastAimX: 0,
     lastAimY: 0,
     lastSample: 0,
@@ -324,6 +325,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           const speed = Math.hypot(state.visualAimX - state.lastAimX, state.visualAimY - state.lastAimY) / sampleSeconds
           state.distances.push(distance)
           state.speeds.push(speed)
+          state.aimOffsets.push({ x: (state.visualAimX - state.targetX) / radius, y: (state.visualAimY - state.targetY) / radius })
           state.lastAimX = state.visualAimX
           state.lastAimY = state.visualAimY
           state.lastSample = time
@@ -398,6 +400,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.lastFrame = 0
       state.distances = []
       state.speeds = []
+      state.aimOffsets = []
       state.lastSample = 0
       state.lastMetricsUpdate = 0
       state.targetTrail = []
@@ -412,6 +415,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const state = stateRef.current
       state.distances = []
       state.speeds = []
+      state.aimOffsets = []
       state.lastAimX = state.visualAimX
       state.lastAimY = state.visualAimY
       state.lastSample = 0
@@ -425,7 +429,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     if (!state.complete) {
       state.complete = true
       const radius = getTargetRadius(canvasRef.current?.clientWidth ?? 0, canvasRef.current?.clientHeight ?? 0)
-      onCompleteRef.current(state.distances, state.speeds, radius)
+      onCompleteRef.current(state.distances, state.speeds, radius, [...state.aimOffsets])
     }
   }
 
