@@ -44,6 +44,7 @@ const ROUND_DURATION_MS = ROUND_DURATION * 1000
 const SAMPLE_INTERVAL_MS = 40
 const METRICS_UPDATE_INTERVAL_MS = 120
 const TARGET_TURN_RATE = 6
+const AIM_RENDER_RESPONSE = 70
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
@@ -130,6 +131,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   const stateRef = useRef({
     aimX: 0,
     aimY: 0,
+    visualAimX: 0,
+    visualAimY: 0,
     targetX: 0,
     targetY: 0,
     destinationX: 0,
@@ -144,6 +147,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     lastAimY: 0,
     lastSample: 0,
     lastMetricsUpdate: 0,
+    canvasWidth: 0,
+    canvasHeight: 0,
     complete: false,
   })
 
@@ -197,12 +202,27 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const ctx = canvas.getContext('2d')
       ctx?.setTransform(ratio, 0, 0, ratio, 0, 0)
       const state = stateRef.current
-      if (!state.aimX) {
+      if (state.canvasWidth > 0 && state.canvasHeight > 0) {
+        const scaleX = rect.width / state.canvasWidth
+        const scaleY = rect.height / state.canvasHeight
+        state.aimX *= scaleX
+        state.aimY *= scaleY
+        state.visualAimX *= scaleX
+        state.visualAimY *= scaleY
+        state.targetX *= scaleX
+        state.targetY *= scaleY
+        state.destinationX *= scaleX
+        state.destinationY *= scaleY
+      } else {
         state.aimX = rect.width / 2
         state.aimY = rect.height / 2
+        state.visualAimX = state.aimX
+        state.visualAimY = state.aimY
         state.lastAimX = state.aimX
         state.lastAimY = state.aimY
       }
+      state.canvasWidth = rect.width
+      state.canvasHeight = rect.height
     }
 
     const observer = new ResizeObserver(resize)
@@ -216,6 +236,9 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const height = canvas.clientHeight
       const state = stateRef.current
       const radius = getTargetRadius(width, height)
+      if (!state.lastFrame) state.lastFrame = time
+      const deltaSeconds = Math.min(0.05, Math.max(0, (time - state.lastFrame) / 1000))
+      state.lastFrame = time
 
       ctx.clearRect(0, 0, width, height)
       ctx.fillStyle = '#0b0e14'
@@ -230,10 +253,13 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
       }
 
+      if (activeRef.current && !pausedRef.current) {
+        const aimBlend = 1 - Math.exp(-AIM_RENDER_RESPONSE * deltaSeconds)
+        state.visualAimX += (state.aimX - state.visualAimX) * aimBlend
+        state.visualAimY += (state.aimY - state.visualAimY) * aimBlend
+      }
+
       if (movingRef.current && !pausedRef.current) {
-        if (!state.lastFrame) state.lastFrame = time
-        const deltaSeconds = Math.min(0.05, (time - state.lastFrame) / 1000)
-        state.lastFrame = time
         if (!state.destinationX || !state.destinationY) {
           const destination = getRandomTarget(width, height, radius)
           state.destinationX = destination.x
@@ -271,12 +297,12 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
         if (scoringRef.current && time - state.lastSample > SAMPLE_INTERVAL_MS) {
           const sampleSeconds = state.lastSample ? Math.max(0.001, (time - state.lastSample) / 1000) : SAMPLE_INTERVAL_MS / 1000
-          const distance = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY)
-          const speed = Math.hypot(state.aimX - state.lastAimX, state.aimY - state.lastAimY) / sampleSeconds
+          const distance = Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY)
+          const speed = Math.hypot(state.visualAimX - state.lastAimX, state.visualAimY - state.lastAimY) / sampleSeconds
           state.distances.push(distance)
           state.speeds.push(speed)
-          state.lastAimX = state.aimX
-          state.lastAimY = state.aimY
+          state.lastAimX = state.visualAimX
+          state.lastAimY = state.visualAimY
           state.lastSample = time
           if (time - state.lastMetricsUpdate >= METRICS_UPDATE_INTERVAL_MS) {
             const recentDistances = state.distances.slice(-30)
@@ -305,8 +331,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       }
 
       if (activeRef.current) {
-        const onTarget = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY) <= radius
-        drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
+        const onTarget = Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius
+        drawCrosshair(ctx, state.visualAimX, state.visualAimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
       }
 
       animationFrame = requestAnimationFrame(render)
@@ -327,6 +353,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const height = canvas?.clientHeight ?? 0
       state.aimX = width / 2
       state.aimY = height / 2
+      state.visualAimX = state.aimX
+      state.visualAimY = state.aimY
       state.targetX = width / 2
       state.targetY = height / 2
       const radius = getTargetRadius(width, height)
@@ -352,8 +380,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const state = stateRef.current
       state.distances = []
       state.speeds = []
-      state.lastAimX = state.aimX
-      state.lastAimY = state.aimY
+      state.lastAimX = state.visualAimX
+      state.lastAimY = state.visualAimY
       state.lastSample = 0
       state.lastMetricsUpdate = 0
       state.complete = false

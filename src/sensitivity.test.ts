@@ -9,6 +9,11 @@ describe('sensitivity conversion', () => {
     expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.overwatch2)).toBeCloseTo(3.333333, 6)
   })
 
+  it('preserves cm/360 when source and target DPI differ', () => {
+    expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.valorant, 800, 1600)).toBeCloseTo(0.157143, 6)
+    expect(convertSensitivity(0.157142857, GAME_BY_ID.valorant, GAME_BY_ID.cs2, 1600, 800)).toBeCloseTo(1, 8)
+  })
+
   it('is reversible within floating point precision', () => {
     const supportedGames = Object.values(GAME_BY_ID).filter((game) => game.yaw)
     for (const source of supportedGames) {
@@ -23,6 +28,8 @@ describe('sensitivity conversion', () => {
     expect(convertSensitivity(-1, GAME_BY_ID.cs2, GAME_BY_ID.valorant)).toBeNull()
     expect(convertSensitivity(0, GAME_BY_ID.cs2, GAME_BY_ID.valorant)).toBeNull()
     expect(convertSensitivity(Number.NaN, GAME_BY_ID.cs2, GAME_BY_ID.valorant)).toBeNull()
+    expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.valorant, 0, 800)).toBeNull()
+    expect(convertSensitivity(1, GAME_BY_ID.cs2, GAME_BY_ID.valorant, 800, 0)).toBeNull()
     expect(convertSensitivity(1, GAME_BY_ID.pubg, GAME_BY_ID.valorant)).toBeNull()
   })
 })
