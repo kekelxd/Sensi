@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
-import { ROUND_DURATION } from './calibration'
+import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS } from './calibration'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -31,6 +31,7 @@ export type TrackingArenaHandle = {
 }
 
 const ROUND_DURATION_MS = ROUND_DURATION * 1000
+const SAMPLE_INTERVAL_MS = 40
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
@@ -113,6 +114,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   const crosshairRef = useRef(crosshair)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
+  const roundRemainingMsRef = useRef(ROUND_DURATION_MS)
   const stateRef = useRef({
     aimX: 0,
     aimY: 0,
@@ -240,9 +242,10 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           state.targetY += dy / distanceToDestination * step
         }
 
-        if (scoringRef.current && time - state.lastSample > 40) {
+        if (scoringRef.current && time - state.lastSample > SAMPLE_INTERVAL_MS) {
+          const sampleSeconds = state.lastSample ? Math.max(0.001, (time - state.lastSample) / 1000) : SAMPLE_INTERVAL_MS / 1000
           const distance = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY)
-          const speed = Math.hypot(state.aimX - state.lastAimX, state.aimY - state.lastAimY)
+          const speed = Math.hypot(state.aimX - state.lastAimX, state.aimY - state.lastAimY) / sampleSeconds
           state.distances.push(distance)
           state.speeds.push(speed)
           state.lastAimX = state.aimX
@@ -253,7 +256,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           const accuracy = recentDistances.filter((value) => value <= radius).length / recentDistances.length * 100
           const meanError = recentDistances.reduce((sum, value) => sum + value, 0) / recentDistances.length
           const changes = recentSpeeds.slice(1).map((value, index) => Math.abs(value - recentSpeeds[index]))
-          const smoothness = Math.max(0, 100 - (changes.reduce((sum, value) => sum + value, 0) / Math.max(1, changes.length)) * 4)
+          const averageChange = changes.reduce((sum, value) => sum + value, 0) / Math.max(1, changes.length)
+          const smoothness = Math.max(0, 100 * (1 - averageChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
           onMetricsRef.current({ accuracy, meanError, smoothness })
         }
       }
@@ -305,6 +309,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.speeds = []
       state.lastSample = 0
       state.complete = false
+      roundRemainingMsRef.current = ROUND_DURATION_MS
     }
   }, [active, multiplier])
 
@@ -331,8 +336,16 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
   useEffect(() => {
     if (!scoring || paused) return
-    const timer = window.setTimeout(finishRound, ROUND_DURATION_MS)
-    return () => window.clearTimeout(timer)
+    const started = performance.now()
+    const initialRemaining = roundRemainingMsRef.current
+    const roundState = stateRef.current
+    const timer = window.setTimeout(finishRound, initialRemaining)
+    return () => {
+      window.clearTimeout(timer)
+      if (!roundState.complete) {
+        roundRemainingMsRef.current = Math.max(0, initialRemaining - (performance.now() - started))
+      }
+    }
   }, [scoring, paused, multiplier])
 
   return (

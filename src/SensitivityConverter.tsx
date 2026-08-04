@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeftRight, Check, Copy, Info, RefreshCw } from 'lucide-react'
 import { GAME_BY_ID, GAMES, GameId } from './games'
-
-const formatSensitivity = (value: number) => value.toFixed(6).replace(/\.?0+$/, '')
+import { convertSensitivity, formatSensitivity, isSensitivityInRange } from './sensitivity'
 
 export function SensitivityConverter() {
   const [sourceId, setSourceId] = useState<GameId>('cs2')
@@ -13,11 +12,12 @@ export function SensitivityConverter() {
   const source = GAME_BY_ID[sourceId]
   const target = GAME_BY_ID[targetId]
   const numericValue = Number(sourceValue.replace(',', '.'))
-  const canConvert = Number.isFinite(numericValue) && numericValue >= 0 && source.yaw && target.yaw
-  const result = useMemo(() => canConvert ? numericValue * source.yaw! / target.yaw! : null, [canConvert, numericValue, source.yaw, target.yaw])
+  const result = useMemo(() => convertSensitivity(numericValue, source, target), [numericValue, source, target])
   const formattedResult = result === null ? '--' : formatSensitivity(result)
   const estimated = Boolean(source.conversionEstimate || target.conversionEstimate)
-  const outsideRange = result !== null && (result < target.sensitivityMin || result > target.sensitivityMax)
+  const invalidInput = !Number.isFinite(numericValue) || numericValue <= 0
+  const sourceOutsideRange = Number.isFinite(numericValue) && !isSensitivityInRange(numericValue, source)
+  const targetOutsideRange = result !== null && !isSensitivityInRange(result, target)
 
   const swapGames = () => {
     setSourceId(targetId)
@@ -76,10 +76,12 @@ export function SensitivityConverter() {
 
       {!source.yaw || !target.yaw ? (
         <div className="converter-notice warning"><Info size={16} /><span>Este par inclui uma escala não linear. PUBG e Battlefield 6 exigem perfil específico de FOV e configuração para uma conversão confiável.</span></div>
+      ) : invalidInput ? (
+        <div className="converter-notice warning"><Info size={16} /><span>Informe uma sensibilidade válida e maior que zero.</span></div>
       ) : (
-        <div className={estimated || outsideRange ? 'converter-notice warning' : 'converter-notice'}>
+        <div className={estimated || sourceOutsideRange || targetOutsideRange ? 'converter-notice warning' : 'converter-notice'}>
           <Info size={16} />
-          <span>{estimated ? 'ARC Raiders usa uma equivalência aproximada. Confirme com uma volta de 360° dentro do jogo.' : outsideRange ? `O resultado está fora do intervalo configurável de ${target.label}.` : 'Conversão linear de hipfire. DPI igual nos dois jogos; FOV e ADS podem alterar a sensação visual.'}</span>
+          <span>{estimated ? 'ARC Raiders usa uma equivalência aproximada. Confirme com uma volta de 360° dentro do jogo.' : sourceOutsideRange ? `A sensibilidade informada está fora do intervalo configurável de ${source.label}.` : targetOutsideRange ? `O resultado está fora do intervalo configurável de ${target.label}.` : 'Conversão linear de hipfire. DPI igual nos dois jogos; FOV e ADS podem alterar a sensação visual.'}</span>
         </div>
       )}
     </section>

@@ -9,9 +9,10 @@ export type RoundResult = {
 
 export type TargetSpeedMode = 'normal' | 'fast'
 
-export const ROUND_MULTIPLIERS = [0.8, 0.9, 1, 1.1, 1.2]
+export const ROUND_MULTIPLIERS = [1, 0.8, 1.2, 0.9, 1.1]
 export const ROUND_DURATION = 25
 export const ROUND_WARMUP = 1
+export const SMOOTHNESS_SPEED_CHANGE_PER_RADIUS = 20
 
 export function getTargetSpeed(mode: TargetSpeedMode) {
   return mode === 'fast' ? 1.12 : 1
@@ -33,7 +34,8 @@ export function calculateRoundResult(
   const averageChange = speedChanges.length
     ? speedChanges.reduce((sum, change) => sum + change, 0) / speedChanges.length
     : 0
-  const smoothness = Math.max(0, Math.min(1, 1 - averageChange / 23))
+  const smoothnessReference = Math.max(1, targetRadius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)
+  const smoothness = Math.max(0, Math.min(1, 1 - averageChange / smoothnessReference))
   const overshoots = distances.slice(1).filter((distance, index) => {
     const previous = distances[index]
     return previous < targetRadius * 0.75 && distance > targetRadius * 1.35
@@ -53,12 +55,18 @@ export function calculateRoundResult(
 }
 
 export function recommendMultiplier(results: RoundResult[]) {
-  if (!results.length) return 1
-  const topCount = results.length >= 8 ? 4 : Math.min(3, results.length)
-  const weighted = [...results]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topCount)
-  const weightTotal = weighted.reduce((sum, result) => sum + result.score ** 1.35, 0)
-  if (!weightTotal) return weighted[0]?.multiplier ?? 1
-  return weighted.reduce((sum, result) => sum + result.multiplier * result.score ** 1.35, 0) / weightTotal
+  const valid = results.filter((result) => Number.isFinite(result.multiplier) && Number.isFinite(result.score))
+  if (!valid.length) return 1
+
+  const bestScore = Math.max(...valid.map((result) => result.score))
+  if (bestScore <= 0) return 1
+
+  const competitiveFloor = bestScore - 12
+  const competitive = valid.filter((result) => result.score >= competitiveFloor)
+  const getWeight = (result: RoundResult) => Math.max(1, result.score - competitiveFloor + 1) ** 1.35
+  const weightTotal = competitive.reduce((sum, result) => sum + getWeight(result), 0)
+  const recommendation = competitive.reduce((sum, result) => sum + result.multiplier * getWeight(result), 0) / weightTotal
+  const minMultiplier = Math.min(...valid.map((result) => result.multiplier))
+  const maxMultiplier = Math.max(...valid.map((result) => result.multiplier))
+  return Math.min(maxMultiplier, Math.max(minMultiplier, recommendation))
 }

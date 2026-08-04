@@ -5,6 +5,7 @@ import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
+import { normalizeSensitivity } from './sensitivity'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
@@ -40,6 +41,7 @@ function Metric({ label, value, suffix, tone }: { label: string, value: string, 
 
 function App() {
   const arenaRef = useRef<TrackingArenaHandle>(null)
+  const phaseRemainingMsRef = useRef(3000)
   const [view, setView] = useState<AppView>('calibration')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
@@ -54,8 +56,10 @@ function App() {
   const [sensitivityInput, setSensitivityInput] = useState(1)
   const [confirmedGame, setConfirmedGame] = useState<GameId>('cs2')
   const [speedMode, setSpeedMode] = useState<TargetSpeedMode>('normal')
+  const [selectedSpeedMode, setSelectedSpeedMode] = useState<TargetSpeedMode>('normal')
   const [baseSensitivity, setBaseSensitivity] = useState(1)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
+  const [selectedCrosshair, setSelectedCrosshair] = useState<CrosshairStyle>('classic')
   const [dpi, setDpi] = useState(800)
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
 
@@ -63,51 +67,45 @@ function App() {
   const tracking = phase === 'running'
   const moving = phase === 'warmup' || phase === 'running'
   const totalRounds = ROUND_MULTIPLIERS.length
-  const multiplier = ROUND_MULTIPLIERS[round] ?? 1
+  const nominalMultiplier = ROUND_MULTIPLIERS[round] ?? 1
   const targetSpeed = getTargetSpeed(speedMode)
   const recommendation = recommendMultiplier(results)
-  const recommendedSelected = baseSensitivity * recommendation
-  const displayedCandidate = baseSensitivity * multiplier
+  const confirmedGameConfig = GAME_BY_ID[confirmedGame]
+  const recommendedSelected = normalizeSensitivity(baseSensitivity * recommendation, confirmedGameConfig)
+  const displayedCandidate = normalizeSensitivity(baseSensitivity * nominalMultiplier, confirmedGameConfig)
+  const multiplier = displayedCandidate / baseSensitivity
   const selectedGameConfig = GAME_BY_ID[selectedGame]
   useEffect(() => {
-    if (phase !== 'countdown' || paused) return
-    setCountdown(3)
-    const started = Date.now()
-    const timer = window.setInterval(() => {
-      const next = Math.max(0, 3 - Math.floor((Date.now() - started) / 1000))
-      setCountdown(next)
-      if (Date.now() - started >= 3000) {
-        window.clearInterval(timer)
+    if (phase === 'idle' || paused) return
+
+    const started = performance.now()
+    const initialRemaining = phaseRemainingMsRef.current
+    let transitioned = false
+    const updateTimer = () => {
+      const nextRemaining = Math.max(0, initialRemaining - (performance.now() - started))
+      phaseRemainingMsRef.current = nextRemaining
+      if (phase === 'countdown') setCountdown(Math.ceil(nextRemaining / 1000))
+      else setRemaining(nextRemaining / 1000)
+
+      if (nextRemaining > 0 || phase === 'running') return
+      transitioned = true
+      if (phase === 'countdown') {
+        phaseRemainingMsRef.current = ROUND_WARMUP * 1000
         setRemaining(ROUND_WARMUP)
         setPhase('warmup')
-      }
-    }, 100)
-    return () => window.clearInterval(timer)
-  }, [phase, paused, round])
-
-  useEffect(() => {
-    if (phase !== 'warmup' || paused) return
-    setRemaining(ROUND_WARMUP)
-    const started = Date.now()
-    const timer = window.setInterval(() => {
-      setRemaining(Math.max(0, ROUND_WARMUP - (Date.now() - started) / 1000))
-      if (Date.now() - started >= ROUND_WARMUP * 1000) {
-        window.clearInterval(timer)
+      } else {
+        phaseRemainingMsRef.current = ROUND_DURATION * 1000
         setRemaining(ROUND_DURATION)
         setPhase('running')
       }
-    }, 100)
-    return () => window.clearInterval(timer)
-  }, [phase, paused, round])
+    }
 
-  useEffect(() => {
-    if (phase !== 'running' || paused) return
-    setRemaining(ROUND_DURATION)
-    const started = Date.now()
-    const timer = window.setInterval(() => {
-      setRemaining(Math.max(0, ROUND_DURATION - (Date.now() - started) / 1000))
-    }, 100)
-    return () => window.clearInterval(timer)
+    updateTimer()
+    const timer = window.setInterval(updateTimer, 100)
+    return () => {
+      window.clearInterval(timer)
+      if (!transitioned) phaseRemainingMsRef.current = Math.max(0, initialRemaining - (performance.now() - started))
+    }
   }, [phase, paused, round])
 
   const beginRound = () => {
@@ -117,6 +115,7 @@ function App() {
       setResultOpen(false)
     }
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
+    phaseRemainingMsRef.current = 3000
     setCountdown(3)
     setRemaining(ROUND_DURATION)
     setPaused(false)
@@ -125,10 +124,21 @@ function App() {
   }
 
   const saveSetup = () => {
-    const cleanSensitivity = Math.min(selectedGameConfig.sensitivityMax, Math.max(selectedGameConfig.sensitivityMin, sensitivityInput))
+    const cleanSensitivity = normalizeSensitivity(sensitivityInput, selectedGameConfig)
+    const configurationChanged = selectedGame !== confirmedGame
+      || cleanSensitivity !== baseSensitivity
+      || selectedSpeedMode !== speedMode
+      || selectedCrosshair !== crosshair
     setSensitivityInput(cleanSensitivity)
     setConfirmedGame(selectedGame)
     setBaseSensitivity(cleanSensitivity)
+    setSpeedMode(selectedSpeedMode)
+    setCrosshair(selectedCrosshair)
+    if (configurationChanged && results.length) {
+      setResults([])
+      setRound(0)
+      setResultOpen(false)
+    }
     setSetupOpen(false)
     if (startAfterSetup) {
       setStartAfterSetup(false)
@@ -138,6 +148,8 @@ function App() {
 
   const start = () => {
     if (!results.length) {
+      setSelectedSpeedMode(speedMode)
+      setSelectedCrosshair(crosshair)
       setStartAfterSetup(true)
       setSetupOpen(true)
       return
@@ -146,6 +158,10 @@ function App() {
   }
 
   const openSetup = () => {
+    setSelectedGame(confirmedGame)
+    setSensitivityInput(baseSensitivity)
+    setSelectedSpeedMode(speedMode)
+    setSelectedCrosshair(crosshair)
     setStartAfterSetup(false)
     setSetupOpen(true)
   }
@@ -178,6 +194,7 @@ function App() {
     setRemaining(ROUND_DURATION)
     setCountdown(3)
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
+    phaseRemainingMsRef.current = 3000
     document.exitPointerLock?.()
   }
 
@@ -248,11 +265,14 @@ function App() {
                 : 'Faça movimentos naturais. A bolinha segue velocidade fixa com mudanças aleatórias de direção.'}
           </p>
           <div className="candidate-list">
-            {ROUND_MULTIPLIERS.map((value, index) => (
-              <div key={`${index}-${value}`} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
-                <span>{String(index + 1).padStart(2, '0')}</span><i /><b>{format(value, 2)}×</b>
-              </div>
-            ))}
+            {ROUND_MULTIPLIERS.map((value, index) => {
+              const effectiveMultiplier = normalizeSensitivity(baseSensitivity * value, confirmedGameConfig) / baseSensitivity
+              return (
+                <div key={`${index}-${value}`} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
+                  <span>{String(index + 1).padStart(2, '0')}</span><i /><b>{format(effectiveMultiplier, 2)}×</b>
+                </div>
+              )
+            })}
           </div>
         </aside>
       </section>
@@ -299,8 +319,8 @@ function App() {
               {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (
                 <button
                   key={mode}
-                  className={speedMode === mode ? 'choice-card selected' : 'choice-card'}
-                  onClick={() => setSpeedMode(mode)}
+                  className={selectedSpeedMode === mode ? 'choice-card selected' : 'choice-card'}
+                  onClick={() => setSelectedSpeedMode(mode)}
                   type="button"
                 >
                   <span>{SPEED_LABEL[mode]}</span>
@@ -313,7 +333,7 @@ function App() {
               {CROSSHAIRS.map((item) => {
                 const Icon = item.icon
                 return (
-                  <button key={item.id} className={crosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setCrosshair(item.id)} type="button">
+                  <button key={item.id} className={selectedCrosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setSelectedCrosshair(item.id)} type="button">
                     <Icon size={18} />
                     <span>{item.label}</span>
                     <small>{item.description}</small>
