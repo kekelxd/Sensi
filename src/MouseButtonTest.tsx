@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Mouse, RotateCcw } from 'lucide-react'
 
 const BUTTONS = [
-  { code: 0, label: 'Esquerdo', short: 'LMB' },
-  { code: 1, label: 'Scroll', short: 'MMB' },
-  { code: 2, label: 'Direito', short: 'RMB' },
-  { code: 3, label: 'Voltar', short: 'M4' },
-  { code: 4, label: 'Avançar', short: 'M5' },
+  { code: 0, mask: 1, label: 'Esquerdo', short: 'LMB' },
+  { code: 1, mask: 4, label: 'Scroll', short: 'MMB' },
+  { code: 2, mask: 2, label: 'Direito', short: 'RMB' },
+  { code: 3, mask: 8, label: 'Voltar', short: 'M4' },
+  { code: 4, mask: 16, label: 'Avançar', short: 'M5' },
 ]
 
 type WheelDirection = 'up' | 'down' | null
@@ -14,6 +14,7 @@ type WheelDirection = 'up' | 'down' | null
 export function MouseButtonTest() {
   const zoneRef = useRef<HTMLDivElement>(null)
   const wheelTimerRef = useRef<number | null>(null)
+  const pressedRef = useRef<Set<number>>(new Set())
   const [pressed, setPressed] = useState<Set<number>>(() => new Set())
   const [counts, setCounts] = useState<Record<number, number>>({})
   const [wheelDirection, setWheelDirection] = useState<WheelDirection>(null)
@@ -23,20 +24,28 @@ export function MouseButtonTest() {
     const zone = zoneRef.current
     if (!zone) return
 
-    const pressButton = (event: PointerEvent) => {
-      if (event.pointerType && event.pointerType !== 'mouse') return
+    const syncPressedButtons = (buttonsMask: number, countNewButtons: boolean) => {
+      const next = new Set(BUTTONS.filter((button) => (buttonsMask & button.mask) !== 0).map((button) => button.code))
+      if (countNewButtons) {
+        const newButtons = [...next].filter((code) => !pressedRef.current.has(code))
+        if (newButtons.length) {
+          setCounts((current) => {
+            const updated = { ...current }
+            for (const code of newButtons) updated[code] = (updated[code] ?? 0) + 1
+            return updated
+          })
+        }
+      }
+      pressedRef.current = next
+      setPressed(next)
+    }
+    const pressButton = (event: MouseEvent) => {
       event.preventDefault()
       zone.focus({ preventScroll: true })
-      setPressed((current) => new Set(current).add(event.button))
-      setCounts((current) => ({ ...current, [event.button]: (current[event.button] ?? 0) + 1 }))
+      syncPressedButtons(event.buttons, true)
     }
-    const releaseButton = (event: PointerEvent) => {
-      setPressed((current) => {
-        const next = new Set(current)
-        next.delete(event.button)
-        return next
-      })
-    }
+    const releaseButton = (event: MouseEvent) => syncPressedButtons(event.buttons, false)
+    const clearPressedButtons = () => syncPressedButtons(0, false)
     const preventBrowserAction = (event: Event) => event.preventDefault()
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault()
@@ -47,15 +56,17 @@ export function MouseButtonTest() {
       wheelTimerRef.current = window.setTimeout(() => setWheelDirection(null), 180)
     }
 
-    zone.addEventListener('pointerdown', pressButton)
-    window.addEventListener('pointerup', releaseButton)
+    zone.addEventListener('mousedown', pressButton)
+    window.addEventListener('mouseup', releaseButton)
+    window.addEventListener('blur', clearPressedButtons)
     zone.addEventListener('contextmenu', preventBrowserAction)
     zone.addEventListener('auxclick', preventBrowserAction)
     zone.addEventListener('wheel', handleWheel, { passive: false })
 
     return () => {
-      zone.removeEventListener('pointerdown', pressButton)
-      window.removeEventListener('pointerup', releaseButton)
+      zone.removeEventListener('mousedown', pressButton)
+      window.removeEventListener('mouseup', releaseButton)
+      window.removeEventListener('blur', clearPressedButtons)
       zone.removeEventListener('contextmenu', preventBrowserAction)
       zone.removeEventListener('auxclick', preventBrowserAction)
       zone.removeEventListener('wheel', handleWheel)
@@ -64,6 +75,7 @@ export function MouseButtonTest() {
   }, [])
 
   const reset = () => {
+    pressedRef.current = new Set()
     setPressed(new Set())
     setCounts({})
     setWheelCounts({ up: 0, down: 0 })

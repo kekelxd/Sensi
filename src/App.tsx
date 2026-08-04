@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Activity, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, VALORANT_RATIO } from './calibration'
+import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
+import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 
-type Game = 'cs2' | 'valorant'
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
 type AppView = 'calibration' | 'polling' | 'buttons'
 
@@ -15,11 +15,6 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: string, description: string
   { id: 'circle', label: 'Circular', description: 'Anel com ponto central', icon: Circle },
   { id: 'plus', label: 'Cruz cheia', description: 'Mira compacta e direta', icon: Plus },
 ]
-
-const GAME_LABEL: Record<Game, string> = {
-  cs2: 'Counter-Strike 2',
-  valorant: 'Valorant',
-}
 
 const SPEED_LABEL: Record<TargetSpeedMode, string> = {
   normal: 'Normal',
@@ -32,8 +27,6 @@ const SPEED_BADGE: Record<TargetSpeedMode, string> = {
 }
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
-const toBaseCS = (game: Game, sensitivity: number) => game === 'cs2' ? sensitivity : sensitivity * VALORANT_RATIO
-const fromBaseCS = (game: Game, csSensitivity: number) => game === 'cs2' ? csSensitivity : csSensitivity / VALORANT_RATIO
 
 function Metric({ label, value, suffix, tone }: { label: string, value: string, suffix?: string, tone?: string }) {
   return (
@@ -54,12 +47,13 @@ function App() {
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [startAfterSetup, setStartAfterSetup] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
-  const [selectedGame, setSelectedGame] = useState<Game>('cs2')
+  const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
   const [sensitivityInput, setSensitivityInput] = useState(1)
-  const [confirmedGame, setConfirmedGame] = useState<Game>('cs2')
+  const [confirmedGame, setConfirmedGame] = useState<GameId>('cs2')
   const [speedMode, setSpeedMode] = useState<TargetSpeedMode>('normal')
-  const [baseCS, setBaseCS] = useState(1)
+  const [baseSensitivity, setBaseSensitivity] = useState(1)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [dpi, setDpi] = useState(800)
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
@@ -71,9 +65,9 @@ function App() {
   const multiplier = ROUND_MULTIPLIERS[round] ?? 1
   const targetSpeed = getTargetSpeed(speedMode)
   const recommendation = recommendMultiplier(results)
-  const recommendedCS = baseCS * recommendation
-  const recommendedSelected = fromBaseCS(confirmedGame, recommendedCS)
-  const displayedCandidate = fromBaseCS(confirmedGame, baseCS * multiplier)
+  const recommendedSelected = baseSensitivity * recommendation
+  const displayedCandidate = baseSensitivity * multiplier
+  const selectedGameConfig = GAME_BY_ID[selectedGame]
   useEffect(() => {
     if (phase !== 'countdown' || paused) return
     setCountdown(3)
@@ -115,27 +109,49 @@ function App() {
     return () => window.clearInterval(timer)
   }, [phase, paused, round])
 
-  const saveSetup = () => {
-    const cleanSensitivity = Math.max(0.01, sensitivityInput)
-    setSensitivityInput(cleanSensitivity)
-    setConfirmedGame(selectedGame)
-    setBaseCS(toBaseCS(selectedGame, cleanSensitivity))
-    setSetupOpen(false)
-  }
-
-  const start = () => {
+  const beginRound = () => {
     if (resultOpen || results.length === totalRounds) {
       setResults([])
       setRound(0)
       setResultOpen(false)
     }
-    saveSetup()
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
     setCountdown(3)
     setRemaining(ROUND_DURATION)
     setPaused(false)
     arenaRef.current?.requestPointerLock()
     setPhase('countdown')
+  }
+
+  const saveSetup = () => {
+    const cleanSensitivity = Math.min(selectedGameConfig.sensitivityMax, Math.max(selectedGameConfig.sensitivityMin, sensitivityInput))
+    setSensitivityInput(cleanSensitivity)
+    setConfirmedGame(selectedGame)
+    setBaseSensitivity(cleanSensitivity)
+    setSetupOpen(false)
+    if (startAfterSetup) {
+      setStartAfterSetup(false)
+      beginRound()
+    }
+  }
+
+  const start = () => {
+    if (!results.length) {
+      setStartAfterSetup(true)
+      setSetupOpen(true)
+      return
+    }
+    beginRound()
+  }
+
+  const openSetup = () => {
+    setStartAfterSetup(false)
+    setSetupOpen(true)
+  }
+
+  const closeSetup = () => {
+    setStartAfterSetup(false)
+    setSetupOpen(false)
   }
 
   const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
@@ -177,7 +193,7 @@ function App() {
           {view === 'calibration' ? (
             <>
               <span>{results.length}/{totalRounds} rodadas</span>
-              <button className="icon-button" onClick={() => setSetupOpen(true)} aria-label="Abrir configurações"><Settings2 size={17} /></button>
+              <button className="icon-button" onClick={openSetup} aria-label="Abrir configurações"><Settings2 size={17} /></button>
             </>
           ) : <span>Diagnóstico do mouse</span>}
         </div>
@@ -216,7 +232,7 @@ function App() {
           <div className="test-value">
             <span>Sensibilidade em teste</span>
             <strong>{format(displayedCandidate, 3)}</strong>
-            <small>{GAME_LABEL[confirmedGame]} · {format(multiplier, 2)}× · Velocidade {SPEED_BADGE[speedMode]}</small>
+            <small>{GAME_BY_ID[confirmedGame].label} · {format(multiplier, 2)}× · Velocidade {SPEED_BADGE[speedMode]}</small>
           </div>
           <div className={phase === 'countdown' ? 'timer countdown-timer' : 'timer'}>
             {phase === 'countdown' ? countdown : active ? format(remaining, 1) : format(ROUND_DURATION, 1)}
@@ -240,7 +256,7 @@ function App() {
       </section>
 
       <footer>
-        <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Tracking ativo · se soltar, clique na arena' : `Base: ${GAME_LABEL[confirmedGame]}`}</div>
+        <div className="footer-status"><MousePointer2 size={16} /> {active ? 'Tracking ativo · se soltar, clique na arena' : `Base: ${GAME_BY_ID[confirmedGame].label}`}</div>
         <div className="controls">
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? 'Retomar' : 'Pausar'}</button>}
         </div>
@@ -250,28 +266,28 @@ function App() {
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
           <section className="modal setup-modal">
-            <button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button>
+            <button className="modal-close" onClick={closeSetup}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>Configurar antes do teste</h2>
             <p>Escolha o jogo, informe sua sensibilidade atual e selecione a velocidade da bolinha. O teste usa {totalRounds} rodadas de {ROUND_DURATION} segundos para calibrar a mira.</p>
 
             <div className="option-group" role="radiogroup" aria-label="Jogo de referência">
-              {(['cs2', 'valorant'] as Game[]).map((game) => (
+              {GAMES.map((game) => (
                 <button
-                  key={game}
-                  className={selectedGame === game ? 'choice-card selected' : 'choice-card'}
-                  onClick={() => setSelectedGame(game)}
+                  key={game.id}
+                  className={selectedGame === game.id ? 'choice-card selected' : 'choice-card'}
+                  onClick={() => setSelectedGame(game.id)}
                   type="button"
                 >
-                  <span>{GAME_LABEL[game]}</span>
-                  <small>Usar sensi do {game === 'cs2' ? 'CS2' : 'Valorant'}</small>
+                  <span>{game.label}</span>
+                  <small>Usar sensibilidade do {game.shortLabel}</small>
                 </button>
               ))}
             </div>
 
             <label>
-              Sensibilidade atual no {GAME_LABEL[selectedGame]}
-              <input type="number" min="0.01" max="20" step="0.001" value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
+              Sensibilidade atual no {selectedGameConfig.label}
+              <input type="number" min={selectedGameConfig.sensitivityMin} max={selectedGameConfig.sensitivityMax} step={selectedGameConfig.sensitivityStep} value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
             </label>
             <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
 
@@ -302,12 +318,11 @@ function App() {
               })}
             </div>
 
-            <div className="conversion">
-              <span>Equivalente CS2 <strong>{format(toBaseCS(selectedGame, sensitivityInput), 3)}</strong></span>
-              <span>Equivalente Valorant <strong>{format(toBaseCS(selectedGame, sensitivityInput) / VALORANT_RATIO, 3)}</strong></span>
+            <div className="conversion single-conversion">
+              <span>Sensibilidade base em {selectedGameConfig.shortLabel} <strong>{format(sensitivityInput, 3)}</strong></span>
             </div>
-            <button className="primary-button wide" onClick={saveSetup}>Salvar e continuar</button>
-            <button className="secondary-button wide polling-shortcut" onClick={() => { setSetupOpen(false); setView('polling') }}><Gauge size={16} /> Ir para teste de polling rate</button>
+            <button className="primary-button wide" onClick={saveSetup}>{startAfterSetup ? 'Salvar e iniciar teste' : 'Salvar configuração'}</button>
+            <button className="secondary-button wide polling-shortcut" onClick={() => { closeSetup(); setView('polling') }}><Gauge size={16} /> Ir para teste de polling rate</button>
           </section>
         </div>
       )}
@@ -321,7 +336,7 @@ function App() {
             <h2>Sensibilidade recomendada</h2>
             <p>Seu melhor equilíbrio entre precisão, controle e suavidade apareceu em <b>{format(recommendation, 2)}×</b> da configuração inicial com velocidade {SPEED_BADGE[speedMode]}.</p>
             <div className="recommendations single-recommendation">
-              <div><span>{GAME_LABEL[confirmedGame]}</span><strong>{format(recommendedSelected, 3)}</strong></div>
+              <div><span>{GAME_BY_ID[confirmedGame].label}</span><strong>{format(recommendedSelected, 3)}</strong></div>
             </div>
             <div className="result-bars">
               {[...results].sort((a, b) => b.score - a.score).map((result, index) => (

@@ -12,7 +12,6 @@ export type TargetSpeedMode = 'normal' | 'fast'
 export const ROUND_MULTIPLIERS = [0.8, 0.9, 1, 1.1, 1.2]
 export const ROUND_DURATION = 25
 export const ROUND_WARMUP = 1
-export const VALORANT_RATIO = 3.181818
 
 export function getTargetSpeed(mode: TargetSpeedMode) {
   return mode === 'fast' ? 1.12 : 1

@@ -270,8 +270,10 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius * .27, 0, Math.PI * 2); ctx.fill()
       }
 
-      const onTarget = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY) <= radius
-      drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
+      if (activeRef.current) {
+        const onTarget = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY) <= radius
+        drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
+      }
 
       animationFrame = requestAnimationFrame(render)
     }

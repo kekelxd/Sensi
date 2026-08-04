@@ -125,6 +125,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .conversion { padding: 12px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 .conversion span { display: block; }
 .conversion strong { color: var(--mint); font: 500 12px DM Mono, monospace; }
+.single-conversion { justify-content: center; text-align: center; }
 .recommendations { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 22px 0; }
 .single-recommendation { grid-template-columns: 1fr; }
 .recommendations div { padding: 17px 8px 17px 0; }
