@@ -232,7 +232,7 @@ function App() {
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
               <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')}><Settings2 size={17} /></button>
             </>
-          ) : <span>{view === 'warmup' ? t('header.aimTraining') : view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
+          ) : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
       </header>
 
@@ -309,7 +309,7 @@ function App() {
       </section>
 
       <footer>
-        <div className="footer-status"><MousePointer2 size={16} /> {active ? t('calibration.trackingActive') : t('calibration.base', { game: GAME_BY_ID[confirmedGame].label })}</div>
+        <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls">
           {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? t('calibration.resume') : t('calibration.pause')}</button>}
         </div>

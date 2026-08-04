@@ -48,7 +48,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .app-tabs button:disabled { cursor: not-allowed; opacity: .5; }
 .header-actions { position: absolute; right: 20px; bottom: 13px; display: flex; align-items: center; gap: 14px; color: var(--muted); font: 500 10px DM Mono, monospace; text-transform: uppercase; }
 .language-switcher { display: flex; align-items: center; gap: 6px; color: #aeb4bf; }
-.language-switcher select { max-width: 92px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 5px 22px 5px 7px; color: #e8e5de; background: #10141b; font: 600 9px DM Mono, monospace; text-transform: none; cursor: pointer; }
+.language-switcher select { width: 108px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; padding: 5px 22px 5px 7px; color: #e8e5de; background: #10141b; font: 600 9px DM Mono, monospace; text-transform: none; cursor: pointer; }
 .icon-button, .modal-close { border: 1px solid var(--line); color: #c2c5ca; background: var(--surface-2); border-radius: 8px; display: grid; place-items: center; }
 .icon-button { width: 34px; height: 34px; }
 
