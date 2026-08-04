@@ -198,10 +198,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .warmup-preview::after { content: ''; position: absolute; z-index: 2; inset: 45% 0 0; background: linear-gradient(transparent, rgba(7,9,13,.96)); }
 .preview-target { position: absolute; width: 24px; height: 24px; border: 2px solid rgba(255,255,255,.55); border-radius: 50%; background: var(--accent); box-shadow: 0 0 22px rgba(255,114,81,.62); animation-play-state: running !important; }
 .preview-target::after { content: ''; position: absolute; inset: 6px; border-radius: 50%; background: rgba(255,255,255,.78); }
-.preview-crosshair { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; animation-play-state: running !important; }
-.preview-crosshair::before, .preview-crosshair::after { content: ''; position: absolute; left: 50%; top: 50%; background: var(--mint); box-shadow: 0 0 7px rgba(141,251,211,.5); }
-.preview-crosshair::before { width: 28px; height: 1px; transform: translate(-50%, -50%); }
-.preview-crosshair::after { width: 1px; height: 28px; transform: translate(-50%, -50%); }
+.preview-crosshair { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border: 2px solid rgba(8,12,15,.72); border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 2px rgba(141,251,211,.2), 0 0 12px rgba(141,251,211,.72); animation-play-state: running !important; }
 .preview-meta { position: absolute; z-index: 3; left: 18px; right: 18px; bottom: 16px; }
 .preview-meta b, .preview-meta small { display: block; }
 .preview-meta b { color: #f2f0e9; font-size: 15px; }
