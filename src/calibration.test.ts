@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateRoundResult, recommendMultiplier, ROUND_MULTIPLIERS, RoundResult } from './calibration'
+import { calculateRoundResult, isCalibrationComplete, recommendMultiplier, ROUND_MULTIPLIERS, RoundResult } from './calibration'
 
 const result = (multiplier: number, score: number): RoundResult => ({ multiplier, score, accuracy: score, meanError: 0, smoothness: score, overshoots: 0 })
 
@@ -37,5 +37,13 @@ describe('final recommendation', () => {
   it('returns the neutral multiplier when there is no useful score', () => {
     expect(recommendMultiplier([])).toBe(1)
     expect(recommendMultiplier([result(0.8, 0), result(1.2, 0)])).toBe(1)
+  })
+})
+
+describe('calibration completion', () => {
+  it('ends exactly after the fifth completed round', () => {
+    expect(isCalibrationComplete(4)).toBe(false)
+    expect(isCalibrationComplete(5)).toBe(true)
+    expect(isCalibrationComplete(6)).toBe(true)
   })
 })

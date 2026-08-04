@@ -18,6 +18,10 @@ export function getTargetSpeed(mode: TargetSpeedMode) {
   return mode === 'fast' ? 1.12 : 1
 }
 
+export function isCalibrationComplete(completedRounds: number, totalRounds = ROUND_MULTIPLIERS.length) {
+  return completedRounds >= totalRounds
+}
+
 export function calculateRoundResult(
   multiplier: number,
   distances: number[],

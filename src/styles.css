@@ -65,6 +65,20 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 
 .arena-wrap { min-width: 0; min-height: 0; position: relative; overflow: hidden; }
 .arena { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; user-select: none; outline: none; }
+.arena-hud { display: none; position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.arena-wrap:fullscreen { width: 100vw; height: 100vh; background: #0b0e14; }
+.arena-wrap:fullscreen .arena-hud { display: block; }
+.arena-hud-metrics, .arena-hud-round { position: absolute; top: 24px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(7,9,13,.78); box-shadow: 0 18px 45px rgba(0,0,0,.24); backdrop-filter: blur(12px); }
+.arena-hud-metrics { left: 24px; width: 180px; padding: 7px 14px; }
+.arena-hud-metrics > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+.arena-hud-metrics > div:last-child { border-bottom: 0; }
+.arena-hud span { color: #858b96; font: 500 9px DM Mono, monospace; text-transform: uppercase; letter-spacing: .07em; }
+.arena-hud strong { color: #f2f0e9; font: 500 17px DM Mono, monospace; }
+.arena-hud strong small { margin-left: 3px; color: #777e89; font-size: 9px; }
+.arena-hud-metrics > div:first-child strong { color: var(--mint); }
+.arena-hud-round { right: 24px; min-width: 138px; padding: 13px 16px; text-align: right; }
+.arena-hud-round span { display: block; margin-bottom: 4px; }
+.arena-hud-round strong { color: var(--accent); font-size: 28px; }
 .arena-prompt { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; text-align: center; color: #737983; font-size: 11px; background: rgba(7,9,13,.34); }
 .arena-prompt span { color: #e7e4dd; font-size: clamp(20px, 3vw, 42px); font-weight: 700; letter-spacing: -.04em; margin-bottom: 8px; }
 .arena-prompt small { color: #8a909a; font-size: 11px; }
@@ -261,6 +275,11 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .metric { padding: 8px; border: 0; }
   .metric-value { font-size: 18px; }
   .arena-wrap { height: 54vh; min-height: 360px; }
+  .arena-wrap:fullscreen { height: 100vh; }
+  .arena-hud-metrics { top: 14px; left: 14px; width: 158px; padding: 5px 11px; }
+  .arena-hud-metrics > div { padding: 8px 0; }
+  .arena-hud-round { top: 14px; right: 14px; min-width: 112px; padding: 10px 12px; }
+  .arena-hud-round strong { font-size: 23px; }
   .round-panel { border: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
   .round-panel p, .candidate-list { display: none; }
   .timer { font-size: 40px; }

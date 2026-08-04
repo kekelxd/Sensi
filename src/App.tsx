@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Gauge, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { calculateRoundResult, getTargetSpeed, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
+import { calculateRoundResult, getTargetSpeed, isCalibrationComplete, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -29,6 +29,12 @@ const SPEED_BADGE: Record<TargetSpeedMode, string> = {
 }
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
+
+const leaveFullscreen = () => {
+  if (!document.fullscreenElement) return
+  const request = document.exitFullscreen?.()
+  request?.catch(() => {})
+}
 
 function Metric({ label, value, suffix, tone }: { label: string, value: string, suffix?: string, tone?: string }) {
   return (
@@ -67,6 +73,7 @@ function App() {
   const tracking = phase === 'running'
   const moving = phase === 'warmup' || phase === 'running'
   const totalRounds = ROUND_MULTIPLIERS.length
+  const calibrationComplete = isCalibrationComplete(results.length, totalRounds)
   const nominalMultiplier = ROUND_MULTIPLIERS[round] ?? 1
   const targetSpeed = getTargetSpeed(speedMode)
   const recommendation = recommendMultiplier(results)
@@ -109,10 +116,10 @@ function App() {
   }, [phase, paused, round])
 
   const beginRound = () => {
-    if (resultOpen || results.length === totalRounds) {
-      setResults([])
-      setRound(0)
-      setResultOpen(false)
+    if (resultOpen || calibrationComplete) {
+      setResultOpen(true)
+      leaveFullscreen()
+      return
     }
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
     phaseRemainingMsRef.current = 3000
@@ -147,6 +154,11 @@ function App() {
   }
 
   const start = () => {
+    if (calibrationComplete) {
+      setResultOpen(true)
+      leaveFullscreen()
+      return
+    }
     if (!results.length) {
       setSelectedSpeedMode(speedMode)
       setSelectedCrosshair(crosshair)
@@ -174,14 +186,17 @@ function App() {
   const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
     const result = calculateRoundResult(multiplier, distances, speeds, targetRadius)
     const nextResults = [...results, result]
+    const completed = isCalibrationComplete(nextResults.length, totalRounds)
     setResults(nextResults)
     setPhase('idle')
     setRemaining(ROUND_DURATION)
     document.exitPointerLock?.()
-    if (round >= totalRounds - 1) {
+    if (completed) {
+      setRound(totalRounds - 1)
       setResultOpen(true)
+      leaveFullscreen()
     } else {
-      window.setTimeout(() => setRound((value) => value + 1), 250)
+      window.setTimeout(() => setRound(nextResults.length), 250)
     }
   }
 
@@ -237,8 +252,21 @@ function App() {
           crosshair={crosshair}
           countdownLabel={phase === 'countdown' ? String(countdown) : phase === 'warmup' ? 'AJUSTE' : ''}
           hasResults={results.length > 0}
+          isComplete={calibrationComplete}
+          hud={{
+            round: Math.min(round + 1, totalRounds),
+            totalRounds,
+            accuracy: format(metrics.accuracy),
+            meanError: format(metrics.meanError),
+            sensitivity: format(displayedCandidate, 3),
+            remaining: phase === 'countdown' ? String(countdown) : format(remaining, 1),
+          }}
           onStart={start}
           onReset={reset}
+          onShowResults={() => {
+            setResultOpen(true)
+            leaveFullscreen()
+          }}
           onMetrics={setMetrics}
           onRoundComplete={completeRound}
         />

@@ -20,8 +20,18 @@ type Props = {
   crosshair: CrosshairStyle
   countdownLabel: string
   hasResults: boolean
+  isComplete: boolean
+  hud: {
+    round: number
+    totalRounds: number
+    accuracy: string
+    meanError: string
+    sensitivity: string
+    remaining: string
+  }
   onStart: () => void
   onReset: () => void
+  onShowResults: () => void
   onMetrics: (metrics: LiveMetrics) => void
   onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
 }
@@ -100,7 +110,7 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
 }
 
 export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function TrackingArena(
-  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, onStart, onReset, onMetrics, onRoundComplete },
+  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, isComplete, hud, onStart, onReset, onShowResults, onMetrics, onRoundComplete },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -351,13 +361,29 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   return (
     <div className="arena-wrap">
       <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && requestCanvasPointerLock(canvasRef.current)} />
+      {active && (
+        <div className="arena-hud" aria-live="polite">
+          <div className="arena-hud-metrics">
+            <div><span>Precisão</span><strong>{hud.accuracy}<small>%</small></strong></div>
+            <div><span>Erro médio</span><strong>{hud.meanError}<small>px</small></strong></div>
+            <div><span>Sensi em teste</span><strong>{hud.sensitivity}</strong></div>
+            <div><span>Tempo</span><strong>{hud.remaining}<small>s</small></strong></div>
+          </div>
+          <div className="arena-hud-round">
+            <span>Rodada atual</span>
+            <strong>{hud.round}<small>/ {hud.totalRounds}</small></strong>
+          </div>
+        </div>
+      )}
       {!active && (
         <div className="arena-prompt">
-          <span>{hasResults ? 'Rodada concluída' : 'Tudo pronto para calibrar'}</span>
-          <small>{hasResults ? 'Continue quando estiver preparado.' : 'Inicie o teste para preparar a primeira rodada.'}</small>
+          <span>{isComplete ? 'Calibração concluída' : hasResults ? 'Rodada concluída' : 'Tudo pronto para calibrar'}</span>
+          <small>{isComplete ? 'As cinco rodadas foram registradas.' : hasResults ? 'Continue quando estiver preparado.' : 'Inicie o teste para preparar a primeira rodada.'}</small>
           <div className="arena-controls">
             <button className="secondary-button" onClick={onReset}><RotateCcw size={16} /> Reiniciar</button>
-            <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? 'Próxima rodada' : 'Iniciar teste'}</button>
+            {isComplete
+              ? <button className="primary-button" onClick={onShowResults}>Ver resultado</button>
+              : <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? 'Próxima rodada' : 'Iniciar teste'}</button>}
           </div>
         </div>
       )}
