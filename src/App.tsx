@@ -337,11 +337,13 @@ function App() {
               ))}
             </div>
 
-            <label>
-              Sensibilidade atual no {selectedGameConfig.label}
-              <input type="number" min={selectedGameConfig.sensitivityMin} max={selectedGameConfig.sensitivityMax} step={selectedGameConfig.sensitivityStep} value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
-            </label>
-            <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+            <div className="setup-fields">
+              <label>
+                Sensibilidade atual no {selectedGameConfig.label}
+                <input type="number" min={selectedGameConfig.sensitivityMin} max={selectedGameConfig.sensitivityMax} step={selectedGameConfig.sensitivityStep} value={sensitivityInput} onChange={(event) => setSensitivityInput(Number(event.target.value))} />
+              </label>
+              <label>DPI do mouse<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+            </div>
 
             <div className="option-group mode-group" role="radiogroup" aria-label="Velocidade da bolinha">
               {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (

@@ -124,9 +124,13 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .modal input { display: block; margin-top: 7px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; color: #f0eee7; background: #0b0e13; font: 500 13px DM Mono, monospace; outline: none; }
 .modal input:focus { border-color: rgba(255,114,81,.6); }
 .modal-close:disabled { opacity: .35; cursor: not-allowed; }
-.setup-modal { width: min(620px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; }
+.setup-modal { width: min(620px, 100%); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 20px 22px; overflow: hidden; }
+.setup-modal .modal-icon { width: 19px; height: 19px; margin-bottom: 7px; }
+.setup-modal h2 { margin-bottom: 6px; font-size: 22px; }
+.setup-modal > p { margin-bottom: 12px; line-height: 1.55; }
+.setup-modal .modal-close { right: 12px; top: 12px; }
 .option-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-.game-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.game-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
 .choice-card, .crosshair-option { text-align: left; border: 1px solid var(--line); color: #dcdad4; background: #0b0e13; border-radius: 10px; transition: border-color .18s, background .18s, transform .18s; }
 .choice-card { padding: 14px; }
 .game-choice { position: relative; aspect-ratio: 1; min-height: 0; padding: 0; overflow: hidden; }
@@ -147,9 +151,19 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .choice-card small, .crosshair-option small { display: block; color: var(--muted); font-size: 9px; line-height: 1.45; margin-top: 5px; }
 .choice-card:hover, .crosshair-option:hover { border-color: rgba(255,114,81,.45); transform: translateY(-1px); }
 .choice-card.selected, .crosshair-option.selected { border-color: rgba(255,114,81,.85); background: rgba(255,114,81,.08); }
-.crosshair-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin: 16px 0; }
-.crosshair-option { min-height: 104px; padding: 12px; }
-.crosshair-option svg { color: var(--accent); margin-bottom: 11px; }
+.setup-fields { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(150px, .6fr); gap: 10px; }
+.setup-fields label { min-width: 0; margin: 6px 0 10px; }
+.setup-fields input { height: 42px; margin-top: 5px; padding: 8px 11px; }
+.modal input[type='number'] { appearance: textfield; -moz-appearance: textfield; }
+.modal input[type='number']::-webkit-inner-spin-button,
+.modal input[type='number']::-webkit-outer-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
+.setup-modal .mode-group { gap: 8px; margin-bottom: 9px; }
+.setup-modal .mode-group .choice-card { min-height: 58px; padding: 10px 12px; }
+.crosshair-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 9px 0; }
+.crosshair-option { min-height: 78px; padding: 10px 11px; }
+.crosshair-option svg { color: var(--accent); margin-bottom: 6px; }
+.setup-modal .conversion { padding: 9px; }
+.setup-modal .wide { height: 38px; margin-top: 10px; }
 .conversion { padding: 12px; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 .conversion span { display: block; }
 .conversion strong { color: var(--mint); font: 500 12px DM Mono, monospace; }
@@ -295,6 +309,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .footer-status, .dpi-status { display: none; }
   footer { justify-content: center; }
   .option-group, .crosshair-picker { grid-template-columns: 1fr 1fr; }
+  .setup-modal .game-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .polling-workspace { grid-template-columns: 1fr; }
   .polling-info, .polling-results { border: 0; padding: 20px; }
   .polling-info { border-bottom: 1px solid var(--line); }
@@ -312,4 +327,13 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .pressed-status { text-align: center; }
   .pressed-status strong { min-height: 38px; font-size: 17px; }
   .button-counters { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 560px), (max-height: 700px) {
+  .setup-modal { overflow-y: auto; }
+}
+
+@media (max-width: 560px) {
+  .setup-modal .game-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setup-fields { grid-template-columns: 1fr; gap: 0; }
 }
