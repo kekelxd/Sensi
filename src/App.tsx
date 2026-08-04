@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, writeCalibrationSession, type CalibrationAimSample, type CalibrationSessionSummary } from './calibration'
+import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, writeCalibrationSession, type CalibrationSessionSummary } from './calibration'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -197,8 +197,8 @@ function App() {
     setSetupOpen(false)
   }
 
-  const completeRound = (distances: number[], speeds: number[], targetRadius: number, aimOffsets: CalibrationAimSample[]) => {
-    const result = calculateRoundResult(multiplier, distances, speeds, targetRadius, aimOffsets)
+  const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
+    const result = calculateRoundResult(multiplier, distances, speeds, targetRadius)
     const nextResults = [...results, result]
     const completed = isCalibrationComplete(nextResults.length, totalRounds)
     setResults(nextResults)

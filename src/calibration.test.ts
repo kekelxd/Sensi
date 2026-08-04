@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalibrationHeatmap, buildCalibrationReport, calculateRoundResult, isCalibrationComplete, recommendMultiplier, ROUND_MULTIPLIERS, RoundResult } from './calibration'
+import { buildCalibrationReport, calculateRoundResult, isCalibrationComplete, recommendMultiplier, ROUND_MULTIPLIERS, RoundResult } from './calibration'
 
 const result = (multiplier: number, score: number): RoundResult => ({
   multiplier, score, accuracy: score, meanError: 20, smoothness: score, overshoots: 0,
-  errorControl: 80, overshootPenalty: 0, sampleCount: 600, targetRadius: 30, aimOffsets: [],
+  errorControl: 80, overshootPenalty: 0, sampleCount: 600, targetRadius: 30,
 })
 
 describe('round scoring', () => {
@@ -17,7 +17,7 @@ describe('round scoring', () => {
   })
 
   it('returns a safe result without samples', () => {
-    expect(calculateRoundResult(1, [], [], 30)).toEqual({ multiplier: 1, accuracy: 0, meanError: 999, smoothness: 0, overshoots: 0, score: 0, errorControl: 0, overshootPenalty: 0, sampleCount: 0, targetRadius: 30, aimOffsets: [] })
+    expect(calculateRoundResult(1, [], [], 30)).toEqual({ multiplier: 1, accuracy: 0, meanError: 999, smoothness: 0, overshoots: 0, score: 0, errorControl: 0, overshootPenalty: 0, sampleCount: 0, targetRadius: 30 })
   })
 })
 
@@ -33,16 +33,6 @@ describe('technical calibration report', () => {
     expect(report?.recommendation).toBeGreaterThanOrEqual(1)
     expect(report?.recommendation).toBeLessThanOrEqual(1.1)
     expect(report?.confidenceScore).toBeGreaterThan(0)
-  })
-
-  it('maps relative aim offsets and identifies samples inside the target', () => {
-    const candidate = result(1, 90)
-    candidate.aimOffsets = [{ x: 0, y: 0 }, { x: 2, y: 0 }]
-    const cells = buildCalibrationHeatmap([candidate])
-
-    expect(cells).toHaveLength(2)
-    expect(cells.some((cell) => cell.insideTarget)).toBe(true)
-    expect(cells.some((cell) => !cell.insideTarget)).toBe(true)
   })
 })
 

@@ -1,11 +1,5 @@
 import type { WarmupExercise } from './warmupConfig'
 
-export type AimSample = {
-  x: number
-  y: number
-  error: number
-}
-
 export type WarmupMetrics = {
   score: number
   accuracy: number
@@ -17,22 +11,10 @@ export type WarmupMetrics = {
   clickErrors: number
   bestStreak: number
   bestTrackingStreakMs: number
-  aimSamples: AimSample[]
-  missSamples: AimSample[]
-  overshootX: number
-  overshootY: number
   overshootCount: number
 }
 
-export type WarmupSessionSummary = Omit<WarmupMetrics, 'remaining' | 'aimSamples' | 'missSamples'>
-
-export type HeatmapCell = {
-  x: number
-  y: number
-  intensity: number
-  error: number
-  samples: number
-}
+export type WarmupSessionSummary = Omit<WarmupMetrics, 'remaining'>
 
 export function createEmptyWarmupMetrics(duration: number): WarmupMetrics {
   return {
@@ -46,10 +28,6 @@ export function createEmptyWarmupMetrics(duration: number): WarmupMetrics {
     clickErrors: 0,
     bestStreak: 0,
     bestTrackingStreakMs: 0,
-    aimSamples: [],
-    missSamples: [],
-    overshootX: 0,
-    overshootY: 0,
     overshootCount: 0,
   }
 }
@@ -65,32 +43,8 @@ export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSum
     clickErrors: metrics.clickErrors,
     bestStreak: metrics.bestStreak,
     bestTrackingStreakMs: metrics.bestTrackingStreakMs,
-    overshootX: metrics.overshootX,
-    overshootY: metrics.overshootY,
     overshootCount: metrics.overshootCount,
   }
-}
-
-export function buildAimHeatmap(samples: AimSample[], columns = 12, rows = 7): HeatmapCell[] {
-  const cells = Array.from({ length: columns * rows }, () => ({ samples: 0, errorTotal: 0 }))
-  for (const sample of samples) {
-    const column = Math.min(columns - 1, Math.max(0, Math.floor(sample.x * columns)))
-    const row = Math.min(rows - 1, Math.max(0, Math.floor(sample.y * rows)))
-    const cell = cells[row * columns + column]
-    cell.samples += 1
-    cell.errorTotal += sample.error
-  }
-  const peak = Math.max(1, ...cells.map((cell) => cell.samples))
-  return cells.flatMap((cell, index) => {
-    if (!cell.samples) return []
-    return [{
-      x: ((index % columns) + 0.5) / columns * 100,
-      y: (Math.floor(index / columns) + 0.5) / rows * 100,
-      intensity: cell.samples / peak,
-      error: cell.errorTotal / cell.samples,
-      samples: cell.samples,
-    }]
-  })
 }
 
 export function getWarmupRecommendation(metrics: WarmupMetrics, current: WarmupExercise): WarmupExercise {

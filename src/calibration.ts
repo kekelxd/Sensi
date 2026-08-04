@@ -9,10 +9,7 @@ export type RoundResult = {
   overshootPenalty: number
   sampleCount: number
   targetRadius: number
-  aimOffsets: CalibrationAimSample[]
 }
-
-export type CalibrationAimSample = { x: number, y: number }
 
 export type CalibrationConfidence = 'high' | 'medium' | 'exploratory'
 
@@ -29,13 +26,6 @@ export type CalibrationReport = {
   confidence: CalibrationConfidence
   confidenceScore: number
   multiplierSpread: number
-}
-
-export type CalibrationHeatmapCell = {
-  x: number
-  y: number
-  intensity: number
-  insideTarget: boolean
 }
 
 export type CalibrationSessionSummary = {
@@ -69,10 +59,9 @@ export function calculateRoundResult(
   distances: number[],
   speeds: number[],
   targetRadius: number,
-  aimOffsets: CalibrationAimSample[] = [],
 ): RoundResult {
   if (!distances.length) {
-    return { multiplier, accuracy: 0, meanError: 999, smoothness: 0, overshoots: 0, score: 0, errorControl: 0, overshootPenalty: 0, sampleCount: 0, targetRadius, aimOffsets }
+    return { multiplier, accuracy: 0, meanError: 999, smoothness: 0, overshoots: 0, score: 0, errorControl: 0, overshootPenalty: 0, sampleCount: 0, targetRadius }
   }
 
   const accuracy = distances.filter((distance) => distance <= targetRadius).length / distances.length
@@ -102,7 +91,6 @@ export function calculateRoundResult(
     overshootPenalty: overshootPenalty * 100,
     sampleCount: distances.length,
     targetRadius,
-    aimOffsets,
   }
 }
 
@@ -163,28 +151,6 @@ export function buildCalibrationReport(results: RoundResult[]): CalibrationRepor
     confidenceScore,
     multiplierSpread,
   }
-}
-
-export function buildCalibrationHeatmap(results: RoundResult[], columns = 13, rows = 13): CalibrationHeatmapCell[] {
-  const cells = Array.from({ length: columns * rows }, () => 0)
-  for (const result of results) {
-    for (const sample of result.aimOffsets) {
-      const x = Math.max(-2, Math.min(2, sample.x))
-      const y = Math.max(-2, Math.min(2, sample.y))
-      const column = Math.min(columns - 1, Math.max(0, Math.floor((x + 2) / 4 * columns)))
-      const row = Math.min(rows - 1, Math.max(0, Math.floor((y + 2) / 4 * rows)))
-      cells[row * columns + column] += 1
-    }
-  }
-  const peak = Math.max(1, ...cells)
-  return cells.flatMap((samples, index) => {
-    if (!samples) return []
-    const x = ((index % columns) + 0.5) / columns * 100
-    const y = (Math.floor(index / columns) + 0.5) / rows * 100
-    const relativeX = (x / 100 * 4) - 2
-    const relativeY = (y / 100 * 4) - 2
-    return [{ x, y, intensity: samples / peak, insideTarget: Math.hypot(relativeX, relativeY) <= 1 }]
-  })
 }
 
 export function createCalibrationSessionSummary(report: CalibrationReport, sensitivity: number): CalibrationSessionSummary {

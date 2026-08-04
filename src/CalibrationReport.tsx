@@ -1,5 +1,5 @@
-import { Activity, BrainCircuit, Crosshair, TrendingUp } from 'lucide-react'
-import { buildCalibrationHeatmap, type CalibrationReport, type CalibrationSessionSummary, type RoundResult } from './calibration'
+import { Activity, BrainCircuit, TrendingUp } from 'lucide-react'
+import { type CalibrationReport, type CalibrationSessionSummary, type RoundResult } from './calibration'
 import type { GameConfig } from './games'
 import { formatSensitivity, normalizeSensitivity } from './sensitivity'
 import { useI18n, type TranslationKey } from './i18n'
@@ -17,20 +17,8 @@ type Props = {
 const format = (value: number, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '0'
 const signed = (value: number, suffix = '') => `${value > 0 ? '+' : ''}${format(value, 1)}${suffix}`
 
-function getBiasKey(x: number, y: number): TranslationKey {
-  if (Math.hypot(x, y) < 0.08) return 'calibration.biasCentered'
-  if (Math.abs(x) > Math.abs(y) * 1.2) return x > 0 ? 'calibration.biasRight' : 'calibration.biasLeft'
-  return y > 0 ? 'calibration.biasDown' : 'calibration.biasUp'
-}
-
 export function CalibrationReportView({ report, results, previous, game, baseSensitivity, recommendedSensitivity, onRedo }: Props) {
   const { t } = useI18n()
-  const cells = buildCalibrationHeatmap(report.competitiveResults)
-  const samples = report.competitiveResults.flatMap((result) => result.aimOffsets)
-  const meanOffset = samples.reduce((sum, sample) => ({ x: sum.x + sample.x, y: sum.y + sample.y }), { x: 0, y: 0 })
-  const biasX = samples.length ? meanOffset.x / samples.length : 0
-  const biasY = samples.length ? meanOffset.y / samples.length : 0
-  const biasKey = getBiasKey(biasX, biasY)
   const baseline = report.baselineResult
   const confidenceKey = `calibration.confidence${report.confidence[0].toUpperCase()}${report.confidence.slice(1)}` as TranslationKey
   const sortedResults = [...results].sort((a, b) => a.multiplier - b.multiplier)
@@ -72,21 +60,6 @@ export function CalibrationReportView({ report, results, previous, game, baseSen
         </div>
       </section>
 
-        <section className="calibration-error-map">
-          <div className="report-section-heading">
-            <div><Crosshair size={16} /><span>{t('calibration.errorMap')}</span></div>
-            <small>{t('calibration.errorMapLegend')}</small>
-          </div>
-          <div className="calibration-heatmap" role="img" aria-label={t('calibration.errorMap')}>
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <path d="M50 0V100M0 50H100" stroke="rgba(255,255,255,.055)" strokeWidth=".45" />
-              <circle cx="50" cy="50" r="25" fill="rgba(141,251,211,.035)" stroke="rgba(141,251,211,.48)" strokeWidth=".7" />
-              {cells.map((cell) => <circle key={`${cell.x}-${cell.y}`} cx={cell.x} cy={cell.y} r={1.2 + cell.intensity * 4.2} fill={cell.insideTarget ? `rgba(141,251,211,${0.2 + cell.intensity * 0.66})` : `rgba(255,114,81,${0.16 + cell.intensity * 0.64})`} />)}
-              <circle cx="50" cy="50" r="1.2" fill="#f4f1ea" />
-            </svg>
-          </div>
-          <div className="calibration-bias"><span>{t('calibration.aimBias')}</span><strong>{t(biasKey)}</strong><small>{format(Math.hypot(biasX, biasY), 2)}r</small></div>
-        </section>
         </div>
 
         <div className="calibration-report-secondary">
