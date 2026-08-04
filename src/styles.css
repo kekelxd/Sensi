@@ -118,10 +118,14 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .game-choice { position: relative; aspect-ratio: 1; min-height: 0; padding: 0; overflow: hidden; }
 .game-logo { position: absolute; inset: 0; overflow: hidden; background: #090c11; }
 .game-logo img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.game-logo-valorant img, .game-logo-overwatch2 img, .game-logo-blackops7 img { object-fit: contain; padding: 18%; }
-.game-logo-valorant { background: #15171d; }
-.game-logo-overwatch2 { background: #11151b; }
-.game-logo-blackops7 { background: #090909; }
+.game-logo-valorant img { object-fit: contain; padding: 17%; filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+.game-logo-overwatch2 img { object-fit: contain; padding: 19%; filter: drop-shadow(0 5px 12px rgba(0,0,0,.42)); }
+.game-logo-blackops7 img, .game-logo-warzone img { object-fit: contain; padding: 10% 6% 20%; filter: drop-shadow(0 5px 12px rgba(0,0,0,.48)); }
+.game-logo-valorant { background: radial-gradient(circle at 50% 35%, #332029, #11141a 72%); }
+.game-logo-overwatch2 { background: radial-gradient(circle at 50% 35%, #ffad4b, #e45b22 62%, #492013); }
+.game-logo-blackops7 { background: radial-gradient(circle at 50% 32%, #612416, #170c09 58%, #070707); }
+.game-logo-warzone { background: radial-gradient(circle at 50% 32%, #536772, #1a252b 58%, #080c0f); }
+.game-logo-pubg img, .game-logo-battlefield6 img { transform: scale(1.015); }
 .game-card-name { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; padding: 22px 8px 8px; color: #fff; background: linear-gradient(transparent, rgba(3,5,8,.92)); text-align: center; font-size: 9px !important; letter-spacing: .01em; }
 .game-choice.selected::after { content: ''; position: absolute; z-index: 3; inset: 4px; border: 1px solid rgba(255,114,81,.9); border-radius: 6px; pointer-events: none; }
 .choice-card span, .crosshair-option span { display: block; font-weight: 800; font-size: 12px; }

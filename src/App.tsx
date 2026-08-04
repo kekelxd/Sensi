@@ -280,7 +280,7 @@ function App() {
                   type="button"
                 >
                   <div className={`game-logo game-logo-${game.id}`}>
-                    <img src={`./game-icons/${game.id}.png`} alt="" />
+                    <img src={`./game-icons/${game.iconFile ?? `${game.id}.png`}`} alt="" />
                   </div>
                   <span className="game-card-name">{game.shortLabel}</span>
                 </button>
