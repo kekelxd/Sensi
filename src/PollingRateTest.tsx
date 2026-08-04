@@ -131,6 +131,7 @@ export function PollingRateTest() {
   }
 
   const progress = status === 'done' ? 100 : (TEST_DURATION - remaining) / TEST_DURATION * 100
+  const displayedRate = status === 'done' && stats.classified ? stats.classified : stats.measured
 
   return (
     <section className="polling-workspace">
@@ -151,8 +152,9 @@ export function PollingRateTest() {
         <div className="polling-grid" />
         <div className="polling-center">
           <div className="polling-kicker"><Zap size={14} /> {status === 'running' ? 'MEDINDO AGORA' : status === 'done' ? 'TESTE CONCLUÍDO' : 'PRONTO PARA MEDIR'}</div>
-          <strong>{stats.measured ? Math.round(stats.measured).toLocaleString('pt-BR') : '--'}</strong>
-          <span>Hz estimados</span>
+          <strong>{displayedRate ? Math.round(displayedRate).toLocaleString('pt-BR') : '--'}</strong>
+          <span>{status === 'done' ? 'Hz prováveis' : 'Hz observados'}</span>
+          {status === 'done' && stats.measured > 0 && <div className="polling-observed">{Math.round(stats.measured).toLocaleString('pt-BR')} Hz observados pelo navegador</div>}
           <div className="polling-progress"><i style={{ width: `${progress}%` }} /></div>
           <div className="polling-time">{status === 'running' ? `${remaining.toFixed(1)}s restantes` : status === 'done' ? `${stats.samples.toLocaleString('pt-BR')} amostras válidas` : `${TEST_DURATION} segundos de teste`}</div>
           <div className="polling-actions">
@@ -165,9 +167,10 @@ export function PollingRateTest() {
       <aside className="polling-results">
         <div className="panel-label">Resultado</div>
         <div className="polling-primary-result">
-          <span>Polling rate provável</span>
-          <strong>{stats.classified ? stats.classified.toLocaleString('pt-BR') : '--'}<small>Hz</small></strong>
+          <span>Taxa observada</span>
+          <strong>{stats.measured ? Math.round(stats.measured).toLocaleString('pt-BR') : '--'}<small>Hz</small></strong>
         </div>
+        <div className="polling-result-row"><span>Polling rate provável</span><b>{stats.classified ? stats.classified.toLocaleString('pt-BR') : '--'} Hz</b></div>
         <div className="polling-result-row"><span>Pico observado</span><b>{stats.peak ? Math.round(stats.peak).toLocaleString('pt-BR') : '--'} Hz</b></div>
         <div className="polling-result-row"><span>Estabilidade</span><b>{stats.samples ? `${stats.stability.toFixed(0)}%` : '--'}</b></div>
         <div className="polling-result-row"><span>Amostras</span><b>{stats.samples.toLocaleString('pt-BR')}</b></div>

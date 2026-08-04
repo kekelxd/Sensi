@@ -153,7 +153,8 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .polling-kicker { display: flex; justify-content: center; align-items: center; gap: 7px; color: var(--mint); font: 500 10px DM Mono, monospace; letter-spacing: .13em; }
 .polling-center > strong { display: block; margin: 20px 0 0; color: #f2f0e9; font: 500 clamp(74px, 10vw, 132px) DM Mono, monospace; line-height: .9; letter-spacing: -.1em; }
 .polling-center > span { display: block; margin-top: 12px; color: var(--muted); font: 500 11px DM Mono, monospace; text-transform: uppercase; letter-spacing: .12em; }
-.polling-progress { height: 3px; margin: 34px auto 10px; background: rgba(255,255,255,.08); }
+.polling-observed { margin-top: 10px; color: #6f7681; font: 500 9px DM Mono, monospace; }
+.polling-progress { height: 3px; margin: 26px auto 10px; background: rgba(255,255,255,.08); }
 .polling-progress i { display: block; height: 100%; background: var(--accent); transition: width .1s linear; box-shadow: 0 0 16px rgba(255,114,81,.5); }
 .polling-time { color: #747b86; font: 500 10px DM Mono, monospace; }
 .polling-actions { min-height: 42px; display: flex; justify-content: center; gap: 9px; margin-top: 25px; }
