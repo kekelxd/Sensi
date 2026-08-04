@@ -134,6 +134,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     lastAimY: 0,
     lastSample: 0,
     lastMetricsUpdate: 0,
+    targetTrail: [] as Array<{ x: number, y: number, time: number }>,
+    lastTrailSample: 0,
     canvasWidth: 0,
     canvasHeight: 0,
     complete: false,
@@ -223,6 +225,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         state.targetY *= scaleY
         state.destinationX *= scaleX
         state.destinationY *= scaleY
+        state.targetTrail = state.targetTrail.map((point) => ({ ...point, x: point.x * scaleX, y: point.y * scaleY }))
         state.aimX = clampAimCoordinate(state.aimX, rect.width)
         state.aimY = clampAimCoordinate(state.aimY, rect.height)
         state.visualAimX = clampAimCoordinate(state.visualAimX, rect.width)
@@ -309,6 +312,12 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         state.targetX = clamp(state.targetX + directionX * step, radius, width - radius)
         state.targetY = clamp(state.targetY + directionY * step, radius, height - radius)
 
+        if (time - state.lastTrailSample >= 18) {
+          state.targetTrail.push({ x: state.targetX, y: state.targetY, time })
+          if (state.targetTrail.length > 20) state.targetTrail.shift()
+          state.lastTrailSample = time
+        }
+
         if (scoringRef.current && time - state.lastSample > SAMPLE_INTERVAL_MS) {
           const sampleSeconds = state.lastSample ? Math.max(0.001, (time - state.lastSample) / 1000) : SAMPLE_INTERVAL_MS / 1000
           const distance = Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY)
@@ -330,6 +339,13 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
             onMetricsRef.current({ accuracy, meanError, smoothness })
           }
         }
+      }
+
+      state.targetTrail = state.targetTrail.filter((point) => time - point.time <= 360)
+      for (const point of state.targetTrail) {
+        const life = 1 - (time - point.time) / 360
+        ctx.fillStyle = `rgba(255,114,81,${Math.max(0, life) * 0.2})`
+        ctx.beginPath(); ctx.arc(point.x, point.y, radius * (0.22 + life * 0.42), 0, Math.PI * 2); ctx.fill()
       }
 
       if (state.targetX) {
@@ -384,6 +400,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.speeds = []
       state.lastSample = 0
       state.lastMetricsUpdate = 0
+      state.targetTrail = []
+      state.lastTrailSample = 0
       state.complete = false
       roundRemainingMsRef.current = ROUND_DURATION_MS
     }

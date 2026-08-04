@@ -116,6 +116,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
     lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
     onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0,
     extraTargets: [] as Array<{ x: number, y: number }>, strafeDirection: 1, nextDirectionChangeAt: 0,
+    targetTrail: [] as Array<{ x: number, y: number, time: number }>, lastTrailSample: 0,
     hits: 0, shots: 0, score: 0, complete: false,
   })
 
@@ -231,6 +232,7 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       state.targetX = state.targetX ? state.targetX * rect.width / oldWidth : rect.width / 2
       state.targetY = state.targetY ? state.targetY * rect.height / oldHeight : rect.height / 2
       state.extraTargets = state.extraTargets.map((target) => ({ x: target.x * rect.width / oldWidth, y: target.y * rect.height / oldHeight }))
+      state.targetTrail = state.targetTrail.map((point) => ({ ...point, x: point.x * rect.width / oldWidth, y: point.y * rect.height / oldHeight }))
       state.aimX = clampAimCoordinate(state.aimX, rect.width)
       state.aimY = clampAimCoordinate(state.aimY, rect.height)
       state.visualAimX = clampAimCoordinate(state.visualAimX, rect.width)
@@ -303,6 +305,12 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
           }
         }
 
+        if (isTrackingExercise(exercise) && time - state.lastTrailSample >= 18) {
+          state.targetTrail.push({ x: state.targetX, y: state.targetY, time })
+          if (state.targetTrail.length > 20) state.targetTrail.shift()
+          state.lastTrailSample = time
+        }
+
         if (exercise === 'reflex' && !state.targetExpiresAt) state.targetExpiresAt = time + reflexWindow(config.targetScale)
         if (exercise === 'reflex' && time >= state.targetExpiresAt) placeTarget(time)
 
@@ -340,6 +348,14 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       }
 
       const visible = time >= state.hiddenUntil
+      state.targetTrail = state.targetTrail.filter((point) => time - point.time <= 360)
+      if (isTrackingExercise(exercise)) {
+        for (const point of state.targetTrail) {
+          const life = 1 - (time - point.time) / 360
+          ctx.fillStyle = `rgba(255,114,81,${Math.max(0, life) * 0.2})`
+          ctx.beginPath(); ctx.arc(point.x, point.y, radius * (0.22 + life * 0.42), 0, Math.PI * 2); ctx.fill()
+        }
+      }
       const drawTarget = (targetX: number, targetY: number) => {
         const glow = ctx.createRadialGradient(targetX, targetY, 0, targetX, targetY, radius * 2)
         glow.addColorStop(0, 'rgba(255,114,81,.28)'); glow.addColorStop(1, 'rgba(255,114,81,0)')
@@ -380,7 +396,8 @@ const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ p
       targetX: width / 2, targetY: height / 2, destinationX: 0, destinationY: 0,
       directionX: 1, directionY: 0, lastFrame: 0, startedAt: 0, lastMetricsAt: 0,
       onTargetMs: 0, dwellMs: 0, hiddenUntil: 0, targetExpiresAt: 0, extraTargets: [],
-      strafeDirection: Math.random() > .5 ? 1 : -1, nextDirectionChangeAt: 0, hits: 0, shots: 0, score: 0, complete: false,
+      strafeDirection: Math.random() > .5 ? 1 : -1, nextDirectionChangeAt: 0, targetTrail: [], lastTrailSample: 0,
+      hits: 0, shots: 0, score: 0, complete: false,
     })
     inputPausedAtRef.current = 0
     placeTarget()

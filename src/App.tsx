@@ -12,6 +12,7 @@ import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
 type AppView = 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
+type CalibrationSetupStep = 1 | 2 | 3
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', description: 'crosshair.classicDescription', icon: Crosshair },
@@ -50,6 +51,7 @@ function App() {
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [setupStep, setSetupStep] = useState<CalibrationSetupStep>(1)
   const [startAfterSetup, setStartAfterSetup] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
@@ -161,6 +163,7 @@ function App() {
       setSelectedSpeedMode(speedMode)
       setSelectedCrosshair(crosshair)
       setStartAfterSetup(true)
+      setSetupStep(1)
       setSetupOpen(true)
       return
     }
@@ -173,6 +176,7 @@ function App() {
     setSelectedSpeedMode(speedMode)
     setSelectedCrosshair(crosshair)
     setStartAfterSetup(false)
+    setSetupStep(1)
     setSetupOpen(true)
   }
 
@@ -322,67 +326,68 @@ function App() {
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
-          <section className="modal setup-modal">
+          <section className="modal setup-modal calibration-setup-modal">
             <button className="modal-close" onClick={closeSetup} aria-label={t('common.close')}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>{t('calibration.setupTitle')}</h2>
             <p>{t('calibration.setupDescription', { rounds: totalRounds, seconds: ROUND_DURATION })}</p>
 
-            <div className="option-group game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
-              {GAMES.map((game) => (
-                <button
-                  key={game.id}
-                  className={selectedGame === game.id ? 'choice-card game-choice selected' : 'choice-card game-choice'}
-                  onClick={() => setSelectedGame(game.id)}
-                  type="button"
-                >
-                  <div className={`game-logo game-logo-${game.id}`}>
-                    <img src={`./game-icons/${game.iconFile ?? `${game.id}.png`}`} alt="" />
-                  </div>
-                  <span className="game-card-name">{game.shortLabel}</span>
-                </button>
+            <div className="warmup-stepper" aria-label={t('calibration.setupTitle')}>
+              {([['warmup.stepGame', 1], ['warmup.stepSettings', 2], ['warmup.stepCrosshair', 3]] as Array<[TranslationKey, CalibrationSetupStep]>).map(([label, step]) => (
+                <div key={step} className={setupStep === step ? 'active' : setupStep > step ? 'complete' : ''}><i>{step}</i><span>{t(label)}</span></div>
               ))}
             </div>
 
-            <div className="setup-fields">
-              <label>
-                {t('calibration.currentSensitivity', { game: selectedGameConfig.label })}
-                <input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} />
-              </label>
-              <label>{t('common.mouseDpi')}<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+            <div className="warmup-step-content">
+              {setupStep === 1 && <>
+                <h3>{t('warmup.chooseGame')}</h3>
+                <div className="option-group game-grid calibration-game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
+                  {GAMES.map((game) => (
+                    <button key={game.id} className={selectedGame === game.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(game.id)} type="button">
+                      <div className={`game-logo game-logo-${game.id}`}><img src={`./game-icons/${game.iconFile ?? `${game.id}.png`}`} alt="" /></div>
+                      <span className="game-card-name">{game.shortLabel}</span>
+                    </button>
+                  ))}
+                </div>
+              </>}
+
+              {setupStep === 2 && <>
+                <h3>{t('warmup.settingsTitle')}</h3>
+                <div className="setup-fields">
+                  <label>{t('calibration.currentSensitivity', { game: selectedGameConfig.label })}<input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} /></label>
+                  <label>{t('common.mouseDpi')}<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
+                </div>
+                <div className="option-group mode-group" role="radiogroup" aria-label={t('calibration.targetSpeed')}>
+                  {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (
+                    <button key={mode} className={selectedSpeedMode === mode ? 'choice-card selected' : 'choice-card'} onClick={() => setSelectedSpeedMode(mode)} type="button">
+                      <span>{mode === 'normal' ? t('calibration.normal') : t('calibration.fast')}</span>
+                      <small>{mode === 'normal' ? t('calibration.normalDescription') : t('calibration.fastDescription')}</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="conversion single-conversion">
+                  <span>{t('calibration.baseSensitivity', { game: selectedGameConfig.shortLabel })} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
+                </div>
+              </>}
+
+              {setupStep === 3 && <>
+                <h3>{t('warmup.crosshairTitle')}</h3>
+                <div className="crosshair-picker" role="radiogroup" aria-label={t('calibration.crosshairType')}>
+                  {CROSSHAIRS.map((item) => { const Icon = item.icon; return (
+                    <button key={item.id} className={selectedCrosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setSelectedCrosshair(item.id)} type="button">
+                      <Icon size={18} /><span>{t(item.label)}</span><small>{t(item.description)}</small>
+                    </button>
+                  ) })}
+                </div>
+              </>}
             </div>
 
-            <div className="option-group mode-group" role="radiogroup" aria-label="Velocidade da bolinha">
-              {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  className={selectedSpeedMode === mode ? 'choice-card selected' : 'choice-card'}
-                  onClick={() => setSelectedSpeedMode(mode)}
-                  type="button"
-                >
-                  <span>{mode === 'normal' ? t('calibration.normal') : t('calibration.fast')}</span>
-                  <small>{mode === 'normal' ? t('calibration.normalDescription') : t('calibration.fastDescription')}</small>
-                </button>
-              ))}
+            <div className="warmup-wizard-actions">
+              {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as CalibrationSetupStep)}>{t('warmup.back')}</button>}
+              {setupStep < 3
+                ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as CalibrationSetupStep)} disabled={setupStep === 2 && parsedSensitivityInput === null}>{t('warmup.next')}</button>
+                : <button className="primary-button" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>}
             </div>
-
-            <div className="crosshair-picker" role="radiogroup" aria-label={t('calibration.crosshairType')}>
-              {CROSSHAIRS.map((item) => {
-                const Icon = item.icon
-                return (
-                  <button key={item.id} className={selectedCrosshair === item.id ? 'crosshair-option selected' : 'crosshair-option'} onClick={() => setSelectedCrosshair(item.id)} type="button">
-                    <Icon size={18} />
-                    <span>{t(item.label)}</span>
-                    <small>{t(item.description)}</small>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="conversion single-conversion">
-              <span>{t('calibration.baseSensitivity', { game: selectedGameConfig.shortLabel })} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
-            </div>
-            <button className="primary-button wide" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>
           </section>
         </div>
       )}

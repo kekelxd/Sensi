@@ -5,6 +5,7 @@ type Params = Record<string, string | number>
 
 const pt = {
   'meta.title': '$ENSI - Aquecimento, sensibilidade e diagnostico FPS',
+  'calibration.targetSpeed': 'Velocidade da bolinha',
   'buttons.mouse': 'Mouse',
   'common.stability': 'Estabilidade', 'common.samples': 'Amostras',
   'language.selector': 'Idioma da página',
@@ -31,6 +32,7 @@ export type TranslationKey = keyof typeof pt
 const en: Record<TranslationKey, string> = {
   ...pt,
   'meta.title': '$ENSI - FPS warm-up, sensitivity and diagnostics',
+  'calibration.targetSpeed': 'Target speed',
   'buttons.mouse': 'Mouse',
   'common.stability': 'Stability', 'common.samples': 'Samples',
   'language.selector': 'Page language',
@@ -55,6 +57,7 @@ const en: Record<TranslationKey, string> = {
 const es: Record<TranslationKey, string> = {
   ...pt,
   'meta.title': '$ENSI - Calentamiento, sensibilidad y diagnostico FPS',
+  'calibration.targetSpeed': 'Velocidad del objetivo',
   'buttons.mouse': 'Ratón',
   'common.stability': 'Estabilidad', 'common.samples': 'Muestras',
   'language.selector': 'Idioma de la página',
