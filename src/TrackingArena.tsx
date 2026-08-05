@@ -52,13 +52,6 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
 
-function getRandomTarget(width: number, height: number, radius: number) {
-  return {
-    x: randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8)),
-    y: randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8)),
-  }
-}
-
 function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, style: CrosshairStyle, color: string) {
   ctx.strokeStyle = color
   ctx.fillStyle = color
@@ -103,6 +96,11 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 ) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  
+  // Refs para bypass do React na atualização visual da HUD
+  const accuracyRef = useRef<HTMLSpanElement>(null)
+  const meanErrorRef = useRef<HTMLSpanElement>(null)
+  
   const [pointerLocked, setPointerLocked] = useState(false)
   const pointerLockedAtRef = useRef(0)
   const activeRef = useRef(active)
@@ -115,6 +113,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
   const roundRemainingMsRef = useRef(ROUND_DURATION_MS)
+  
   const stateRef = useRef({
     aimX: 0,
     aimY: 0,
@@ -176,28 +175,39 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       setPointerLocked(locked)
       onPointerLockChange(locked)
     }
-    const handleMove = (event: MouseEvent) => {
+
+    const handlePointer = (event: PointerEvent) => {
       if (!activeRef.current || pausedRef.current || document.pointerLockElement !== canvas) return
       const state = stateRef.current
-      const movement = sanitizePointerMovement({
-        movementX: event.movementX,
-        movementY: event.movementY,
-        gain: multiplierRef.current,
-        width: canvas.clientWidth,
-        height: canvas.clientHeight,
-        elapsedSinceLock: performance.now() - pointerLockedAtRef.current,
-      })
-      if (!movement) return
-      state.aimX = clampAimCoordinate(state.aimX + movement.x, canvas.clientWidth)
-      state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
+      
+      // Otimização de Hardware: Coleta eventos agrupados de mouses de alto polling rate
+      const coalesced = event.getCoalescedEvents?.() || [event]
+      
+      for (const ev of coalesced) {
+        const movement = sanitizePointerMovement({
+          movementX: ev.movementX,
+          movementY: ev.movementY,
+          gain: multiplierRef.current,
+          width: canvas.clientWidth,
+          height: canvas.clientHeight,
+          elapsedSinceLock: performance.now() - pointerLockedAtRef.current,
+        })
+        if (!movement) continue
+        state.aimX = clampAimCoordinate(state.aimX + movement.x, canvas.clientWidth)
+        state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
+      }
     }
 
+    // Otimização: Capturar dados brutos da porta USB ignorando V-Sync (onde suportado)
+    const eventName = 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove'
+
     document.addEventListener('pointerlockchange', updatePointerLock)
-    document.addEventListener('mousemove', handleMove)
+    document.addEventListener(eventName, handlePointer as EventListener, { passive: true })
+    
     updatePointerLock()
     return () => {
       document.removeEventListener('pointerlockchange', updatePointerLock)
-      document.removeEventListener('mousemove', handleMove)
+      document.removeEventListener(eventName, handlePointer as EventListener)
     }
   }, [onPointerLockChange])
 
@@ -211,8 +221,11 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const rect = canvas.getBoundingClientRect()
       canvas.width = rect.width * ratio
       canvas.height = rect.height * ratio
-      const ctx = canvas.getContext('2d')
+      
+      // Otimização de Canvas: Desync para minimizar latência (onde suportado)
+      const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) as CanvasRenderingContext2D
       ctx?.setTransform(ratio, 0, 0, ratio, 0, 0)
+      
       const state = stateRef.current
       if (state.canvasWidth > 0 && state.canvasHeight > 0) {
         const scaleX = rect.width / state.canvasWidth
@@ -247,7 +260,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     resize()
 
     const render = (time: number) => {
-      const ctx = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) as CanvasRenderingContext2D
       if (!ctx) return
       const width = canvas.clientWidth
       const height = canvas.clientHeight
@@ -257,7 +270,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const deltaSeconds = Math.min(0.05, Math.max(0, (time - state.lastFrame) / 1000))
       state.lastFrame = time
 
-      ctx.clearRect(0, 0, width, height)
+      // Fundo opaco para melhorar tempo de composição GPU
       ctx.fillStyle = '#0b0e14'
       ctx.fillRect(0, 0, width, height)
 
@@ -278,9 +291,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
       if (movingRef.current && !pausedRef.current) {
         if (!state.destinationX || !state.destinationY) {
-          const destination = getRandomTarget(width, height, radius)
-          state.destinationX = destination.x
-          state.destinationY = destination.y
+          state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
+          state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
         }
 
         const targetVelocity = Math.min(width, height) * 0.32 * targetSpeedRef.current
@@ -289,9 +301,9 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         let distanceToDestination = Math.hypot(dx, dy)
 
         if (distanceToDestination <= Math.max(radius * 0.65, targetVelocity * deltaSeconds * 2)) {
-          const destination = getRandomTarget(width, height, radius)
-          state.destinationX = destination.x
-          state.destinationY = destination.y
+          // Otimização GC: Evita alocar objetos para novos destinos
+          state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
+          state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
           dx = state.destinationX - state.targetX
           dy = state.destinationY - state.targetY
           distanceToDestination = Math.hypot(dx, dy)
@@ -314,7 +326,6 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
 
         if (time - state.lastTrailSample >= 18) {
           state.targetTrail.push({ x: state.targetX, y: state.targetY, time })
-          if (state.targetTrail.length > 20) state.targetTrail.shift()
           state.lastTrailSample = time
         }
 
@@ -327,22 +338,49 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
           state.lastAimX = state.visualAimX
           state.lastAimY = state.visualAimY
           state.lastSample = time
+          
           if (time - state.lastMetricsUpdate >= METRICS_UPDATE_INTERVAL_MS) {
-            const recentDistances = state.distances.slice(-30)
-            const recentSpeeds = state.speeds.slice(-30)
-            const accuracy = recentDistances.filter((value) => value <= radius).length / recentDistances.length * 100
-            const meanError = recentDistances.reduce((sum, value) => sum + value, 0) / recentDistances.length
-            const changes = recentSpeeds.slice(1).map((value, index) => Math.abs(value - recentSpeeds[index]))
-            const averageChange = changes.reduce((sum, value) => sum + value, 0) / Math.max(1, changes.length)
+            // Otimização GC: Calcula as métricas diretamente sobre o array existente sem invocar `.slice()`
+            const startIdx = Math.max(0, state.distances.length - 30)
+            const count = state.distances.length - startIdx
+            let accHits = 0
+            let meanSum = 0
+            let speedChangeSum = 0
+
+            for (let i = startIdx; i < state.distances.length; i++) {
+              if (state.distances[i] <= radius) accHits++
+              meanSum += state.distances[i]
+              if (i > startIdx) {
+                speedChangeSum += Math.abs(state.speeds[i] - state.speeds[i - 1])
+              }
+            }
+
+            const accuracy = count > 0 ? (accHits / count) * 100 : 0
+            const meanError = count > 0 ? meanSum / count : 0
+            const averageChange = count > 1 ? speedChangeSum / (count - 1) : 0
             const smoothness = Math.max(0, 100 * (1 - averageChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
+
             state.lastMetricsUpdate = time
             onMetricsRef.current({ accuracy, meanError, smoothness })
+
+            // Otimização DOM: Atualização visual imediata ignorando a Virtual Tree do React
+            if (accuracyRef.current) accuracyRef.current.innerText = accuracy.toFixed(0)
+            if (meanErrorRef.current) meanErrorRef.current.innerText = meanError.toFixed(0)
           }
         }
       }
 
-      state.targetTrail = state.targetTrail.filter((point) => time - point.time <= 360)
-      for (const point of state.targetTrail) {
+      // Otimização GC: O Rastro reescreve os elementos sem criar novos Arrays e engasgar a CPU
+      let activeTrailCount = 0
+      for (let i = 0; i < state.targetTrail.length; i++) {
+        if (time - state.targetTrail[i].time <= 360) {
+          state.targetTrail[activeTrailCount++] = state.targetTrail[i]
+        }
+      }
+      state.targetTrail.length = activeTrailCount
+
+      for (let i = 0; i < state.targetTrail.length; i++) {
+        const point = state.targetTrail[i]
         const life = 1 - (time - point.time) / 360
         ctx.fillStyle = `rgba(255,114,81,${Math.max(0, life) * 0.2})`
         ctx.beginPath(); ctx.arc(point.x, point.y, radius * (0.22 + life * 0.42), 0, Math.PI * 2); ctx.fill()
@@ -388,12 +426,13 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       state.targetX = width / 2
       state.targetY = height / 2
       const radius = getTargetRadius(width, height)
-      const destination = getRandomTarget(width, height, radius)
-      state.destinationX = destination.x
-      state.destinationY = destination.y
-      const initialDistance = Math.hypot(destination.x - state.targetX, destination.y - state.targetY) || 1
-      state.directionX = (destination.x - state.targetX) / initialDistance
-      state.directionY = (destination.y - state.targetY) / initialDistance
+      
+      state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
+      state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
+      const initialDistance = Math.hypot(state.destinationX - state.targetX, state.destinationY - state.targetY) || 1
+      state.directionX = (state.destinationX - state.targetX) / initialDistance
+      state.directionY = (state.destinationY - state.targetY) / initialDistance
+      
       state.startTime = 0
       state.lastFrame = 0
       state.distances = []
@@ -449,8 +488,8 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       {active && (
         <div className="arena-hud" aria-live="polite">
           <div className="arena-hud-metrics">
-            <div><span>{t('common.accuracy')}</span><strong>{hud.accuracy}<small>%</small></strong></div>
-            <div><span>{t('common.meanError')}</span><strong>{hud.meanError}<small>px</small></strong></div>
+            <div><span>{t('common.accuracy')}</span><strong><span ref={accuracyRef}>{hud.accuracy}</span><small>%</small></strong></div>
+            <div><span>{t('common.meanError')}</span><strong><span ref={meanErrorRef}>{hud.meanError}</span><small>px</small></strong></div>
             <div><span>{t('arena.testSensitivity')}</span><strong>{hud.sensitivity}</strong></div>
             <div><span>{t('common.time')}</span><strong>{hud.remaining}<small>s</small></strong></div>
           </div>
