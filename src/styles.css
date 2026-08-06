@@ -749,3 +749,24 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .calibration-previous > div:last-child { grid-template-columns: repeat(2, 1fr); }
   .calibration-previous > div:last-child span:nth-child(2) { border-right: 0; }
 }
+
+/* Calibration reliability v2 */
+.calibration-result-status { margin: 0 0 9px; padding: 9px 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(141,251,211,.2); border-radius: 8px; color: #b8c2c0; background: rgba(141,251,211,.035); font-size: 9px; line-height: 1.45; }
+.calibration-result-status.result-inconclusive, .calibration-result-status.result-invalid { border-color: rgba(255,114,81,.28); color: #d9aaa0; background: rgba(255,114,81,.045); }
+.calibration-quality { margin-top: 9px; display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 10px; background: #0b0e13; }
+.calibration-quality > div { min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line); }
+.calibration-quality > div:last-child { border-right: 0; }
+.calibration-quality span, .calibration-quality strong { display: block; }
+.calibration-quality span { color: var(--muted); font-size: 7px; }
+.calibration-quality strong { margin-top: 3px; color: #e7e4dd; font: 500 12px DM Mono, monospace; }
+.calibration-round-list { max-height: 215px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+.calibration-round-list .validation { border-left: 2px solid rgba(255,114,81,.42); padding-left: 5px; }
+.calibration-round-list .validation.current { color: var(--accent); }
+.calibration-round-list .validation.done { color: var(--mint); border-left-color: rgba(141,251,211,.5); }
+
+@media (max-width: 760px) {
+  .calibration-quality { grid-template-columns: repeat(2, 1fr); }
+  .calibration-quality > div:nth-child(2) { border-right: 0; }
+  .calibration-quality > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+}
+.setup-validation-error { display: block; margin-top: 8px; color: #f09b86; font-size: 8px; line-height: 1.5; }

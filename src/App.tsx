@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Pause, Play, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, recommendMultiplier, ROUND_DURATION, ROUND_MULTIPLIERS, ROUND_WARMUP, RoundResult, TargetSpeedMode, writeCalibrationSession, type CalibrationSessionSummary } from './calibration'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
+import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -27,6 +28,13 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description
 
 const format = (value: number, digits = 0) => Number.isFinite(value) ? value.toFixed(digits) : '0'
 
+const ROUND_ISSUE_KEYS: Record<RoundIssue, TranslationKey> = {
+  'insufficient-samples': 'calibration.issueInsufficientSamples',
+  'canvas-resized': 'calibration.issueCanvasResized',
+  'unstable-frame-time': 'calibration.issueUnstableFrames',
+  'too-many-interruptions': 'calibration.issueInterruptions',
+}
+
 const leaveFullscreen = () => {
   if (!document.fullscreenElement) return
   const request = document.exitFullscreen?.()
@@ -49,8 +57,9 @@ function App() {
   const [view, setView] = useState<AppView>('routine')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
+  const [plan, setPlan] = useState<CalibrationPlan | null>(null)
+  const [rejectedIssue, setRejectedIssue] = useState<RoundIssue | null>(null)
   const [phase, setPhase] = useState<RoundPhase>('idle')
-  const [paused, setPaused] = useState(false)
   const [inputReady, setInputReady] = useState(false)
   const [remaining, setRemaining] = useState(ROUND_DURATION)
   const [countdown, setCountdown] = useState(3)
@@ -67,28 +76,55 @@ function App() {
   const [baseSensitivity, setBaseSensitivity] = useState(1)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [selectedCrosshair, setSelectedCrosshair] = useState<CrosshairStyle>('classic')
-  const [dpi, setDpi] = useState(800)
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
   const [previousCalibration, setPreviousCalibration] = useState<CalibrationSessionSummary | null>(null)
 
   const active = phase !== 'idle'
   const tracking = phase === 'running'
   const moving = phase === 'warmup' || phase === 'running'
-  const totalRounds = ROUND_MULTIPLIERS.length
-  const calibrationComplete = isCalibrationComplete(results.length, totalRounds)
-  const nominalMultiplier = ROUND_MULTIPLIERS[round] ?? 1
+  const landingRounds = BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS + VALIDATION_FINALIST_COUNT
+  const totalRounds = plan?.rounds.length ?? landingRounds
+  const currentRoundPlan = plan?.rounds[round] ?? null
+  const currentCandidate = currentRoundPlan
+    ? plan?.candidates.find((candidate) => candidate.id === currentRoundPlan.candidateId) ?? null
+    : null
+  const calibrationComplete = Boolean(plan?.validationRoundCount)
+    && isCalibrationComplete(results.length, plan?.rounds.length ?? 0)
   const targetSpeed = getTargetSpeed(speedMode)
-  const calibrationReport = buildCalibrationReport(results)
-  const recommendation = calibrationReport?.recommendation ?? recommendMultiplier(results)
+  const calibrationReport = plan
+    ? buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+    : null
+  const recommendation = calibrationReport?.recommendation ?? 1
   const confirmedGameConfig = GAME_BY_ID[confirmedGame]
   const recommendedSelected = normalizeSensitivity(baseSensitivity * recommendation, confirmedGameConfig)
-  const displayedCandidate = normalizeSensitivity(baseSensitivity * nominalMultiplier, confirmedGameConfig)
-  const multiplier = displayedCandidate / baseSensitivity
+  const recommendedRangeMin = calibrationReport
+    ? normalizeSensitivity(baseSensitivity * calibrationReport.range.min, confirmedGameConfig)
+    : recommendedSelected
+  const recommendedRangeMax = calibrationReport
+    ? normalizeSensitivity(baseSensitivity * calibrationReport.range.max, confirmedGameConfig)
+    : recommendedSelected
+  const displayedCandidate = currentCandidate?.sensitivity ?? baseSensitivity
+  const multiplier = currentCandidate?.multiplier ?? 1
   const selectedGameConfig = GAME_BY_ID[selectedGame]
   const parsedSensitivityInput = parsePositiveNumberInput(sensitivityInput)
   const sensitivityPreview = parsedSensitivityInput === null ? null : normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
+  const setupCandidateCount = sensitivityPreview === null
+    ? 0
+    : buildCalibrationCandidates(sensitivityPreview, selectedGameConfig).length
+  const setupCanCalibrate = setupCandidateCount >= MIN_CALIBRATION_CANDIDATES
+  const rejectedIssueMessage = rejectedIssue ? t(ROUND_ISSUE_KEYS[rejectedIssue]) : undefined
+  const validationReady = Boolean(
+    plan?.validationRoundCount
+    && results.length === plan.measurementRoundCount
+    && currentRoundPlan?.stage === 'validation',
+  )
+  const resultTitleKey: TranslationKey = calibrationReport?.resultKind === 'recommended'
+    ? 'calibration.resultTitleRecommended'
+    : calibrationReport?.resultKind === 'range'
+      ? 'calibration.resultTitleRange'
+      : 'calibration.resultTitleInconclusive'
   useEffect(() => {
-    if (phase === 'idle' || paused || !inputReady) return
+    if (phase === 'idle' || !inputReady) return
 
     const started = performance.now()
     const initialRemaining = phaseRemainingMsRef.current
@@ -118,19 +154,20 @@ function App() {
       window.clearInterval(timer)
       if (!transitioned) phaseRemainingMsRef.current = Math.max(0, initialRemaining - (performance.now() - started))
     }
-  }, [phase, paused, round, inputReady])
+  }, [phase, round, inputReady])
 
-  const beginRound = () => {
-    if (resultOpen || calibrationComplete) {
+  const beginRound = (targetPlan = plan, targetRoundIndex = round) => {
+    if (!targetPlan?.rounds[targetRoundIndex]) return
+    if (resultOpen || (targetPlan.validationRoundCount > 0 && isCalibrationComplete(results.length, targetPlan.rounds.length))) {
       setResultOpen(true)
       leaveFullscreen()
       return
     }
+    setRejectedIssue(null)
     setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
     phaseRemainingMsRef.current = 3000
     setCountdown(3)
     setRemaining(ROUND_DURATION)
-    setPaused(false)
     setInputReady(false)
     arenaRef.current?.requestPointerLock()
     setPhase('countdown')
@@ -143,26 +180,37 @@ function App() {
       || cleanSensitivity !== baseSensitivity
       || selectedSpeedMode !== speedMode
       || selectedCrosshair !== crosshair
-    setSensitivityInput(String(cleanSensitivity))
-    setConfirmedGame(selectedGame)
-    setBaseSensitivity(cleanSensitivity)
-    setSpeedMode(selectedSpeedMode)
-    setCrosshair(selectedCrosshair)
-    if (configurationChanged && results.length) {
-      setResults([])
-      setRound(0)
-      setResultOpen(false)
-    }
-    if (startAfterSetup) {
-      flushSync(() => {
+    const nextPlan = configurationChanged || !plan
+      ? createCalibrationPlan(cleanSensitivity, selectedGameConfig)
+      : plan
+    if (nextPlan.candidates.length < MIN_CALIBRATION_CANDIDATES) return
+
+    flushSync(() => {
+      setSensitivityInput(String(cleanSensitivity))
+      setConfirmedGame(selectedGame)
+      setBaseSensitivity(cleanSensitivity)
+      setSpeedMode(selectedSpeedMode)
+      setCrosshair(selectedCrosshair)
+      setPlan(nextPlan)
+      setRejectedIssue(null)
+
+      if (configurationChanged) {
+        setResults([])
+        setRound(0)
+        setResultOpen(false)
+        setPreviousCalibration(null)
+      }
+
+      if (startAfterSetup) {
         setStartAfterSetup(false)
         setCalibrationStarted(true)
         setSetupOpen(false)
-      })
-      beginRound()
-    } else {
-      setSetupOpen(false)
-    }
+      } else {
+        setSetupOpen(false)
+      }
+    })
+
+    if (startAfterSetup) beginRound(nextPlan, configurationChanged ? 0 : round)
   }
 
   const start = () => {
@@ -171,7 +219,7 @@ function App() {
       leaveFullscreen()
       return
     }
-    if (!results.length) {
+    if (!plan) {
       setSelectedSpeedMode(speedMode)
       setSelectedCrosshair(crosshair)
       setStartAfterSetup(true)
@@ -183,6 +231,7 @@ function App() {
   }
 
   const openSetup = () => {
+    if (active) return
     setSelectedGame(confirmedGame)
     setSensitivityInput(String(baseSensitivity))
     setSelectedSpeedMode(speedMode)
@@ -197,35 +246,69 @@ function App() {
     setSetupOpen(false)
   }
 
-  const completeRound = (distances: number[], speeds: number[], targetRadius: number) => {
-    const result = calculateRoundResult(multiplier, distances, speeds, targetRadius)
-    const nextResults = [...results, result]
-    const completed = isCalibrationComplete(nextResults.length, totalRounds)
-    setResults(nextResults)
+  const completeRound = (capture: RoundCapture) => {
+    if (!plan || !currentRoundPlan || !currentCandidate) return
+    const result = calculateRoundResult(currentRoundPlan, currentCandidate, capture)
+
     setPhase('idle')
     setRemaining(ROUND_DURATION)
+    setInputReady(false)
     document.exitPointerLock?.()
+
+    if (!result.valid) {
+      setRejectedIssue(result.issues[0] ?? 'insufficient-samples')
+      leaveFullscreen()
+      return
+    }
+
+    const nextResults = [...results, result]
+    setResults(nextResults)
+    setRejectedIssue(null)
+
+    const measurementComplete = nextResults.filter((item) => item.stage === 'measurement').length >= plan.measurementRoundCount
+    if (measurementComplete && plan.validationRoundCount === 0) {
+      const preliminaryReport = buildCalibrationReport(nextResults, plan.candidates, plan.measurementRoundCount, 0)
+      if (preliminaryReport) {
+        const finalistIds = selectValidationCandidateIds(preliminaryReport, VALIDATION_FINALIST_COUNT)
+        const expandedPlan = appendValidationRounds(plan, finalistIds)
+        setPlan(expandedPlan)
+        setRound(nextResults.length)
+        return
+      }
+    }
+
+    const completed = plan.validationRoundCount > 0 && isCalibrationComplete(nextResults.length, plan.rounds.length)
     if (completed) {
-      const finalReport = buildCalibrationReport(nextResults)
+      const finalReport = buildCalibrationReport(nextResults, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
       if (finalReport) {
         const finalSensitivity = normalizeSensitivity(baseSensitivity * finalReport.recommendation, confirmedGameConfig)
+        const rangeMinSensitivity = normalizeSensitivity(baseSensitivity * finalReport.range.min, confirmedGameConfig)
+        const rangeMaxSensitivity = normalizeSensitivity(baseSensitivity * finalReport.range.max, confirmedGameConfig)
         setPreviousCalibration(readCalibrationSession(window.localStorage, confirmedGame))
-        writeCalibrationSession(window.localStorage, confirmedGame, createCalibrationSessionSummary(finalReport, finalSensitivity))
+        if (finalReport.resultKind === 'recommended' || finalReport.resultKind === 'range') {
+          writeCalibrationSession(
+            window.localStorage,
+            confirmedGame,
+            createCalibrationSessionSummary(finalReport, finalSensitivity, rangeMinSensitivity, rangeMaxSensitivity),
+          )
+        }
       }
-      setRound(totalRounds - 1)
+      setRound(Math.max(0, plan.rounds.length - 1))
       setResultOpen(true)
       leaveFullscreen()
-    } else {
-      window.setTimeout(() => setRound(nextResults.length), 250)
+      return
     }
+
+    setRound(nextResults.length)
   }
 
   const reset = () => {
     setPhase('idle')
-    setPaused(false)
     setInputReady(false)
     setRound(0)
     setResults([])
+    setPlan(null)
+    setRejectedIssue(null)
     setResultOpen(false)
     setCalibrationStarted(false)
     setRemaining(ROUND_DURATION)
@@ -259,7 +342,7 @@ function App() {
           {view === 'calibration' && calibrationStarted ? (
             <>
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
-              <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')}><Settings2 size={17} /></button>
+              <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')} disabled={active}><Settings2 size={17} /></button>
             </>
           ) : view === 'calibration' ? null : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
@@ -278,11 +361,15 @@ function App() {
           active={active}
           moving={moving && inputReady}
           scoring={tracking && inputReady}
-          paused={paused || !inputReady}
+          paused={!inputReady}
           multiplier={multiplier}
           targetSpeed={targetSpeed}
+          trajectorySeed={currentRoundPlan?.trajectorySeed ?? plan?.sessionSeed ?? 1}
+          roundKey={currentRoundPlan?.id ?? 'idle'}
           crosshair={crosshair}
-          countdownLabel={phase === 'countdown' ? String(countdown) : phase === 'warmup' ? 'AJUSTE' : ''}
+          countdownLabel={phase === 'countdown' ? String(countdown) : phase === 'warmup' ? t('calibration.adjust') : ''}
+          idleMessage={rejectedIssueMessage ?? (validationReady ? t('calibration.validationReady') : undefined)}
+          idleHint={rejectedIssue ? t('calibration.retryRound') : validationReady ? t('calibration.validationHint') : undefined}
           hasResults={results.length > 0}
           isComplete={calibrationComplete}
           hud={{
@@ -312,7 +399,7 @@ function App() {
           <div className="test-value">
             <span>{t('calibration.testSensitivity')}</span>
             <strong>{format(displayedCandidate, 3)}</strong>
-            <small>{GAME_BY_ID[confirmedGame].label} · {format(multiplier, 2)}× · {t('calibration.speed', { speed: speedMode === 'normal' ? t('calibration.normal') : t('calibration.fastBadge') })}</small>
+            <small>{GAME_BY_ID[confirmedGame].label} · {format(multiplier, 2)}× · {currentRoundPlan?.stage === 'validation' ? t('calibration.validationStage') : t('calibration.measurementStage')} · {t('calibration.speed', { speed: speedMode === 'normal' ? t('calibration.normal') : t('calibration.fastBadge') })}</small>
           </div>
           <div className={phase === 'countdown' ? 'timer countdown-timer' : 'timer'}>
             {phase === 'countdown' ? countdown : active ? format(remaining, 1) : format(ROUND_DURATION, 1)}
@@ -325,12 +412,12 @@ function App() {
                 ? t('calibration.warmup')
                 : t('calibration.guidance')}
           </p>
-          <div className="candidate-list">
-            {ROUND_MULTIPLIERS.map((value, index) => {
-              const effectiveMultiplier = normalizeSensitivity(baseSensitivity * value, confirmedGameConfig) / baseSensitivity
+          <div className="candidate-list calibration-round-list">
+            {(plan?.rounds ?? []).map((plannedRound, index) => {
+              const candidate = plan?.candidates.find((item) => item.id === plannedRound.candidateId)
               return (
-                <div key={`${index}-${value}`} className={index === round ? 'current' : index < results.length ? 'done' : ''}>
-                  <span>{String(index + 1).padStart(2, '0')}</span><i /><b>{format(effectiveMultiplier, 2)}×</b>
+                <div key={plannedRound.id} className={`${index === round ? 'current' : index < results.length ? 'done' : ''} ${plannedRound.stage}`.trim()}>
+                  <span>{String(index + 1).padStart(2, '0')}</span><i /><b>{candidate ? format(candidate.multiplier, 2) : '--'}×</b>
                 </div>
               )
             })}
@@ -340,11 +427,9 @@ function App() {
 
       <footer>
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
-        <div className="controls">
-          {active && <button className="secondary-button" onClick={() => setPaused((value) => !value)}>{paused ? <Play size={16} /> : <Pause size={16} />}{paused ? t('calibration.resume') : t('calibration.pause')}</button>}
-        </div>
-        <div className="dpi-status">DPI <b>{dpi}</b></div>
-      </footer></> : <CalibrationLanding rounds={totalRounds} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+        <div className="controls" />
+        <div className="dpi-status">{t('calibration.relativeMethod')}</div>
+      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
@@ -352,7 +437,7 @@ function App() {
             <button className="modal-close" onClick={closeSetup} aria-label={t('common.close')}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>{t('calibration.setupTitle')}</h2>
-            <p>{t('calibration.setupDescription', { rounds: totalRounds, seconds: ROUND_DURATION })}</p>
+            <p>{t('calibration.setupDescription', { rounds: landingRounds, seconds: ROUND_DURATION })}</p>
 
             <div className="warmup-stepper" aria-label={t('calibration.setupTitle')}>
               {([['warmup.stepGame', 1], ['warmup.stepSettings', 2], ['warmup.stepCrosshair', 3]] as Array<[TranslationKey, CalibrationSetupStep]>).map(([label, step]) => (
@@ -377,7 +462,6 @@ function App() {
                 <h3>{t('warmup.settingsTitle')}</h3>
                 <div className="setup-fields">
                   <label>{t('calibration.currentSensitivity', { game: selectedGameConfig.label })}<input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} /></label>
-                  <label>{t('common.mouseDpi')}<input type="number" min="100" max="6400" value={dpi} onChange={(event) => setDpi(Number(event.target.value))} /></label>
                 </div>
                 <div className="option-group mode-group" role="radiogroup" aria-label={t('calibration.targetSpeed')}>
                   {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (
@@ -390,6 +474,7 @@ function App() {
                 <div className="conversion single-conversion">
                   <span>{t('calibration.baseSensitivity', { game: selectedGameConfig.shortLabel })} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
                 </div>
+                {sensitivityPreview !== null && !setupCanCalibrate ? <small className="setup-validation-error">{t('calibration.insufficientCandidates')}</small> : null}
               </>}
 
               {setupStep === 3 && <>
@@ -407,8 +492,8 @@ function App() {
             <div className="warmup-wizard-actions">
               {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as CalibrationSetupStep)}>{t('warmup.back')}</button>}
               {setupStep < 3
-                ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as CalibrationSetupStep)} disabled={setupStep === 2 && parsedSensitivityInput === null}>{t('warmup.next')}</button>
-                : <button className="primary-button" onClick={saveSetup} disabled={parsedSensitivityInput === null}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>}
+                ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as CalibrationSetupStep)} disabled={setupStep === 2 && (parsedSensitivityInput === null || !setupCanCalibrate)}>{t('warmup.next')}</button>
+                : <button className="primary-button" onClick={saveSetup} disabled={parsedSensitivityInput === null || !setupCanCalibrate}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>}
             </div>
           </section>
         </div>
@@ -420,14 +505,15 @@ function App() {
             <button className="modal-close" onClick={() => setResultOpen(false)} aria-label={t('common.close')}><X size={18} /></button>
             <Target size={24} className="modal-icon" />
             <div className="panel-label">{t('common.result')}</div>
-            <h2>{t('calibration.resultTitle')}</h2>
+            <h2>{t(resultTitleKey)}</h2>
             {calibrationReport && <CalibrationReportView
               report={calibrationReport}
-              results={results}
               previous={previousCalibration}
               game={confirmedGameConfig}
               baseSensitivity={baseSensitivity}
               recommendedSensitivity={recommendedSelected}
+              recommendedRangeMin={recommendedRangeMin}
+              recommendedRangeMax={recommendedRangeMax}
               onRedo={reset}
             />}
           </section>

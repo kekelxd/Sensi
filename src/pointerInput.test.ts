@@ -12,11 +12,9 @@ describe('pointer input safety', () => {
     expect(result!.y).toBeCloseTo(-2.4)
   })
 
-  it('limits a browser-generated jump while preserving its direction', () => {
-    const result = sanitizePointerMovement({ movementX: 4000, movementY: 3000, gain: 1, width: 1280, height: 720, elapsedSinceLock: 200 })
-    expect(result).not.toBeNull()
-    expect(Math.hypot(result!.x, result!.y)).toBeCloseTo(720 * 0.14)
-    expect(result!.x / result!.y).toBeCloseTo(4 / 3)
+  it('preserves a legitimate fast movement after pointer lock settles', () => {
+    const result = sanitizePointerMovement({ movementX: 400, movementY: 300, gain: 1.25, width: 1280, height: 720, elapsedSinceLock: 200 })
+    expect(result).toEqual({ x: 500, y: 375 })
   })
 
   it('keeps the complete crosshair inside the arena', () => {

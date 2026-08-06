@@ -13,7 +13,7 @@ const TRAIL_POINTS = [
 ]
 
 type CalibrationLandingProps = {
-  rounds: number
+  rounds: number | string
   seconds: number
   onStart: () => void
 }

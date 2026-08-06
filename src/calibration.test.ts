@@ -1,68 +1,190 @@
 import { describe, expect, it } from 'vitest'
-import { buildCalibrationReport, calculateRoundResult, isCalibrationComplete, recommendMultiplier, ROUND_MULTIPLIERS, RoundResult } from './calibration'
+import {
+  buildCalibrationReport,
+  calculateRoundResult,
+  isCalibrationComplete,
+  type RoundCapture,
+  type RoundDiagnostics,
+  type RoundResult,
+} from './calibration'
+import { appendValidationRounds, createCalibrationPlan } from './calibrationPlan'
+import { GAME_BY_ID } from './games'
 
-const result = (multiplier: number, score: number): RoundResult => ({
-  multiplier, score, accuracy: score, meanError: 20, smoothness: score, overshoots: 0,
-  errorControl: 80, overshootPenalty: 0, sampleCount: 600, targetRadius: 30,
+const diagnostics = (overrides: Partial<RoundDiagnostics> = {}): RoundDiagnostics => ({
+  pointerLockLosses: 0,
+  resizeCount: 0,
+  frameCount: 1200,
+  longFrameCount: 0,
+  inputEventCount: 500,
+  rawInputSupported: true,
+  coalescedInputSupported: true,
+  ...overrides,
+})
+
+const capture = (distance: number, speed: number, overrides: Partial<RoundCapture> = {}): RoundCapture => ({
+  distances: Array(500).fill(distance),
+  speeds: Array(500).fill(speed),
+  targetRadius: 30,
+  diagnostics: diagnostics(),
+  ...overrides,
+})
+
+const syntheticResult = (
+  round: ReturnType<typeof createCalibrationPlan>['rounds'][number],
+  candidate: ReturnType<typeof createCalibrationPlan>['candidates'][number],
+  score: number,
+): RoundResult => ({
+  roundId: round.id,
+  stage: round.stage,
+  candidateId: candidate.id,
+  blockIndex: round.blockIndex,
+  repetitionIndex: round.repetitionIndex,
+  trajectorySeed: round.trajectorySeed,
+  sensitivity: candidate.sensitivity,
+  multiplier: candidate.multiplier,
+  accuracy: score,
+  meanError: 20,
+  smoothness: score,
+  overshoots: 0,
+  score,
+  errorControl: 80,
+  overshootPenalty: 0,
+  sampleCount: 500,
+  targetRadius: 30,
+  qualityScore: 100,
+  valid: true,
+  issues: [],
+  diagnostics: diagnostics(),
 })
 
 describe('round scoring', () => {
-  it('rewards accurate and smooth tracking', () => {
-    const strong = calculateRoundResult(1, Array(100).fill(5), Array(100).fill(120), 30)
-    const weak = calculateRoundResult(1, Array(100).fill(90), Array.from({ length: 100 }, (_, index) => index % 2 ? 900 : 20), 30)
+  it('rewards accurate and stable tracking', () => {
+    const plan = createCalibrationPlan(1, GAME_BY_ID.cs2, 10)
+    const round = plan.rounds[0]
+    const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+    const strong = calculateRoundResult(round, candidate, capture(5, 120))
+    const weak = calculateRoundResult(round, candidate, capture(90, 900, {
+      speeds: Array.from({ length: 500 }, (_, index) => index % 2 ? 900 : 20),
+    }))
+
+    expect(strong.valid).toBe(true)
     expect(strong.score).toBeGreaterThan(weak.score)
     expect(strong.accuracy).toBe(100)
     expect(strong.smoothness).toBe(100)
-    expect(strong.score).toBeCloseTo(strong.accuracy * 0.55 + strong.errorControl * 0.3 + strong.smoothness * 0.15 - strong.overshootPenalty, 10)
   })
 
-  it('returns a safe result without samples', () => {
-    expect(calculateRoundResult(1, [], [], 30)).toEqual({ multiplier: 1, accuracy: 0, meanError: 999, smoothness: 0, overshoots: 0, score: 0, errorControl: 0, overshootPenalty: 0, sampleCount: 0, targetRadius: 30 })
+  it('rejects a round when pointer lock is interrupted during scoring', () => {
+    const plan = createCalibrationPlan(1, GAME_BY_ID.cs2, 10)
+    const round = plan.rounds[0]
+    const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+    const result = calculateRoundResult(round, candidate, capture(5, 120, {
+      diagnostics: diagnostics({ pointerLockLosses: 1 }),
+    }))
+
+    expect(result.valid).toBe(false)
+    expect(result.issues).toContain('too-many-interruptions')
+  })
+
+  it('rejects a round with insufficient samples', () => {
+    const plan = createCalibrationPlan(1, GAME_BY_ID.cs2, 10)
+    const round = plan.rounds[0]
+    const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+    const result = calculateRoundResult(round, candidate, capture(5, 120, {
+      distances: Array(10).fill(5),
+      speeds: Array(10).fill(120),
+    }))
+
+    expect(result.valid).toBe(false)
+    expect(result.issues).toContain('insufficient-samples')
   })
 })
 
-describe('technical calibration report', () => {
-  it('summarizes only competitive candidates and reports confidence', () => {
-    const report = buildCalibrationReport([
-      result(0.8, 48), result(0.9, 76), result(1, 92), result(1.1, 81), result(1.2, 50),
-    ])
+describe('calibration report', () => {
+  it('confirms a candidate when both blocks and validation agree', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 123)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const best = orderedCandidates[2]
+    const second = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [best.id, second.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = candidate.id === best.id ? 92 : candidate.id === second.id ? 81 : 58
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
 
     expect(report).not.toBeNull()
-    expect(report?.bestResult.multiplier).toBe(1)
-    expect(report?.competitiveResults.map((candidate) => candidate.multiplier)).toEqual([1, 1.1])
-    expect(report?.recommendation).toBeGreaterThanOrEqual(1)
-    expect(report?.recommendation).toBeLessThanOrEqual(1.1)
-    expect(report?.confidenceScore).toBeGreaterThan(0)
-  })
-})
-
-describe('final recommendation', () => {
-  it('starts neutral and alternates lower and higher candidates', () => {
-    expect(ROUND_MULTIPLIERS).toEqual([1, 0.8, 1.2, 0.9, 1.1])
+    expect(report?.bestResult.candidateId).toBe(best.id)
+    expect(report?.resultKind).toBe('recommended')
+    expect(report?.validationAgreementScore).toBe(100)
   })
 
-  it('does not favor earlier rounds when scores tie', () => {
-    const results = [0.8, 0.9, 1, 1.1, 1.2].map((multiplier) => result(multiplier, 80))
-    expect(recommendMultiplier(results)).toBeCloseTo(1, 10)
+
+  it('returns the tested winner instead of inventing an intermediate value', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 456)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const best = orderedCandidates[2]
+    const second = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [best.id, second.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = candidate.id === best.id ? 90 : candidate.id === second.id ? 86.5 : 60
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.resultKind).toBe('recommended')
+    expect(report?.recommendation).toBe(best.multiplier)
   })
 
-  it('follows a clearly superior candidate and stays in tested bounds', () => {
-    const results = [result(0.8, 40), result(0.9, 50), result(1, 95), result(1.1, 55), result(1.2, 45)]
-    expect(recommendMultiplier(results)).toBe(1)
-    expect(recommendMultiplier(results)).toBeGreaterThanOrEqual(0.8)
-    expect(recommendMultiplier(results)).toBeLessThanOrEqual(1.2)
+  it('caps session confidence and includes both finalists when validation conflicts', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 789)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const measurementWinner = orderedCandidates[1]
+    const validationWinner = orderedCandidates[4]
+    const plan = appendValidationRounds(initialPlan, [measurementWinner.id, validationWinner.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = round.stage === 'validation'
+        ? candidate.id === validationWinner.id ? 96 : 70
+        : candidate.id === measurementWinner.id ? 94 : candidate.id === validationWinner.id ? 82 : 60
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.resultKind).toBe('inconclusive')
+    expect(report?.reason).toBe('validation-conflict')
+    expect(report?.confidenceScore).toBeLessThanOrEqual(59)
+    expect(report?.range.min).toBe(Math.min(measurementWinner.multiplier, validationWinner.multiplier))
+    expect(report?.range.max).toBe(Math.max(measurementWinner.multiplier, validationWinner.multiplier))
   })
 
-  it('returns the neutral multiplier when there is no useful score', () => {
-    expect(recommendMultiplier([])).toBe(1)
-    expect(recommendMultiplier([result(0.8, 0), result(1.2, 0)])).toBe(1)
+  it('returns a range when adjacent candidates remain close', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 321)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const first = orderedCandidates[2]
+    const second = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [first.id, second.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = candidate.id === first.id ? 86 : candidate.id === second.id ? 85 : 60
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.resultKind).toBe('range')
+    expect(report?.range.max).toBeGreaterThan(report?.range.min ?? 0)
   })
 })
 
 describe('calibration completion', () => {
-  it('ends exactly after the fifth completed round', () => {
-    expect(isCalibrationComplete(4)).toBe(false)
-    expect(isCalibrationComplete(5)).toBe(true)
-    expect(isCalibrationComplete(6)).toBe(true)
+  it('uses the dynamic plan length', () => {
+    expect(isCalibrationComplete(11, 12)).toBe(false)
+    expect(isCalibrationComplete(12, 12)).toBe(true)
+    expect(isCalibrationComplete(13, 12)).toBe(true)
   })
 })

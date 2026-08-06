@@ -1,8 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Play, RotateCcw } from 'lucide-react'
-import { ROUND_DURATION, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS } from './calibration'
+import { ROUND_DURATION, ROUND_WARMUP, SAMPLE_INTERVAL_MS, SMOOTHNESS_SPEED_CHANGE_PER_RADIUS, type RoundCapture, type RoundDiagnostics } from './calibration'
 import { useI18n } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
+import { createTargetTrajectory, sampleTargetTrajectory, type TargetTrajectory } from './targetTrajectory'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -19,8 +20,12 @@ type Props = {
   paused: boolean
   multiplier: number
   targetSpeed: number
+  trajectorySeed: number
+  roundKey: string
   crosshair: CrosshairStyle
   countdownLabel: string
+  idleMessage?: string
+  idleHint?: string
   hasResults: boolean
   isComplete: boolean
   hud: {
@@ -35,7 +40,7 @@ type Props = {
   onReset: () => void
   onShowResults: () => void
   onMetrics: (metrics: LiveMetrics) => void
-  onRoundComplete: (distances: number[], speeds: number[], targetRadius: number) => void
+  onRoundComplete: (capture: RoundCapture) => void
   onPointerLockChange: (locked: boolean) => void
 }
 
@@ -44,13 +49,19 @@ export type TrackingArenaHandle = {
 }
 
 const ROUND_DURATION_MS = ROUND_DURATION * 1000
-const SAMPLE_INTERVAL_MS = 40
 const METRICS_UPDATE_INTERVAL_MS = 120
-const TARGET_TURN_RATE = 6
-const AIM_RENDER_RESPONSE = 70
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
-const randomBetween = (min: number, max: number) => min + Math.random() * (max - min)
+const LONG_FRAME_THRESHOLD_MS = 50
 const getTargetRadius = (width: number, height: number) => Math.max(28, Math.min(width, height) * 0.055)
+
+const createDiagnostics = (rawInputSupported: boolean, coalescedInputSupported: boolean): RoundDiagnostics => ({
+  pointerLockLosses: 0,
+  resizeCount: 0,
+  frameCount: 0,
+  longFrameCount: 0,
+  inputEventCount: 0,
+  rawInputSupported,
+  coalescedInputSupported,
+})
 
 function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, style: CrosshairStyle, color: string) {
   ctx.strokeStyle = color
@@ -91,41 +102,57 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number, styl
 }
 
 export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function TrackingArena(
-  { active, moving, scoring, paused, multiplier, targetSpeed, crosshair, countdownLabel, hasResults, isComplete, hud, onStart, onReset, onShowResults, onMetrics, onRoundComplete, onPointerLockChange },
+  {
+    active,
+    moving,
+    scoring,
+    paused,
+    multiplier,
+    targetSpeed,
+    trajectorySeed,
+    roundKey,
+    crosshair,
+    countdownLabel,
+    idleMessage,
+    idleHint,
+    hasResults,
+    isComplete,
+    hud,
+    onStart,
+    onReset,
+    onShowResults,
+    onMetrics,
+    onRoundComplete,
+    onPointerLockChange,
+  },
   ref,
 ) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  
-  // Refs para bypass do React na atualização visual da HUD
-  const accuracyRef = useRef<HTMLSpanElement>(null)
-  const meanErrorRef = useRef<HTMLSpanElement>(null)
-  
   const [pointerLocked, setPointerLocked] = useState(false)
   const pointerLockedAtRef = useRef(0)
+  const hasLockedThisRoundRef = useRef(false)
+  const wasPointerLockedRef = useRef(false)
   const activeRef = useRef(active)
   const movingRef = useRef(moving)
   const scoringRef = useRef(scoring)
   const pausedRef = useRef(paused)
   const multiplierRef = useRef(multiplier)
-  const targetSpeedRef = useRef(targetSpeed)
   const crosshairRef = useRef(crosshair)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
+  const onPointerLockChangeRef = useRef(onPointerLockChange)
   const roundRemainingMsRef = useRef(ROUND_DURATION_MS)
-  
+  const rawInputSupportedRef = useRef(false)
+  const coalescedInputSupportedRef = useRef(false)
+  const trajectoryRef = useRef<TargetTrajectory>(createTargetTrajectory(trajectorySeed, targetSpeed))
+
   const stateRef = useRef({
     aimX: 0,
     aimY: 0,
-    visualAimX: 0,
-    visualAimY: 0,
     targetX: 0,
     targetY: 0,
-    destinationX: 0,
-    destinationY: 0,
-    directionX: 0,
-    directionY: 0,
-    startTime: 0,
+    trajectoryElapsedMs: 0,
     lastFrame: 0,
     distances: [] as number[],
     speeds: [] as number[],
@@ -138,6 +165,7 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     canvasWidth: 0,
     canvasHeight: 0,
     complete: false,
+    diagnostics: createDiagnostics(false, false),
   })
 
   useImperativeHandle(ref, () => ({
@@ -151,106 +179,120 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   useEffect(() => { scoringRef.current = scoring }, [scoring])
   useEffect(() => { pausedRef.current = paused }, [paused])
   useEffect(() => { multiplierRef.current = multiplier }, [multiplier])
-  useEffect(() => { targetSpeedRef.current = targetSpeed }, [targetSpeed])
   useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onRoundComplete }, [onRoundComplete])
+  useEffect(() => { onPointerLockChangeRef.current = onPointerLockChange }, [onPointerLockChange])
+
+  useEffect(() => {
+    trajectoryRef.current = createTargetTrajectory(trajectorySeed, targetSpeed)
+  }, [targetSpeed, trajectorySeed])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
+    rawInputSupportedRef.current = 'onpointerrawupdate' in window
+    coalescedInputSupportedRef.current = typeof PointerEvent !== 'undefined'
+      && 'getCoalescedEvents' in PointerEvent.prototype
+    const eventName = rawInputSupportedRef.current ? 'pointerrawupdate' : 'pointermove'
+
     const updatePointerLock = () => {
       const locked = document.pointerLockElement === canvas
+      const state = stateRef.current
+
       if (locked) {
-        const state = stateRef.current
-        state.aimX = canvas.clientWidth / 2
-        state.aimY = canvas.clientHeight / 2
-        state.visualAimX = state.aimX
-        state.visualAimY = state.aimY
-        state.lastAimX = state.aimX
-        state.lastAimY = state.aimY
+        if (!hasLockedThisRoundRef.current) {
+          state.aimX = canvas.clientWidth / 2
+          state.aimY = canvas.clientHeight / 2
+          state.lastAimX = state.aimX
+          state.lastAimY = state.aimY
+          hasLockedThisRoundRef.current = true
+        }
         pointerLockedAtRef.current = performance.now()
-      } else pointerLockedAtRef.current = 0
+      } else {
+        pointerLockedAtRef.current = 0
+        if (wasPointerLockedRef.current && activeRef.current && scoringRef.current && !state.complete) {
+          state.diagnostics.pointerLockLosses += 1
+        }
+      }
+
+      wasPointerLockedRef.current = locked
       setPointerLocked(locked)
-      onPointerLockChange(locked)
+      onPointerLockChangeRef.current(locked)
     }
 
     const handlePointer = (event: PointerEvent) => {
       if (!activeRef.current || pausedRef.current || document.pointerLockElement !== canvas) return
       const state = stateRef.current
-      
-      // Otimização de Hardware: Coleta eventos agrupados de mouses de alto polling rate
-      const coalesced = event.getCoalescedEvents?.() || [event]
-      
-      for (const ev of coalesced) {
+      const groupedEvents = event.getCoalescedEvents?.()
+      const events = groupedEvents && groupedEvents.length > 0 ? groupedEvents : [event]
+      const elapsedSinceLock = performance.now() - pointerLockedAtRef.current
+
+      for (const currentEvent of events) {
         const movement = sanitizePointerMovement({
-          movementX: ev.movementX,
-          movementY: ev.movementY,
+          movementX: currentEvent.movementX,
+          movementY: currentEvent.movementY,
           gain: multiplierRef.current,
           width: canvas.clientWidth,
           height: canvas.clientHeight,
-          elapsedSinceLock: performance.now() - pointerLockedAtRef.current,
+          elapsedSinceLock,
         })
         if (!movement) continue
         state.aimX = clampAimCoordinate(state.aimX + movement.x, canvas.clientWidth)
         state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
+        if (scoringRef.current) state.diagnostics.inputEventCount += 1
       }
     }
 
-    // Otimização: Capturar dados brutos da porta USB ignorando V-Sync (onde suportado)
-    const eventName = 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove'
-
     document.addEventListener('pointerlockchange', updatePointerLock)
     document.addEventListener(eventName, handlePointer as EventListener, { passive: true })
-    
     updatePointerLock()
+
     return () => {
       document.removeEventListener('pointerlockchange', updatePointerLock)
       document.removeEventListener(eventName, handlePointer as EventListener)
     }
-  }, [onPointerLockChange])
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) as CanvasRenderingContext2D | null
+    if (!ctx) return
     let animationFrame = 0
 
     const resize = () => {
       const ratio = window.devicePixelRatio || 1
       const rect = canvas.getBoundingClientRect()
-      canvas.width = rect.width * ratio
-      canvas.height = rect.height * ratio
-      
-      // Otimização de Canvas: Desync para minimizar latência (onde suportado)
-      const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) as CanvasRenderingContext2D
-      ctx?.setTransform(ratio, 0, 0, ratio, 0, 0)
-      
       const state = stateRef.current
+
+      if (state.canvasWidth > 0 && state.canvasHeight > 0 && scoringRef.current && !state.complete) {
+        state.diagnostics.resizeCount += 1
+      }
+
+      canvas.width = Math.max(1, Math.round(rect.width * ratio))
+      canvas.height = Math.max(1, Math.round(rect.height * ratio))
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+
       if (state.canvasWidth > 0 && state.canvasHeight > 0) {
         const scaleX = rect.width / state.canvasWidth
         const scaleY = rect.height / state.canvasHeight
-        state.aimX *= scaleX
-        state.aimY *= scaleY
-        state.visualAimX *= scaleX
-        state.visualAimY *= scaleY
-        state.targetX *= scaleX
-        state.targetY *= scaleY
-        state.destinationX *= scaleX
-        state.destinationY *= scaleY
-        state.targetTrail = state.targetTrail.map((point) => ({ ...point, x: point.x * scaleX, y: point.y * scaleY }))
-        state.aimX = clampAimCoordinate(state.aimX, rect.width)
-        state.aimY = clampAimCoordinate(state.aimY, rect.height)
-        state.visualAimX = clampAimCoordinate(state.visualAimX, rect.width)
-        state.visualAimY = clampAimCoordinate(state.visualAimY, rect.height)
+        state.aimX = clampAimCoordinate(state.aimX * scaleX, rect.width)
+        state.aimY = clampAimCoordinate(state.aimY * scaleY, rect.height)
+        state.lastAimX = clampAimCoordinate(state.lastAimX * scaleX, rect.width)
+        state.lastAimY = clampAimCoordinate(state.lastAimY * scaleY, rect.height)
+        for (const point of state.targetTrail) {
+          point.x *= scaleX
+          point.y *= scaleY
+        }
       } else {
         state.aimX = rect.width / 2
         state.aimY = rect.height / 2
-        state.visualAimX = state.aimX
-        state.visualAimY = state.aimY
         state.lastAimX = state.aimX
         state.lastAimY = state.aimY
       }
+
       state.canvasWidth = rect.width
       state.canvasHeight = rect.height
     }
@@ -260,22 +302,20 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     resize()
 
     const render = (time: number) => {
-      const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true }) as CanvasRenderingContext2D
-      if (!ctx) return
       const width = canvas.clientWidth
       const height = canvas.clientHeight
       const state = stateRef.current
       const radius = getTargetRadius(width, height)
       if (!state.lastFrame) state.lastFrame = time
-      const deltaSeconds = Math.min(0.05, Math.max(0, (time - state.lastFrame) / 1000))
+      const rawDeltaMs = Math.max(0, time - state.lastFrame)
+      const deltaMs = Math.min(250, rawDeltaMs)
       state.lastFrame = time
 
-      // Fundo opaco para melhorar tempo de composição GPU
       ctx.fillStyle = '#0b0e14'
       ctx.fillRect(0, 0, width, height)
-
       ctx.strokeStyle = 'rgba(255,255,255,.035)'
       ctx.lineWidth = 1
+
       for (let x = 0; x < width; x += 42) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke()
       }
@@ -283,110 +323,78 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
       }
 
-      if (activeRef.current && !pausedRef.current) {
-        const aimBlend = 1 - Math.exp(-AIM_RENDER_RESPONSE * deltaSeconds)
-        state.visualAimX += (state.aimX - state.visualAimX) * aimBlend
-        state.visualAimY += (state.aimY - state.visualAimY) * aimBlend
-      }
-
       if (movingRef.current && !pausedRef.current) {
-        if (!state.destinationX || !state.destinationY) {
-          state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
-          state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
-        }
-
-        const targetVelocity = Math.min(width, height) * 0.32 * targetSpeedRef.current
-        let dx = state.destinationX - state.targetX
-        let dy = state.destinationY - state.targetY
-        let distanceToDestination = Math.hypot(dx, dy)
-
-        if (distanceToDestination <= Math.max(radius * 0.65, targetVelocity * deltaSeconds * 2)) {
-          // Otimização GC: Evita alocar objetos para novos destinos
-          state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
-          state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
-          dx = state.destinationX - state.targetX
-          dy = state.destinationY - state.targetY
-          distanceToDestination = Math.hypot(dx, dy)
-        }
-
-        const desiredX = distanceToDestination ? dx / distanceToDestination : state.directionX
-        const desiredY = distanceToDestination ? dy / distanceToDestination : state.directionY
-        const turnBlend = 1 - Math.exp(-TARGET_TURN_RATE * deltaSeconds)
-        let directionX = state.directionX + (desiredX - state.directionX) * turnBlend
-        let directionY = state.directionY + (desiredY - state.directionY) * turnBlend
-        const directionLength = Math.hypot(directionX, directionY) || 1
-        directionX /= directionLength
-        directionY /= directionLength
-        state.directionX = directionX
-        state.directionY = directionY
-
-        const step = targetVelocity * deltaSeconds
-        state.targetX = clamp(state.targetX + directionX * step, radius, width - radius)
-        state.targetY = clamp(state.targetY + directionY * step, radius, height - radius)
+        state.trajectoryElapsedMs += deltaMs
+        const target = sampleTargetTrajectory(trajectoryRef.current, state.trajectoryElapsedMs, width, height, radius)
+        state.targetX = target.x
+        state.targetY = target.y
 
         if (time - state.lastTrailSample >= 18) {
           state.targetTrail.push({ x: state.targetX, y: state.targetY, time })
           state.lastTrailSample = time
         }
+      }
 
-        if (scoringRef.current && time - state.lastSample > SAMPLE_INTERVAL_MS) {
+      if (scoringRef.current && !pausedRef.current) {
+        state.diagnostics.frameCount += 1
+        if (rawDeltaMs > LONG_FRAME_THRESHOLD_MS) state.diagnostics.longFrameCount += 1
+
+        if (time - state.lastSample >= SAMPLE_INTERVAL_MS) {
           const sampleSeconds = state.lastSample ? Math.max(0.001, (time - state.lastSample) / 1000) : SAMPLE_INTERVAL_MS / 1000
-          const distance = Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY)
-          const speed = Math.hypot(state.visualAimX - state.lastAimX, state.visualAimY - state.lastAimY) / sampleSeconds
+          const distance = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY)
+          const speed = Math.hypot(state.aimX - state.lastAimX, state.aimY - state.lastAimY) / sampleSeconds
           state.distances.push(distance)
           state.speeds.push(speed)
-          state.lastAimX = state.visualAimX
-          state.lastAimY = state.visualAimY
+          state.lastAimX = state.aimX
+          state.lastAimY = state.aimY
           state.lastSample = time
-          
-          if (time - state.lastMetricsUpdate >= METRICS_UPDATE_INTERVAL_MS) {
-            // Otimização GC: Calcula as métricas diretamente sobre o array existente sem invocar `.slice()`
-            const startIdx = Math.max(0, state.distances.length - 30)
-            const count = state.distances.length - startIdx
-            let accHits = 0
-            let meanSum = 0
-            let speedChangeSum = 0
 
-            for (let i = startIdx; i < state.distances.length; i++) {
-              if (state.distances[i] <= radius) accHits++
-              meanSum += state.distances[i]
-              if (i > startIdx) {
-                speedChangeSum += Math.abs(state.speeds[i] - state.speeds[i - 1])
-              }
+          if (time - state.lastMetricsUpdate >= METRICS_UPDATE_INTERVAL_MS) {
+            const startIndex = Math.max(0, state.distances.length - 30)
+            const sampleCount = state.distances.length - startIndex
+            let hits = 0
+            let errorSum = 0
+            const speedChanges: number[] = []
+
+            for (let index = startIndex; index < state.distances.length; index += 1) {
+              if (state.distances[index] <= radius) hits += 1
+              errorSum += state.distances[index]
+              if (index > startIndex) speedChanges.push(Math.abs(state.speeds[index] - state.speeds[index - 1]))
             }
 
-            const accuracy = count > 0 ? (accHits / count) * 100 : 0
-            const meanError = count > 0 ? meanSum / count : 0
-            const averageChange = count > 1 ? speedChangeSum / (count - 1) : 0
-            const smoothness = Math.max(0, 100 * (1 - averageChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
+            speedChanges.sort((left, right) => left - right)
+            const middle = Math.floor(speedChanges.length / 2)
+            const robustChange = speedChanges.length === 0
+              ? 0
+              : speedChanges.length % 2
+                ? speedChanges[middle]
+                : (speedChanges[middle - 1] + speedChanges[middle]) / 2
+            const accuracy = sampleCount > 0 ? hits / sampleCount * 100 : 0
+            const meanError = sampleCount > 0 ? errorSum / sampleCount : 0
+            const smoothness = Math.max(0, 100 * (1 - robustChange / (radius * SMOOTHNESS_SPEED_CHANGE_PER_RADIUS)))
 
             state.lastMetricsUpdate = time
             onMetricsRef.current({ accuracy, meanError, smoothness })
-
-            // Otimização DOM: Atualização visual imediata ignorando a Virtual Tree do React
-            if (accuracyRef.current) accuracyRef.current.innerText = accuracy.toFixed(0)
-            if (meanErrorRef.current) meanErrorRef.current.innerText = meanError.toFixed(0)
           }
         }
       }
 
-      // Otimização GC: O Rastro reescreve os elementos sem criar novos Arrays e engasgar a CPU
       let activeTrailCount = 0
-      for (let i = 0; i < state.targetTrail.length; i++) {
-        if (time - state.targetTrail[i].time <= 360) {
-          state.targetTrail[activeTrailCount++] = state.targetTrail[i]
+      for (let index = 0; index < state.targetTrail.length; index += 1) {
+        if (time - state.targetTrail[index].time <= 360) {
+          state.targetTrail[activeTrailCount] = state.targetTrail[index]
+          activeTrailCount += 1
         }
       }
       state.targetTrail.length = activeTrailCount
 
-      for (let i = 0; i < state.targetTrail.length; i++) {
-        const point = state.targetTrail[i]
+      for (const point of state.targetTrail) {
         const life = 1 - (time - point.time) / 360
         ctx.fillStyle = `rgba(255,114,81,${Math.max(0, life) * 0.2})`
         ctx.beginPath(); ctx.arc(point.x, point.y, radius * (0.22 + life * 0.42), 0, Math.PI * 2); ctx.fill()
       }
 
-      if (state.targetX) {
+      if (state.targetX > 0) {
         const glow = ctx.createRadialGradient(state.targetX, state.targetY, 0, state.targetX, state.targetY, radius * 2)
         glow.addColorStop(0, 'rgba(255,111,78,.28)')
         glow.addColorStop(1, 'rgba(255,111,78,0)')
@@ -395,12 +403,12 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
         ctx.fillStyle = '#ff7251'
         ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = 'rgba(255,255,255,.72)'
-        ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius * .27, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(state.targetX, state.targetY, radius * 0.27, 0, Math.PI * 2); ctx.fill()
       }
 
       if (activeRef.current) {
-        const onTarget = Math.hypot(state.visualAimX - state.targetX, state.visualAimY - state.targetY) <= radius
-        drawCrosshair(ctx, state.visualAimX, state.visualAimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
+        const onTarget = Math.hypot(state.aimX - state.targetX, state.aimY - state.targetY) <= radius
+        drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, onTarget ? '#8dfbd3' : '#f4f2eb')
       }
 
       animationFrame = requestAnimationFrame(render)
@@ -414,58 +422,65 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   }, [])
 
   useEffect(() => {
-    if (active) {
-      const canvas = canvasRef.current
-      const state = stateRef.current
-      const width = canvas?.clientWidth ?? 0
-      const height = canvas?.clientHeight ?? 0
-      state.aimX = width / 2
-      state.aimY = height / 2
-      state.visualAimX = state.aimX
-      state.visualAimY = state.aimY
-      state.targetX = width / 2
-      state.targetY = height / 2
-      const radius = getTargetRadius(width, height)
-      
-      state.destinationX = randomBetween(radius * 1.8, Math.max(radius * 1.8, width - radius * 1.8))
-      state.destinationY = randomBetween(radius * 1.8, Math.max(radius * 1.8, height - radius * 1.8))
-      const initialDistance = Math.hypot(state.destinationX - state.targetX, state.destinationY - state.targetY) || 1
-      state.directionX = (state.destinationX - state.targetX) / initialDistance
-      state.directionY = (state.destinationY - state.targetY) / initialDistance
-      
-      state.startTime = 0
-      state.lastFrame = 0
-      state.distances = []
-      state.speeds = []
-      state.lastSample = 0
-      state.lastMetricsUpdate = 0
-      state.targetTrail = []
-      state.lastTrailSample = 0
-      state.complete = false
-      roundRemainingMsRef.current = ROUND_DURATION_MS
-    }
-  }, [active, multiplier])
+    if (!active) return
+    const canvas = canvasRef.current
+    const state = stateRef.current
+    const width = canvas?.clientWidth ?? 0
+    const height = canvas?.clientHeight ?? 0
+    const radius = getTargetRadius(width, height)
+    const initialTarget = sampleTargetTrajectory(trajectoryRef.current, 0, width, height, radius)
+
+    hasLockedThisRoundRef.current = false
+    state.aimX = width / 2
+    state.aimY = height / 2
+    state.lastAimX = state.aimX
+    state.lastAimY = state.aimY
+    state.targetX = initialTarget.x
+    state.targetY = initialTarget.y
+    state.trajectoryElapsedMs = 0
+    state.lastFrame = 0
+    state.distances = []
+    state.speeds = []
+    state.lastSample = 0
+    state.lastMetricsUpdate = 0
+    state.targetTrail = []
+    state.lastTrailSample = 0
+    state.complete = false
+    state.diagnostics = createDiagnostics(rawInputSupportedRef.current, coalescedInputSupportedRef.current)
+    roundRemainingMsRef.current = ROUND_DURATION_MS
+  }, [active, roundKey])
 
   useEffect(() => {
-    if (scoring) {
-      const state = stateRef.current
-      state.distances = []
-      state.speeds = []
-      state.lastAimX = state.visualAimX
-      state.lastAimY = state.visualAimY
-      state.lastSample = 0
-      state.lastMetricsUpdate = 0
-      state.complete = false
-    }
-  }, [scoring, multiplier])
+    if (!moving) return
+    const state = stateRef.current
+    state.trajectoryElapsedMs = 0
+    state.lastFrame = 0
+  }, [moving, roundKey])
+
+  useEffect(() => {
+    if (!scoring) return
+    const state = stateRef.current
+    state.trajectoryElapsedMs = ROUND_WARMUP * 1000
+    state.distances = []
+    state.speeds = []
+    state.lastAimX = state.aimX
+    state.lastAimY = state.aimY
+    state.lastSample = 0
+    state.lastMetricsUpdate = 0
+    state.complete = false
+  }, [scoring, roundKey])
 
   const finishRound = () => {
     const state = stateRef.current
-    if (!state.complete) {
-      state.complete = true
-      const radius = getTargetRadius(canvasRef.current?.clientWidth ?? 0, canvasRef.current?.clientHeight ?? 0)
-      onCompleteRef.current(state.distances, state.speeds, radius)
-    }
+    if (state.complete) return
+    state.complete = true
+    const radius = getTargetRadius(canvasRef.current?.clientWidth ?? 0, canvasRef.current?.clientHeight ?? 0)
+    onCompleteRef.current({
+      distances: [...state.distances],
+      speeds: [...state.speeds],
+      targetRadius: radius,
+      diagnostics: { ...state.diagnostics },
+    })
   }
 
   useEffect(() => {
@@ -474,22 +489,23 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     const initialRemaining = roundRemainingMsRef.current
     const roundState = stateRef.current
     const timer = window.setTimeout(finishRound, initialRemaining)
+
     return () => {
       window.clearTimeout(timer)
       if (!roundState.complete) {
         roundRemainingMsRef.current = Math.max(0, initialRemaining - (performance.now() - started))
       }
     }
-  }, [scoring, paused, multiplier])
+  }, [paused, roundKey, scoring])
 
   return (
     <div className="arena-wrap">
       <canvas ref={canvasRef} className="arena" tabIndex={0} onMouseDown={() => active && void requestStablePointerLock(canvasRef.current)} />
-      {active && (
+      {active ? (
         <div className="arena-hud" aria-live="polite">
           <div className="arena-hud-metrics">
-            <div><span>{t('common.accuracy')}</span><strong><span ref={accuracyRef}>{hud.accuracy}</span><small>%</small></strong></div>
-            <div><span>{t('common.meanError')}</span><strong><span ref={meanErrorRef}>{hud.meanError}</span><small>px</small></strong></div>
+            <div><span>{t('common.accuracy')}</span><strong>{hud.accuracy}<small>%</small></strong></div>
+            <div><span>{t('common.meanError')}</span><strong>{hud.meanError}<small>px</small></strong></div>
             <div><span>{t('arena.testSensitivity')}</span><strong>{hud.sensitivity}</strong></div>
             <div><span>{t('common.time')}</span><strong>{hud.remaining}<small>s</small></strong></div>
           </div>
@@ -498,11 +514,12 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
             <strong>{hud.round}<small>/ {hud.totalRounds}</small></strong>
           </div>
         </div>
-      )}
-      {!active && (
+      ) : null}
+
+      {!active ? (
         <div className="arena-prompt">
-          <span>{isComplete ? t('arena.calibrationComplete') : hasResults ? t('arena.roundComplete') : t('arena.ready')}</span>
-          <small>{isComplete ? t('arena.fiveRounds') : hasResults ? t('arena.continueReady') : t('arena.startHint')}</small>
+          <span>{idleMessage ?? (isComplete ? t('arena.calibrationComplete') : hasResults ? t('arena.roundComplete') : t('arena.ready'))}</span>
+          <small>{idleHint ?? (isComplete ? t('arena.allRounds') : hasResults ? t('arena.continueReady') : t('arena.startHint'))}</small>
           <div className="arena-controls">
             <button className="secondary-button" onClick={onReset}><RotateCcw size={16} /> {t('common.restart')}</button>
             {isComplete
@@ -510,16 +527,18 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
               : <button className="primary-button" onClick={onStart}><Play size={17} /> {hasResults ? t('arena.nextRound') : t('arena.startTest')}</button>}
           </div>
         </div>
-      )}
-      {active && !scoring && (
+      ) : null}
+
+      {active && !scoring ? (
         <div className="arena-phase-overlay">
           <strong>{countdownLabel}</strong>
           <span>{t('arena.notScoring')}</span>
         </div>
-      )}
-      {active && !pointerLocked && (
+      ) : null}
+
+      {active && !pointerLocked ? (
         <button className="lock-prompt" onClick={() => void requestStablePointerLock(canvasRef.current)}>{t('arena.lockCursor')}</button>
-      )}
+      ) : null}
     </div>
   )
 })

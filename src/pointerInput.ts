@@ -14,15 +14,13 @@ export function sanitizePointerMovement({ movementX, movementY, gain, width, hei
   if (elapsedSinceLock < POINTER_LOCK_SETTLE_MS) return null
   if (![movementX, movementY, gain, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return null
 
-  const deltaX = movementX * gain
-  const deltaY = movementY * gain
-  const distance = Math.hypot(deltaX, deltaY)
-  if (!distance) return { x: 0, y: 0 }
-
-  // Pointer-lock transitions can emit a synthetic desktop-sized jump.
-  const maximumDistance = Math.max(36, Math.min(width, height) * 0.14)
-  const scale = Math.min(1, maximumDistance / distance)
-  return { x: deltaX * scale, y: deltaY * scale }
+  // O intervalo de estabilização acima descarta os saltos sintéticos mais comuns
+  // emitidos na transição para pointer lock. Depois disso, o movimento precisa ser
+  // preservado integralmente para não reduzir flicks legítimos em DPI ou polling altos.
+  return {
+    x: movementX * gain,
+    y: movementY * gain,
+  }
 }
 
 export function clampAimCoordinate(value: number, size: number, padding = AIM_EDGE_PADDING) {
