@@ -64,13 +64,21 @@ export type CandidateResult = {
 
 export type CalibrationConfidence = 'high' | 'medium' | 'exploratory'
 export type CalibrationResultKind = 'recommended' | 'range' | 'inconclusive' | 'invalid'
-export type CalibrationReason = 'confirmed' | 'close-candidates' | 'low-consistency' | 'low-signal' | 'incomplete' | 'validation-conflict'
+export type CalibrationReason = 'confirmed' | 'close-candidates' | 'split-candidates' | 'low-consistency' | 'low-signal' | 'incomplete' | 'validation-conflict'
+
+export type CalibrationDirection = 'lower' | 'higher' | 'near-base'
+export type CalibrationZoneKind = 'confirmed' | 'continuous' | 'single' | 'split' | 'none'
 
 export type CalibrationReport = {
   resultKind: CalibrationResultKind
   reason: CalibrationReason
   recommendation: number
   range: { min: number, max: number }
+  zoneKind: CalibrationZoneKind
+  zoneResults: CandidateResult[]
+  direction: CalibrationDirection
+  changePercent: number
+  refinementMultipliers: number[]
   bestResult: CandidateResult
   baselineResult: CandidateResult
   candidateResults: CandidateResult[]
@@ -82,10 +90,16 @@ export type CalibrationReport = {
   score: number
   confidence: CalibrationConfidence
   confidenceScore: number
+  collectionQualityScore: number
+  playerConsistencyScore: number
+  recommendationStrengthScore: number
   repeatabilityScore: number
   blockAgreementScore: number
   validationAgreementScore: number | null
+  validationConfirmedRounds: number
+  validationTotalRounds: number
   separationScore: number
+  scoreGap: number
   completenessScore: number
   sampleQualityScore: number
   expectedRoundCount: number
@@ -103,6 +117,9 @@ export type CalibrationSessionSummary = {
   smoothness: number
   overshoots: number
   confidenceScore: number
+  collectionQualityScore: number
+  playerConsistencyScore: number
+  recommendationStrengthScore: number
   resultKind: CalibrationResultKind
 }
 
@@ -113,6 +130,8 @@ export const ROUND_WARMUP = 2
 export const SAMPLE_INTERVAL_MS = 40
 export const SMOOTHNESS_SPEED_CHANGE_PER_RADIUS = 18
 export const COMPETITIVE_SCORE_DELTA = 4
+export const CONTIGUOUS_ZONE_SCORE_DELTA = 1.75
+export const SPLIT_CANDIDATE_SCORE_DELTA = 2.5
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
@@ -332,6 +351,64 @@ function calculateValidationAgreement(bestResult: CandidateResult, candidateResu
   return 20
 }
 
+function buildContinuousZone(bestResult: CandidateResult, orderedCandidates: CandidateResult[]) {
+  const bestIndex = orderedCandidates.findIndex((candidate) => candidate.candidateId === bestResult.candidateId)
+  if (bestIndex < 0) return [bestResult]
+
+  const neighbors = [orderedCandidates[bestIndex - 1], orderedCandidates[bestIndex + 1]]
+    .filter((candidate): candidate is CandidateResult => Boolean(candidate))
+    .filter((candidate) => bestResult.score - candidate.score <= CONTIGUOUS_ZONE_SCORE_DELTA)
+    .filter((candidate) => candidate.repeatability >= 42)
+    .sort((left, right) => right.score - left.score)
+
+  // A zona final deve ser estreita. Mantemos o melhor valor e, no máximo,
+  // o vizinho imediato mais forte. Isso impede que toda a busca ampla seja
+  // apresentada como uma faixa útil para o jogador.
+  return neighbors.length
+    ? [bestResult, neighbors[0]].sort((left, right) => left.multiplier - right.multiplier)
+    : [bestResult]
+}
+
+function buildRefinementMultipliers(bestResult: CandidateResult, orderedCandidates: CandidateResult[]) {
+  const orderedMultipliers = orderedCandidates.map((candidate) => candidate.multiplier)
+  const bestIndex = orderedCandidates.findIndex((candidate) => candidate.candidateId === bestResult.candidateId)
+  const spacings: number[] = []
+
+  for (let index = 1; index < orderedMultipliers.length; index += 1) {
+    const spacing = orderedMultipliers[index] - orderedMultipliers[index - 1]
+    if (spacing > 0) spacings.push(spacing)
+  }
+
+  const coarseSpacing = median(spacings) || 0.1
+  const refinementStep = Math.max(0.005, coarseSpacing / 2)
+  const minimum = orderedMultipliers[0] ?? bestResult.multiplier
+  const maximum = orderedMultipliers[orderedMultipliers.length - 1] ?? bestResult.multiplier
+  let values = [bestResult.multiplier - refinementStep, bestResult.multiplier, bestResult.multiplier + refinementStep]
+
+  if (bestIndex === 0) {
+    values = [bestResult.multiplier, bestResult.multiplier + refinementStep, bestResult.multiplier + refinementStep * 2]
+  } else if (bestIndex === orderedCandidates.length - 1) {
+    values = [bestResult.multiplier - refinementStep * 2, bestResult.multiplier - refinementStep, bestResult.multiplier]
+  }
+
+  return [...new Set(values
+    .map((value) => Math.max(minimum, Math.min(maximum, value)))
+    .map((value) => Number(value.toFixed(6))))]
+    .sort((left, right) => left - right)
+}
+
+function getValidationSummary(bestResult: CandidateResult, candidateResults: CandidateResult[]) {
+  const finalists = candidateResults.filter((candidate) => candidate.validationScore !== null)
+  if (!finalists.length) return { confirmed: 0, total: 0 }
+  const validationWinner = finalists.reduce((best, candidate) =>
+    (candidate.validationScore ?? -Infinity) > (best.validationScore ?? -Infinity) ? candidate : best,
+  )
+  return {
+    confirmed: validationWinner.candidateId === bestResult.candidateId ? 1 : 0,
+    total: 1,
+  }
+}
+
 export function buildCalibrationReport(
   results: RoundResult[],
   candidates: CalibrationCandidate[],
@@ -343,97 +420,144 @@ export function buildCalibrationReport(
   if (!valid.length || !competitive.length) return null
 
   const sortedByScore = [...valid].sort((left, right) => right.score - left.score)
+  const orderedCandidates = [...valid].sort((left, right) => left.multiplier - right.multiplier)
   const bestResult = sortedByScore[0]
   const secondResult = sortedByScore[1]
-  const baselineResult = valid.reduce((closest, candidate) => Math.abs(candidate.multiplier - 1) < Math.abs(closest.multiplier - 1) ? candidate : closest)
-  const weightedRecommendation = recommendMultiplier(valid)
+  const baselineResult = valid.reduce((closest, candidate) =>
+    Math.abs(candidate.multiplier - 1) < Math.abs(closest.multiplier - 1) ? candidate : closest,
+  )
   const weightTotal = competitive.reduce((sum, candidate) => sum + getCompetitiveWeight(candidate, competitiveFloor), 0)
-  const weighted = (selector: (candidate: CandidateResult) => number) => competitive.reduce((sum, candidate) => sum + selector(candidate) * getCompetitiveWeight(candidate, competitiveFloor), 0) / weightTotal
+  const weighted = (selector: (candidate: CandidateResult) => number) =>
+    competitive.reduce((sum, candidate) => sum + selector(candidate) * getCompetitiveWeight(candidate, competitiveFloor), 0) / weightTotal
   const validRoundCount = results.filter((result) => result.valid).length
   const expectedRoundCount = expectedMeasurementRounds + expectedValidationRounds
   const completenessScore = expectedRoundCount > 0 ? Math.min(100, validRoundCount / expectedRoundCount * 100) : 0
-  const sampleQualityScore = average(results.filter((result) => result.valid).map((result) => result.qualityScore))
+  const validResults = results.filter((result) => result.valid)
+  const sampleQualityScore = average(validResults.map((result) => result.qualityScore))
   const repeatabilityScore = weighted((candidate) => candidate.repeatability)
-  const blockAgreementScore = calculateBlockAgreement(results, [...valid].sort((left, right) => left.multiplier - right.multiplier))
+  const blockAgreementScore = calculateBlockAgreement(results, orderedCandidates)
   const validationAgreementScore = calculateValidationAgreement(bestResult, candidateResults)
+  const validationSummary = getValidationSummary(bestResult, candidateResults)
   const scoreGap = secondResult ? bestResult.score - secondResult.score : COMPETITIVE_SCORE_DELTA
   const separationScore = Math.min(100, Math.max(0, scoreGap / 8 * 100))
-
+  const collectionQualityScore = Math.round(completenessScore * 0.55 + sampleQualityScore * 0.45)
+  const playerConsistencyScore = Math.round(repeatabilityScore * 0.65 + blockAgreementScore * 0.35)
   const validationComponent = validationAgreementScore ?? blockAgreementScore
-  const rawConfidenceScore = Math.round(
-    completenessScore * 0.18
-    + sampleQualityScore * 0.18
-    + repeatabilityScore * 0.22
-    + blockAgreementScore * 0.17
-    + separationScore * 0.1
-    + validationComponent * 0.15,
+  const continuousZone = buildContinuousZone(bestResult, orderedCandidates)
+  const bestIndex = orderedCandidates.findIndex((candidate) => candidate.candidateId === bestResult.candidateId)
+  const secondIndex = secondResult
+    ? orderedCandidates.findIndex((candidate) => candidate.candidateId === secondResult.candidateId)
+    : bestIndex
+  const splitCandidates = Boolean(
+    secondResult
+    && Math.abs(bestIndex - secondIndex) > 1
+    && scoreGap <= SPLIT_CANDIDATE_SCORE_DELTA,
   )
-  let resultKind: CalibrationResultKind = 'range'
-  let reason: CalibrationReason = 'close-candidates'
+
+  let resultKind: CalibrationResultKind = 'inconclusive'
+  let reason: CalibrationReason = 'low-signal'
+  let zoneKind: CalibrationZoneKind = 'single'
 
   if (completenessScore < 100) {
     resultKind = 'invalid'
     reason = 'incomplete'
+    zoneKind = 'none'
   } else if (bestResult.score < 40) {
     resultKind = 'inconclusive'
     reason = 'low-signal'
+    zoneKind = 'single'
   } else if (repeatabilityScore < 42) {
     resultKind = 'inconclusive'
     reason = 'low-consistency'
+    zoneKind = 'single'
   } else if (validationAgreementScore !== null && validationAgreementScore < 40) {
     resultKind = 'inconclusive'
     reason = 'validation-conflict'
-  } else if (validationAgreementScore !== null && validationAgreementScore >= 75 && scoreGap >= 3 && rawConfidenceScore >= 68) {
+    zoneKind = 'split'
+  } else if (splitCandidates) {
+    resultKind = 'inconclusive'
+    reason = 'split-candidates'
+    zoneKind = 'split'
+  } else if (continuousZone.length >= 2) {
+    resultKind = 'range'
+    reason = 'close-candidates'
+    zoneKind = 'continuous'
+  } else if (validationAgreementScore !== null && validationAgreementScore >= 75 && scoreGap >= 3) {
     resultKind = 'recommended'
     reason = 'confirmed'
+    zoneKind = 'confirmed'
   }
 
-  // Um resultado único usa uma sensibilidade realmente testada. A média ponderada
-  // fica restrita aos resultados em faixa, onde funciona como ponto central opcional.
-  const recommendation = resultKind === 'recommended'
-    ? bestResult.multiplier
-    : weightedRecommendation
-
-  const rangeSource = resultKind === 'inconclusive' || resultKind === 'invalid'
-    ? (() => {
-        const validated = candidateResults.filter((candidate) => candidate.validationScore !== null)
-        return validated.length >= 2 ? validated : sortedByScore.slice(0, Math.min(2, sortedByScore.length))
-      })()
-    : competitive
+  // O ponto inicial é sempre uma sensibilidade realmente testada. A faixa fica
+  // restrita à zona contínua ao redor do melhor resultado e nunca usa pontos
+  // fortes separados por uma candidata intermediária mais fraca.
+  const recommendation = bestResult.multiplier
+  const zoneResults = resultKind === 'range' ? continuousZone : [bestResult]
   const range = {
-    min: Math.min(...rangeSource.map((candidate) => candidate.multiplier)),
-    max: Math.max(...rangeSource.map((candidate) => candidate.multiplier)),
+    min: Math.min(...zoneResults.map((candidate) => candidate.multiplier)),
+    max: Math.max(...zoneResults.map((candidate) => candidate.multiplier)),
   }
+  const changePercent = (recommendation - 1) * 100
+  const direction: CalibrationDirection = Math.abs(changePercent) <= 2.5
+    ? 'near-base'
+    : changePercent < 0 ? 'lower' : 'higher'
+  const refinementMultipliers = buildRefinementMultipliers(bestResult, orderedCandidates)
 
-  // Uma sessão inconclusiva não deve exibir confiança alta mesmo quando parte dos
-  // indicadores internos é forte. O limite comunica a qualidade da conclusão final.
-  const confidenceScore = resultKind === 'invalid'
-    ? Math.min(rawConfidenceScore, 39)
-    : resultKind === 'inconclusive'
-      ? Math.min(rawConfidenceScore, 59)
-      : rawConfidenceScore
-  const confidence: CalibrationConfidence = confidenceScore >= 78 ? 'high' : confidenceScore >= 60 ? 'medium' : 'exploratory'
+  let recommendationStrengthScore = Math.round(
+    separationScore * 0.35
+    + validationComponent * 0.3
+    + blockAgreementScore * 0.2
+    + repeatabilityScore * 0.15,
+  )
+
+  // Limites obrigatórios impedem que uma coleta tecnicamente boa esconda uma
+  // conclusão fraca ou contraditória.
+  if (collectionQualityScore < 80) recommendationStrengthScore = Math.min(recommendationStrengthScore, 60)
+  if (blockAgreementScore < 50) recommendationStrengthScore = Math.min(recommendationStrengthScore, 50)
+  if (separationScore < 15) recommendationStrengthScore = Math.min(recommendationStrengthScore, 65)
+  if (zoneKind === 'split') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
+  if (reason === 'validation-conflict') recommendationStrengthScore = Math.min(recommendationStrengthScore, 45)
+  if (reason === 'low-consistency') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
+  if (resultKind === 'range') recommendationStrengthScore = Math.min(recommendationStrengthScore, 75)
+  if (resultKind === 'inconclusive') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
+  if (resultKind === 'invalid') recommendationStrengthScore = Math.min(recommendationStrengthScore, 39)
+
+  const confidenceScore = recommendationStrengthScore
+  const confidence: CalibrationConfidence = confidenceScore >= 78
+    ? 'high'
+    : confidenceScore >= 60 ? 'medium' : 'exploratory'
 
   return {
     resultKind,
     reason,
     recommendation,
     range,
+    zoneKind,
+    zoneResults,
+    direction,
+    changePercent,
+    refinementMultipliers,
     bestResult,
     baselineResult,
     candidateResults: [...candidateResults].sort((left, right) => left.multiplier - right.multiplier),
     competitiveResults: [...competitive].sort((left, right) => right.score - left.score),
-    accuracy: weighted((candidate) => candidate.accuracy),
-    meanError: weighted((candidate) => candidate.meanError),
-    smoothness: weighted((candidate) => candidate.smoothness),
-    overshoots: weighted((candidate) => candidate.overshoots),
-    score: weighted((candidate) => candidate.score),
+    accuracy: bestResult.accuracy,
+    meanError: bestResult.meanError,
+    smoothness: bestResult.smoothness,
+    overshoots: bestResult.overshoots,
+    score: bestResult.score,
     confidence,
     confidenceScore,
+    collectionQualityScore,
+    playerConsistencyScore,
+    recommendationStrengthScore,
     repeatabilityScore,
     blockAgreementScore,
     validationAgreementScore,
+    validationConfirmedRounds: validationSummary.confirmed,
+    validationTotalRounds: validationSummary.total,
     separationScore,
+    scoreGap,
     completenessScore,
     sampleQualityScore,
     expectedRoundCount,
@@ -466,11 +590,14 @@ export function createCalibrationSessionSummary(
     smoothness: report.smoothness,
     overshoots: report.overshoots,
     confidenceScore: report.confidenceScore,
+    collectionQualityScore: report.collectionQualityScore,
+    playerConsistencyScore: report.playerConsistencyScore,
+    recommendationStrengthScore: report.recommendationStrengthScore,
     resultKind: report.resultKind,
   }
 }
 
-const calibrationSessionStorageKey = (game: string) => `sensi-calibration-session:v2:${game}`
+const calibrationSessionStorageKey = (game: string) => `sensi-calibration-session:v3:${game}`
 
 export function readCalibrationSession(storage: Storage, game: string): CalibrationSessionSummary | null {
   try {

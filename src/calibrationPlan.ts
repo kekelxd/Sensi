@@ -120,18 +120,40 @@ export function buildCalibrationCandidates(baseSensitivity: number, game: GameCo
     }))
 }
 
-export function createCalibrationPlan(
+export function buildCalibrationCandidatesFromMultipliers(
   baseSensitivity: number,
   game: GameConfig,
-  sessionSeed = createSessionSeed(),
-  repetitions = CALIBRATION_REPETITIONS,
+  multipliers: readonly number[],
+) {
+  const normalizedBase = normalizeSensitivity(baseSensitivity, game)
+  const sensitivities = new Map<string, { sensitivity: number, sourceMultiplier: number }>()
+
+  for (const sourceMultiplier of multipliers) {
+    if (!Number.isFinite(sourceMultiplier) || sourceMultiplier <= 0) continue
+    const sensitivity = normalizeSensitivity(normalizedBase * sourceMultiplier, game)
+    sensitivities.set(sensitivityKey(sensitivity), { sensitivity, sourceMultiplier })
+  }
+
+  return [...sensitivities.values()]
+    .sort((left, right) => left.sensitivity - right.sensitivity)
+    .slice(0, MAX_CALIBRATION_CANDIDATES)
+    .map(({ sensitivity, sourceMultiplier }) => ({
+      id: `candidate-${sensitivityKey(sensitivity)}`,
+      sensitivity,
+      multiplier: sensitivity / normalizedBase,
+      sourceMultiplier,
+    }))
+}
+
+function createPlanFromCandidates(
+  candidates: CalibrationCandidate[],
+  sessionSeed: number,
+  repetitions: number,
 ): CalibrationPlan {
-  const candidates = buildCalibrationCandidates(baseSensitivity, game)
   const baseOrder = seededShuffle(candidates, deriveSeed(sessionSeed, 101))
   const rounds: CalibrationRoundPlan[] = []
 
   for (let blockIndex = 0; blockIndex < repetitions; blockIndex += 1) {
-    // A inversão no segundo bloco equilibra o efeito de aprendizagem e fadiga.
     const order = blockIndex % 2 === 0
       ? baseOrder
       : [...baseOrder].reverse()
@@ -158,6 +180,33 @@ export function createCalibrationPlan(
     measurementRoundCount: rounds.length,
     validationRoundCount: 0,
   }
+}
+
+export function createCalibrationPlan(
+  baseSensitivity: number,
+  game: GameConfig,
+  sessionSeed = createSessionSeed(),
+  repetitions = CALIBRATION_REPETITIONS,
+): CalibrationPlan {
+  return createPlanFromCandidates(
+    buildCalibrationCandidates(baseSensitivity, game),
+    sessionSeed,
+    repetitions,
+  )
+}
+
+export function createRefinementPlan(
+  baseSensitivity: number,
+  game: GameConfig,
+  multipliers: readonly number[],
+  sessionSeed = createSessionSeed(),
+  repetitions = CALIBRATION_REPETITIONS,
+): CalibrationPlan {
+  return createPlanFromCandidates(
+    buildCalibrationCandidatesFromMultipliers(baseSensitivity, game, multipliers),
+    sessionSeed,
+    repetitions,
+  )
 }
 
 export function appendValidationRounds(plan: CalibrationPlan, finalistIds: readonly string[]) {

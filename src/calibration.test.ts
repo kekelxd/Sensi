@@ -157,9 +157,55 @@ describe('calibration report', () => {
 
     expect(report?.resultKind).toBe('inconclusive')
     expect(report?.reason).toBe('validation-conflict')
-    expect(report?.confidenceScore).toBeLessThanOrEqual(59)
-    expect(report?.range.min).toBe(Math.min(measurementWinner.multiplier, validationWinner.multiplier))
-    expect(report?.range.max).toBe(Math.max(measurementWinner.multiplier, validationWinner.multiplier))
+    expect(report?.confidenceScore).toBeLessThanOrEqual(45)
+    expect(report?.zoneKind).toBe('split')
+    expect(report?.range.min).toBe(measurementWinner.multiplier)
+    expect(report?.range.max).toBe(measurementWinner.multiplier)
+  })
+
+
+  it('does not turn separated strong candidates into a broad range', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 654)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const second = orderedCandidates[1]
+    const best = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [best.id, second.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = candidate.id === best.id ? 84.3 : candidate.id === second.id ? 82.9 : candidate.id === orderedCandidates[2].id ? 81.9 : 79
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.resultKind).toBe('inconclusive')
+    expect(report?.reason).toBe('split-candidates')
+    expect(report?.recommendation).toBe(best.multiplier)
+    expect(report?.range).toEqual({ min: best.multiplier, max: best.multiplier })
+    expect(report?.refinementMultipliers).toContain(best.multiplier)
+  })
+
+  it('caps recommendation strength when blocks disagree', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 777)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const firstWinner = orderedCandidates[0]
+    const secondWinner = orderedCandidates[4]
+    const plan = appendValidationRounds(initialPlan, [firstWinner.id, secondWinner.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = round.stage === 'validation'
+        ? candidate.id === firstWinner.id ? 91 : 80
+        : round.blockIndex === 0
+          ? candidate.id === firstWinner.id ? 92 : 75
+          : candidate.id === secondWinner.id ? 92 : 75
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.blockAgreementScore).toBe(20)
+    expect(report?.recommendationStrengthScore).toBeLessThanOrEqual(50)
+    expect(report?.collectionQualityScore).toBe(100)
   })
 
   it('returns a range when adjacent candidates remain close', () => {

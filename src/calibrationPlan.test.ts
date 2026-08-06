@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendValidationRounds, buildCalibrationCandidates, createCalibrationPlan } from './calibrationPlan'
+import { appendValidationRounds, buildCalibrationCandidates, createCalibrationPlan, createRefinementPlan } from './calibrationPlan'
 import { GAME_BY_ID } from './games'
 
 describe('calibration plan', () => {
@@ -25,6 +25,15 @@ describe('calibration plan', () => {
     const candidates = buildCalibrationCandidates(1, GAME_BY_ID.pubg)
     expect(new Set(candidates.map((candidate) => candidate.sensitivity)).size).toBe(candidates.length)
     expect(candidates.length).toBeLessThan(3)
+  })
+
+
+  it('creates a narrow refinement plan around the selected point', () => {
+    const plan = createRefinementPlan(0.12, GAME_BY_ID.valorant, [0.85, 0.9, 0.95], 99)
+
+    expect(plan.candidates.map((candidate) => candidate.sensitivity)).toEqual([0.102, 0.108, 0.114])
+    expect(plan.measurementRoundCount).toBe(6)
+    expect(new Set(plan.candidates.map((candidate) => candidate.sensitivity)).size).toBe(3)
   })
 
   it('adds validation rounds with one new shared trajectory', () => {

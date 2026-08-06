@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
-import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, type CalibrationPlan } from './calibrationPlan'
+import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -156,9 +156,9 @@ function App() {
     }
   }, [phase, round, inputReady])
 
-  const beginRound = (targetPlan = plan, targetRoundIndex = round) => {
+  const beginRound = (targetPlan = plan, targetRoundIndex = round, force = false) => {
     if (!targetPlan?.rounds[targetRoundIndex]) return
-    if (resultOpen || (targetPlan.validationRoundCount > 0 && isCalibrationComplete(results.length, targetPlan.rounds.length))) {
+    if (!force && (resultOpen || (targetPlan.validationRoundCount > 0 && isCalibrationComplete(results.length, targetPlan.rounds.length)))) {
       setResultOpen(true)
       leaveFullscreen()
       return
@@ -300,6 +300,32 @@ function App() {
     }
 
     setRound(nextResults.length)
+  }
+
+  const refineCalibration = () => {
+    if (!calibrationReport) return
+    const nextPlan = createRefinementPlan(
+      baseSensitivity,
+      confirmedGameConfig,
+      calibrationReport.refinementMultipliers,
+    )
+    if (nextPlan.candidates.length < MIN_CALIBRATION_CANDIDATES) return
+
+    flushSync(() => {
+      setPhase('idle')
+      setInputReady(false)
+      setRound(0)
+      setResults([])
+      setPlan(nextPlan)
+      setRejectedIssue(null)
+      setResultOpen(false)
+      setRemaining(ROUND_DURATION)
+      setCountdown(3)
+      setMetrics({ accuracy: 0, meanError: 0, smoothness: 0 })
+      phaseRemainingMsRef.current = 3000
+    })
+
+    beginRound(nextPlan, 0, true)
   }
 
   const reset = () => {
@@ -514,6 +540,7 @@ function App() {
               recommendedSensitivity={recommendedSelected}
               recommendedRangeMin={recommendedRangeMin}
               recommendedRangeMax={recommendedRangeMax}
+              onRefine={refineCalibration}
               onRedo={reset}
             />}
           </section>

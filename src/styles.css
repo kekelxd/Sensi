@@ -770,3 +770,26 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .calibration-quality > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
 }
 .setup-validation-error { display: block; margin-top: 8px; color: #f09b86; font-size: 8px; line-height: 1.5; }
+
+/* Calibration guidance v3 */
+.calibration-action-panel { margin-top: 9px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #0b0e13; }
+.calibration-action-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.calibration-action-grid > div { min-width: 0; padding: 10px; border: 1px solid rgba(255,255,255,.06); border-radius: 7px; background: #090c11; }
+.calibration-action-grid span, .calibration-action-grid strong, .calibration-action-grid small { display: block; }
+.calibration-action-grid span { color: var(--muted); font-size: 7px; }
+.calibration-action-grid strong { margin-top: 4px; color: #ece9e2; font: 500 13px DM Mono, monospace; overflow-wrap: anywhere; }
+.calibration-action-grid small { margin-top: 4px; color: #717985; font-size: 7px; line-height: 1.45; }
+.candidate-table > div.zone { border-color: rgba(141,251,211,.32); background: rgba(141,251,211,.04); }
+.candidate-table .zone span:last-child em { background: var(--mint); }
+.calibration-quality small { display: block; margin-top: 3px; color: #68717d; font-size: 7px; line-height: 1.35; }
+
+@media (max-width: 960px) {
+  .calibration-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .calibration-action-grid { grid-template-columns: 1fr; }
+}
+.calibration-result-actions { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: 8px; margin-top: 10px; }
+.calibration-result-actions button { width: 100%; height: 38px; }
+@media (max-width: 560px) { .calibration-result-actions { grid-template-columns: 1fr; } }
