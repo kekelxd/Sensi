@@ -64,10 +64,11 @@ export type CandidateResult = {
 
 export type CalibrationConfidence = 'high' | 'medium' | 'exploratory'
 export type CalibrationResultKind = 'recommended' | 'range' | 'inconclusive' | 'invalid'
-export type CalibrationReason = 'confirmed' | 'close-candidates' | 'split-candidates' | 'low-consistency' | 'low-signal' | 'incomplete' | 'validation-conflict'
+export type CalibrationReason = 'confirmed' | 'close-candidates' | 'split-candidates' | 'low-consistency' | 'low-signal' | 'incomplete' | 'validation-reversed' | 'validation-split'
 
 export type CalibrationDirection = 'lower' | 'higher' | 'near-base'
 export type CalibrationZoneKind = 'confirmed' | 'continuous' | 'single' | 'split' | 'none'
+export type CalibrationValidationStatus = 'confirmed' | 'split' | 'reversed' | 'unavailable'
 
 export type CalibrationReport = {
   resultKind: CalibrationResultKind
@@ -96,7 +97,12 @@ export type CalibrationReport = {
   repeatabilityScore: number
   blockAgreementScore: number
   validationAgreementScore: number | null
+  validationStatus: CalibrationValidationStatus
+  validationWinner: CandidateResult | null
+  validationScoreGap: number | null
   validationConfirmedRounds: number
+  validationAlternativeRounds: number
+  validationTiedRounds: number
   validationTotalRounds: number
   separationScore: number
   scoreGap: number
@@ -335,20 +341,131 @@ function calculateBlockAgreement(results: RoundResult[], orderedCandidates: Cand
   return maximumDistance <= 1 ? 70 : maximumDistance <= 2 ? 45 : 20
 }
 
-function calculateValidationAgreement(bestResult: CandidateResult, candidateResults: CandidateResult[]) {
-  const finalists = candidateResults.filter((candidate) => candidate.validationScore !== null)
-  if (!finalists.length) return null
-  const validationWinner = finalists.reduce((best, candidate) => (candidate.validationScore ?? -Infinity) > (best.validationScore ?? -Infinity) ? candidate : best)
-  if (validationWinner.candidateId === bestResult.candidateId) return 100
+const VALIDATION_BLOCK_TIE_SCORE_DELTA = 0.75
+const VALIDATION_AVERAGE_TIE_SCORE_DELTA = 0.75
 
-  const bestValidation = bestResult.validationScore
-  const winnerValidation = validationWinner.validationScore
-  if (bestValidation !== null && winnerValidation !== null) {
-    const validationGap = winnerValidation - bestValidation
-    if (validationGap <= 2) return 70
-    if (validationGap <= 5 && Math.abs(validationWinner.multiplier - bestResult.multiplier) <= 0.11) return 50
+type ValidationSummary = {
+  status: CalibrationValidationStatus
+  agreementScore: number | null
+  confirmedBlocks: number
+  alternativeBlocks: number
+  tiedBlocks: number
+  totalBlocks: number
+  winner: CandidateResult | null
+  scoreGap: number | null
+}
+
+function calculateValidationSummary(
+  measurementBest: CandidateResult,
+  candidateResults: CandidateResult[],
+  results: RoundResult[],
+): ValidationSummary {
+  const finalists = candidateResults.filter((testedValue) => testedValue.validationScore !== null)
+  const validationRounds = results.filter((result) => result.valid && result.stage === 'validation')
+  const blocks = [...new Set(validationRounds.map((result) => result.blockIndex))].sort((left, right) => left - right)
+
+  if (finalists.length !== 2 || blocks.length < 2) {
+    return {
+      status: 'unavailable',
+      agreementScore: null,
+      confirmedBlocks: 0,
+      alternativeBlocks: 0,
+      tiedBlocks: 0,
+      totalBlocks: blocks.length,
+      winner: null,
+      scoreGap: null,
+    }
   }
-  return 20
+
+  const alternative = finalists.find((testedValue) => testedValue.candidateId !== measurementBest.candidateId)
+  if (!alternative) {
+    return {
+      status: 'unavailable',
+      agreementScore: null,
+      confirmedBlocks: 0,
+      alternativeBlocks: 0,
+      tiedBlocks: 0,
+      totalBlocks: blocks.length,
+      winner: null,
+      scoreGap: null,
+    }
+  }
+
+  let confirmedBlocks = 0
+  let alternativeBlocks = 0
+  let tiedBlocks = 0
+
+  for (const blockIndex of blocks) {
+    const blockRounds = validationRounds.filter((round) => round.blockIndex === blockIndex)
+    const initialRound = blockRounds.find((round) => round.candidateId === measurementBest.candidateId)
+    const alternativeRound = blockRounds.find((round) => round.candidateId === alternative.candidateId)
+
+    if (!initialRound || !alternativeRound) continue
+    const delta = initialRound.score - alternativeRound.score
+    if (Math.abs(delta) <= VALIDATION_BLOCK_TIE_SCORE_DELTA) tiedBlocks += 1
+    else if (delta > 0) confirmedBlocks += 1
+    else alternativeBlocks += 1
+  }
+
+  const comparedBlocks = confirmedBlocks + alternativeBlocks + tiedBlocks
+  if (comparedBlocks < 2) {
+    return {
+      status: 'unavailable',
+      agreementScore: null,
+      confirmedBlocks,
+      alternativeBlocks,
+      tiedBlocks,
+      totalBlocks: comparedBlocks,
+      winner: null,
+      scoreGap: null,
+    }
+  }
+
+  const initialValidation = measurementBest.validationScore ?? 0
+  const alternativeValidation = alternative.validationScore ?? 0
+  const averageDelta = initialValidation - alternativeValidation
+  const scoreGap = Math.abs(averageDelta)
+  const winner = scoreGap <= VALIDATION_AVERAGE_TIE_SCORE_DELTA
+    ? null
+    : averageDelta > 0 ? measurementBest : alternative
+
+  if (confirmedBlocks === comparedBlocks) {
+    return {
+      status: 'confirmed',
+      agreementScore: 100,
+      confirmedBlocks,
+      alternativeBlocks,
+      tiedBlocks,
+      totalBlocks: comparedBlocks,
+      winner: measurementBest,
+      scoreGap,
+    }
+  }
+
+  if (alternativeBlocks === comparedBlocks) {
+    return {
+      status: 'reversed',
+      agreementScore: 20,
+      confirmedBlocks,
+      alternativeBlocks,
+      tiedBlocks,
+      totalBlocks: comparedBlocks,
+      winner: alternative,
+      scoreGap,
+    }
+  }
+
+  const initialShare = (confirmedBlocks + tiedBlocks * 0.5) / comparedBlocks
+  return {
+    status: 'split',
+    agreementScore: Math.round(35 + initialShare * 35),
+    confirmedBlocks,
+    alternativeBlocks,
+    tiedBlocks,
+    totalBlocks: comparedBlocks,
+    winner,
+    scoreGap,
+  }
 }
 
 function buildContinuousZone(bestResult: CandidateResult, orderedCandidates: CandidateResult[]) {
@@ -397,18 +514,6 @@ function buildRefinementMultipliers(bestResult: CandidateResult, orderedCandidat
     .sort((left, right) => left - right)
 }
 
-function getValidationSummary(bestResult: CandidateResult, candidateResults: CandidateResult[]) {
-  const finalists = candidateResults.filter((candidate) => candidate.validationScore !== null)
-  if (!finalists.length) return { confirmed: 0, total: 0 }
-  const validationWinner = finalists.reduce((best, candidate) =>
-    (candidate.validationScore ?? -Infinity) > (best.validationScore ?? -Infinity) ? candidate : best,
-  )
-  return {
-    confirmed: validationWinner.candidateId === bestResult.candidateId ? 1 : 0,
-    total: 1,
-  }
-}
-
 export function buildCalibrationReport(
   results: RoundResult[],
   candidates: CalibrationCandidate[],
@@ -436,8 +541,8 @@ export function buildCalibrationReport(
   const sampleQualityScore = average(validResults.map((result) => result.qualityScore))
   const repeatabilityScore = weighted((candidate) => candidate.repeatability)
   const blockAgreementScore = calculateBlockAgreement(results, orderedCandidates)
-  const validationAgreementScore = calculateValidationAgreement(bestResult, candidateResults)
-  const validationSummary = getValidationSummary(bestResult, candidateResults)
+  const validationSummary = calculateValidationSummary(bestResult, candidateResults, results)
+  const validationAgreementScore = validationSummary.agreementScore
   const scoreGap = secondResult ? bestResult.score - secondResult.score : COMPETITIVE_SCORE_DELTA
   const separationScore = Math.min(100, Math.max(0, scoreGap / 8 * 100))
   const collectionQualityScore = Math.round(completenessScore * 0.55 + sampleQualityScore * 0.45)
@@ -470,9 +575,9 @@ export function buildCalibrationReport(
     resultKind = 'inconclusive'
     reason = 'low-consistency'
     zoneKind = 'single'
-  } else if (validationAgreementScore !== null && validationAgreementScore < 40) {
+  } else if (validationSummary.status === 'reversed') {
     resultKind = 'inconclusive'
-    reason = 'validation-conflict'
+    reason = 'validation-reversed'
     zoneKind = 'split'
   } else if (splitCandidates) {
     resultKind = 'inconclusive'
@@ -482,7 +587,11 @@ export function buildCalibrationReport(
     resultKind = 'range'
     reason = 'close-candidates'
     zoneKind = 'continuous'
-  } else if (validationAgreementScore !== null && validationAgreementScore >= 75 && scoreGap >= 3) {
+  } else if (validationSummary.status === 'split') {
+    resultKind = 'inconclusive'
+    reason = 'validation-split'
+    zoneKind = 'single'
+  } else if (validationSummary.status === 'confirmed' && scoreGap >= 3) {
     resultKind = 'recommended'
     reason = 'confirmed'
     zoneKind = 'confirmed'
@@ -490,7 +599,7 @@ export function buildCalibrationReport(
 
   // O ponto inicial é sempre uma sensibilidade realmente testada. A faixa fica
   // restrita à zona contínua ao redor do melhor resultado e nunca usa pontos
-  // fortes separados por uma candidata intermediária mais fraca.
+  // fortes separados por um valor intermediário mais fraco.
   const recommendation = bestResult.multiplier
   const zoneResults = resultKind === 'range' ? continuousZone : [bestResult]
   const range = {
@@ -516,7 +625,8 @@ export function buildCalibrationReport(
   if (blockAgreementScore < 50) recommendationStrengthScore = Math.min(recommendationStrengthScore, 50)
   if (separationScore < 15) recommendationStrengthScore = Math.min(recommendationStrengthScore, 65)
   if (zoneKind === 'split') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
-  if (reason === 'validation-conflict') recommendationStrengthScore = Math.min(recommendationStrengthScore, 45)
+  if (reason === 'validation-reversed') recommendationStrengthScore = Math.min(recommendationStrengthScore, 40)
+  if (reason === 'validation-split') recommendationStrengthScore = Math.min(recommendationStrengthScore, 60)
   if (reason === 'low-consistency') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
   if (resultKind === 'range') recommendationStrengthScore = Math.min(recommendationStrengthScore, 75)
   if (resultKind === 'inconclusive') recommendationStrengthScore = Math.min(recommendationStrengthScore, 55)
@@ -554,8 +664,13 @@ export function buildCalibrationReport(
     repeatabilityScore,
     blockAgreementScore,
     validationAgreementScore,
-    validationConfirmedRounds: validationSummary.confirmed,
-    validationTotalRounds: validationSummary.total,
+    validationStatus: validationSummary.status,
+    validationWinner: validationSummary.winner,
+    validationScoreGap: validationSummary.scoreGap,
+    validationConfirmedRounds: validationSummary.confirmedBlocks,
+    validationAlternativeRounds: validationSummary.alternativeBlocks,
+    validationTiedRounds: validationSummary.tiedBlocks,
+    validationTotalRounds: validationSummary.totalBlocks,
     separationScore,
     scoreGap,
     completenessScore,

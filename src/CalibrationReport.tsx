@@ -12,8 +12,11 @@ type Props = {
   recommendedSensitivity: number
   recommendedRangeMin: number
   recommendedRangeMax: number
+  canRefine: boolean
+  isRefinement: boolean
   onRefine: () => void
   onRedo: () => void
+  onClose: () => void
 }
 
 const format = (value: number, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '0'
@@ -26,7 +29,8 @@ const REASON_KEYS: Record<CalibrationReport['reason'], TranslationKey> = {
   'low-consistency': 'calibration.reasonLowConsistency',
   'low-signal': 'calibration.reasonLowSignal',
   incomplete: 'calibration.reasonIncomplete',
-  'validation-conflict': 'calibration.reasonValidationConflict',
+  'validation-reversed': 'calibration.reasonValidationReversed',
+  'validation-split': 'calibration.reasonValidationSplit',
 }
 
 const DIRECTION_KEYS: Record<CalibrationReport['direction'], TranslationKey> = {
@@ -42,11 +46,19 @@ const HERO_LABEL_KEYS: Record<CalibrationReport['resultKind'], TranslationKey> =
   invalid: 'calibration.bestObserved',
 }
 
+const VALIDATION_LABEL_KEYS: Record<CalibrationReport['validationStatus'], TranslationKey> = {
+  confirmed: 'calibration.validationStatusConfirmed',
+  split: 'calibration.validationStatusSplit',
+  reversed: 'calibration.validationStatusReversed',
+  unavailable: 'calibration.validationStatusUnavailable',
+}
+
 function getConclusionKey(report: CalibrationReport): TranslationKey {
   if (report.reason === 'confirmed') return 'calibration.conclusionConfirmed'
   if (report.reason === 'close-candidates') return 'calibration.conclusionRange'
   if (report.reason === 'split-candidates') return 'calibration.conclusionSplit'
-  if (report.reason === 'validation-conflict') return 'calibration.conclusionValidationConflict'
+  if (report.reason === 'validation-reversed') return 'calibration.conclusionValidationReversed'
+  if (report.reason === 'validation-split') return 'calibration.conclusionValidationSplit'
   if (report.reason === 'low-consistency') return 'calibration.conclusionLowConsistency'
   if (report.reason === 'incomplete') return 'calibration.conclusionIncomplete'
   return 'calibration.conclusionLowSignal'
@@ -60,8 +72,11 @@ export function CalibrationReportView({
   recommendedSensitivity,
   recommendedRangeMin,
   recommendedRangeMax,
+  canRefine,
+  isRefinement,
   onRefine,
   onRedo,
+  onClose,
 }: Props) {
   const { t } = useI18n()
   const baseline = report.baselineResult
@@ -69,6 +84,7 @@ export function CalibrationReportView({
   const StatusIcon = report.resultKind === 'inconclusive' || report.resultKind === 'invalid' ? TriangleAlert : CheckCircle2
   const sortedByScore = [...report.candidateResults].sort((left, right) => right.score - left.score)
   const secondResult = sortedByScore[1] ?? report.bestResult
+  const canUseResult = report.resultKind === 'recommended' || report.resultKind === 'range'
   const zoneIsRange = report.zoneResults.length > 1
   const rangeText = zoneIsRange
     ? `${formatSensitivity(recommendedRangeMin, 6)} – ${formatSensitivity(recommendedRangeMax, 6)}`
@@ -88,17 +104,43 @@ export function CalibrationReportView({
     percent: format(Math.abs(report.changePercent), 0),
     base: formatSensitivity(baseSensitivity, 6),
   })
-  const validationText = report.validationTotalRounds === 0
+  const validationWinner = report.validationWinner
+    ? formatSensitivity(report.validationWinner.sensitivity, 6)
+    : null
+  const validationRecord = report.validationStatus === 'unavailable'
+    ? '—'
+    : report.validationStatus === 'split'
+      ? `${report.validationConfirmedRounds}–${report.validationAlternativeRounds}${report.validationTiedRounds > 0 ? ` · ${report.validationTiedRounds} ${t('calibration.validationTieShort')}` : ''}`
+      : `${report.validationConfirmedRounds}/${report.validationTotalRounds}`
+  const validationText = report.validationStatus === 'unavailable'
     ? t('calibration.validationUnavailable')
-    : report.validationConfirmedRounds === report.validationTotalRounds
+    : report.validationStatus === 'confirmed'
       ? t('calibration.validationConfirmedCount', {
           confirmed: report.validationConfirmedRounds,
           total: report.validationTotalRounds,
+          value: validationWinner ?? formatSensitivity(report.bestResult.sensitivity, 6),
         })
-      : t('calibration.validationConflictCount', {
-          confirmed: report.validationConfirmedRounds,
-          total: report.validationTotalRounds,
-        })
+      : report.validationStatus === 'split'
+        ? validationWinner
+          ? t('calibration.validationSplitCount', {
+              confirmed: report.validationConfirmedRounds,
+              alternative: report.validationAlternativeRounds,
+              ties: report.validationTiedRounds,
+              total: report.validationTotalRounds,
+              value: validationWinner,
+              gap: format(report.validationScoreGap ?? 0),
+            })
+          : t('calibration.validationSplitTieCount', {
+              confirmed: report.validationConfirmedRounds,
+              alternative: report.validationAlternativeRounds,
+              ties: report.validationTiedRounds,
+              total: report.validationTotalRounds,
+            })
+        : t('calibration.validationReversedCount', {
+            alternative: report.validationAlternativeRounds,
+            total: report.validationTotalRounds,
+            value: validationWinner ?? formatSensitivity(report.bestResult.sensitivity, 6),
+          })
   const conclusionText = t(getConclusionKey(report), {
     best: formatSensitivity(report.bestResult.sensitivity, 6),
     second: formatSensitivity(secondResult.sensitivity, 6),
@@ -110,6 +152,8 @@ export function CalibrationReportView({
     base: formatSensitivity(baseSensitivity, 6),
     repeatability: format(report.repeatabilityScore, 0),
     blockAgreement: format(report.blockAgreementScore, 0),
+    validationWinner: validationWinner ?? formatSensitivity(report.bestResult.sensitivity, 6),
+    validationRecord,
   })
 
   return (
@@ -146,68 +190,65 @@ export function CalibrationReportView({
             <small>{zoneHint}</small>
           </div>
           <div>
-            <span>{t('calibration.nextTest')}</span>
-            <strong>{refinementValues}</strong>
-            <small>{t('calibration.nextTestHint')}</small>
+            <span>{canRefine ? t('calibration.nextTest') : t('calibration.refinementStatus')}</span>
+            <strong>{canRefine ? refinementValues : t(isRefinement ? 'calibration.refinementCompleted' : 'calibration.refinementNotNeeded')}</strong>
+            <small>{canRefine ? t('calibration.nextTestHint') : t(isRefinement ? 'calibration.refinementCompletedHint' : 'calibration.refinementNotNeededHint')}</small>
           </div>
-          <div>
+          <div className={`validation-summary validation-${report.validationStatus}`}>
             <span>{t('calibration.finalValidation')}</span>
-            <strong>{report.validationConfirmedRounds}/{report.validationTotalRounds || '—'}</strong>
-            <small>{validationText}</small>
+            <strong>{validationRecord}</strong>
+            <small><b>{t(VALIDATION_LABEL_KEYS[report.validationStatus])}</b> · {validationText}</small>
           </div>
         </div>
       </section>
 
       <div className="calibration-report-dashboard">
-        <div className="calibration-report-primary">
-          <section className="calibration-explanation">
-            <div className="report-section-heading"><div><BrainCircuit size={16} /><span>{t('calibration.whyTitle')}</span></div></div>
-            <p>{conclusionText}</p>
-            <div className="calibration-reason-grid">
-              <div><span>{t('common.accuracy')}</span><strong>{format(report.bestResult.accuracy)}%</strong><small>{signed(report.bestResult.accuracy - baseline.accuracy, ' pp')} {t('calibration.vsBase')}</small></div>
-              <div><span>{t('common.meanError')}</span><strong>{format(report.bestResult.meanError)}px</strong><small>{signed(report.bestResult.meanError - baseline.meanError, ' px')} {t('calibration.vsBase')}</small></div>
-              <div><span>{t('common.score')}</span><strong>{format(report.bestResult.score)}</strong><small>{t('calibration.scoreGapHint', { gap: format(report.scoreGap) })}</small></div>
-              <div><span>{t('calibration.playerConsistency')}</span><strong>{format(report.playerConsistencyScore)}%</strong><small>{t('calibration.playerConsistencyHint')}</small></div>
-            </div>
-          </section>
-        </div>
+        <section className="calibration-explanation">
+          <div className="report-section-heading"><div><BrainCircuit size={16} /><span>{t('calibration.whyTitle')}</span></div></div>
+          <p>{conclusionText}</p>
+          <div className="calibration-reason-grid">
+            <div><span>{t('common.accuracy')}</span><strong>{format(report.bestResult.accuracy)}%</strong><small>{signed(report.bestResult.accuracy - baseline.accuracy, ' pp')} {t('calibration.vsBase')}</small></div>
+            <div><span>{t('common.meanError')}</span><strong>{format(report.bestResult.meanError)}px</strong><small>{signed(report.bestResult.meanError - baseline.meanError, ' px')} {t('calibration.vsBase')}</small></div>
+            <div><span>{t('common.score')}</span><strong>{format(report.bestResult.score)}</strong><small>{t('calibration.scoreGapHint', { gap: format(report.scoreGap) })}</small></div>
+            <div><span>{t('calibration.playerConsistency')}</span><strong>{format(report.playerConsistencyScore)}%</strong><small>{t('calibration.playerConsistencyHint')}</small></div>
+          </div>
+        </section>
 
-        <div className="calibration-report-secondary">
-          <section className="calibration-formula">
-            <div className="report-section-heading"><div><Activity size={16} /><span>{t('calibration.howCalculated')}</span></div></div>
-            <div className="formula-line"><span>52%</span><strong>{t('common.accuracy')}</strong></div>
-            <div className="formula-line"><span>33%</span><strong>{t('calibration.errorControl')}</strong></div>
-            <div className="formula-line"><span>15%</span><strong>{t('common.smoothness')}</strong></div>
-            <div className="formula-line penalty"><span>−</span><strong>{t('calibration.overshootPenalty')}</strong></div>
-            <p>{t('calibration.formulaExplanationV2')}</p>
-            <small>{t('calibration.strengthExplanation')}</small>
-          </section>
+        <section className="calibration-formula">
+          <div className="report-section-heading"><div><Activity size={16} /><span>{t('calibration.howCalculated')}</span></div></div>
+          <div className="formula-line"><span>52%</span><strong>{t('common.accuracy')}</strong></div>
+          <div className="formula-line"><span>33%</span><strong>{t('calibration.errorControl')}</strong></div>
+          <div className="formula-line"><span>15%</span><strong>{t('common.smoothness')}</strong></div>
+          <div className="formula-line penalty"><span>−</span><strong>{t('calibration.overshootPenalty')}</strong></div>
+          <p>{t('calibration.formulaExplanationV2')}</p>
+          <small>{t('calibration.strengthExplanation')}</small>
+        </section>
 
-          <section className="calibration-candidates">
-            <div className="report-section-heading"><div><TrendingUp size={16} /><span>{t('calibration.candidateEvidenceV2')}</span></div><small>{t('calibration.candidateTableHint')}</small></div>
-            <div className="candidate-table candidate-table-v2">
-              <div className="candidate-table-head"><span>{t('common.sensitivity')}</span><span>{t('common.accuracy')}</span><span>{t('common.meanError')}</span><span>{t('calibration.repeatability')}</span><span>{t('common.score')}</span></div>
-              {report.candidateResults.map((candidate) => {
-                const competitive = report.competitiveResults.some((item) => item.candidateId === candidate.candidateId)
-                const inZone = report.zoneResults.some((item) => item.candidateId === candidate.candidateId)
-                const best = candidate.candidateId === report.bestResult.candidateId
-                const className = best ? 'best' : inZone ? 'zone' : competitive ? 'competitive' : ''
-                return (
-                  <div key={candidate.candidateId} className={className}>
-                    <span>
-                      <b>{formatSensitivity(candidate.sensitivity, 6)}</b>
-                      <small>{format(candidate.multiplier, 2)}× · {candidate.measurementRounds.length}+{candidate.validationRounds.length}</small>
-                    </span>
-                    <span>{format(candidate.accuracy)}%</span>
-                    <span>{format(candidate.meanError)}px</span>
-                    <span>{format(candidate.repeatability)}%</span>
-                    <span><i><em style={{ width: `${candidate.score}%` }} /></i><b>{format(candidate.score)}</b></span>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        </div>
+        <section className="calibration-tested-values">
+          <div className="report-section-heading"><div><TrendingUp size={16} /><span>{t('calibration.testedValuesEvidence')}</span></div><small>{t('calibration.testedValuesHint')}</small></div>
+          <div className="sensitivity-table sensitivity-table-v3">
+            <div className="sensitivity-table-head"><span>{t('common.sensitivity')}</span><span>{t('common.accuracy')}</span><span>{t('common.meanError')}</span><span>{t('calibration.repeatability')}</span><span>{t('calibration.validationColumn')}</span><span>{t('common.score')}</span></div>
+            {report.candidateResults.map((testedValue) => {
+              const competitive = report.competitiveResults.some((item) => item.candidateId === testedValue.candidateId)
+              const inZone = report.zoneResults.some((item) => item.candidateId === testedValue.candidateId)
+              const best = testedValue.candidateId === report.bestResult.candidateId
+              const className = best ? 'best' : inZone ? 'zone' : competitive ? 'competitive' : ''
+              return (
+                <div key={testedValue.candidateId} className={className}>
+                  <span>
+                    <b>{formatSensitivity(testedValue.sensitivity, 6)}</b>
+                    <small>{format(testedValue.multiplier, 2)}× · {t('calibration.roundCountCompact', { measurements: testedValue.measurementRounds.length, validation: testedValue.validationRounds.length })}</small>
+                  </span>
+                  <span>{format(testedValue.accuracy)}%</span>
+                  <span>{format(testedValue.meanError)}px</span>
+                  <span>{format(testedValue.repeatability)}%</span>
+                  <span>{testedValue.validationScore === null ? '—' : format(testedValue.validationScore)}</span>
+                  <span><i><em style={{ width: `${testedValue.score}%` }} /></i><b>{format(testedValue.score)}</b></span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       </div>
 
       <section className="calibration-quality">
@@ -217,22 +258,24 @@ export function CalibrationReportView({
         <div><span>{t('calibration.completedRounds')}</span><strong>{report.validRoundCount}/{report.expectedRoundCount}</strong><small>{t('calibration.completedRoundsHint')}</small></div>
       </section>
 
-      {report.resultKind === 'recommended' || report.resultKind === 'range' ? (
-        <section className="calibration-previous">
+      {previous ? (
+        <section className="calibration-previous calibration-previous-compact">
           <div className="report-section-heading"><div><TrendingUp size={16} /><span>{t('calibration.previousSession')}</span></div></div>
-          {previous ? <div>
+          <div>
             <span>{t('common.sensitivity')} <strong>{signed(recommendedSensitivity - previous.sensitivity)}</strong></span>
             <span>{t('common.score')} <strong>{signed(report.score - previous.score)}</strong></span>
             <span>{t('common.accuracy')} <strong>{signed(report.accuracy - previous.accuracy, ' pp')}</strong></span>
             <span>{t('common.meanError')} <strong>{signed(report.meanError - previous.meanError, ' px')}</strong></span>
-          </div> : <p>{t('calibration.firstSession')}</p>}
+          </div>
         </section>
       ) : null}
 
       <small className="disclaimer">{t('calibration.disclaimerV3')}</small>
       <div className="calibration-result-actions">
         <button className="secondary-button" onClick={onRedo}>{t('calibration.redo')}</button>
-        <button className="primary-button" onClick={onRefine}>{t('calibration.refine')}</button>
+        {canRefine
+          ? <button className="primary-button" onClick={onRefine}>{t('calibration.refineFinal')}</button>
+          : <button className="primary-button" onClick={onClose}>{t(canUseResult ? 'calibration.finish' : 'calibration.closeReport')}</button>}
       </div>
     </>
   )

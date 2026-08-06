@@ -118,6 +118,11 @@ describe('calibration report', () => {
     expect(report?.bestResult.candidateId).toBe(best.id)
     expect(report?.resultKind).toBe('recommended')
     expect(report?.validationAgreementScore).toBe(100)
+    expect(report?.validationStatus).toBe('confirmed')
+    expect(report?.validationConfirmedRounds).toBe(2)
+    expect(report?.validationAlternativeRounds).toBe(0)
+    expect(report?.validationTiedRounds).toBe(0)
+    expect(report?.validationTotalRounds).toBe(2)
   })
 
 
@@ -139,7 +144,60 @@ describe('calibration report', () => {
     expect(report?.recommendation).toBe(best.multiplier)
   })
 
-  it('caps session confidence and includes both finalists when validation conflicts', () => {
+
+  it('marks validation as split when each tested value wins one final trajectory', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 246)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const measurementWinner = orderedCandidates[2]
+    const nearbyValue = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [measurementWinner.id, nearbyValue.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = round.stage === 'validation'
+        ? round.blockIndex === plan.repetitions
+          ? candidate.id === measurementWinner.id ? 91 : 89
+          : candidate.id === nearbyValue.id ? 91 : 89
+        : candidate.id === measurementWinner.id ? 90 : candidate.id === nearbyValue.id ? 87 : 60
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.validationStatus).toBe('split')
+    expect(report?.reason).toBe('validation-split')
+    expect(report?.resultKind).toBe('inconclusive')
+    expect(report?.validationWinner).toBeNull()
+    expect(report?.validationConfirmedRounds).toBe(1)
+    expect(report?.validationAlternativeRounds).toBe(1)
+    expect(report?.validationTiedRounds).toBe(0)
+    expect(report?.validationTotalRounds).toBe(2)
+  })
+
+  it('does not invent a validation winner when both final trajectories are technical ties', () => {
+    const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 247)
+    const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
+    const first = orderedCandidates[2]
+    const second = orderedCandidates[3]
+    const plan = appendValidationRounds(initialPlan, [first.id, second.id])
+
+    const results = plan.rounds.map((round) => {
+      const candidate = plan.candidates.find((item) => item.id === round.candidateId)!
+      const score = round.stage === 'validation'
+        ? round.blockIndex === plan.repetitions
+          ? candidate.id === first.id ? 90 : 89.5
+          : candidate.id === second.id ? 90 : 89.5
+        : candidate.id === first.id ? 88 : candidate.id === second.id ? 87.5 : 60
+      return syntheticResult(round, candidate, score)
+    })
+    const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
+
+    expect(report?.validationStatus).toBe('split')
+    expect(report?.validationWinner).toBeNull()
+    expect(report?.validationTiedRounds).toBe(2)
+    expect(report?.validationTotalRounds).toBe(2)
+  })
+
+  it('rejects the initial leader when the other tested value wins both final trajectories', () => {
     const initialPlan = createCalibrationPlan(1, GAME_BY_ID.cs2, 789)
     const orderedCandidates = [...initialPlan.candidates].sort((left, right) => left.multiplier - right.multiplier)
     const measurementWinner = orderedCandidates[1]
@@ -156,9 +214,13 @@ describe('calibration report', () => {
     const report = buildCalibrationReport(results, plan.candidates, plan.measurementRoundCount, plan.validationRoundCount)
 
     expect(report?.resultKind).toBe('inconclusive')
-    expect(report?.reason).toBe('validation-conflict')
-    expect(report?.confidenceScore).toBeLessThanOrEqual(45)
+    expect(report?.reason).toBe('validation-reversed')
+    expect(report?.confidenceScore).toBeLessThanOrEqual(40)
     expect(report?.zoneKind).toBe('split')
+    expect(report?.validationStatus).toBe('reversed')
+    expect(report?.validationConfirmedRounds).toBe(0)
+    expect(report?.validationAlternativeRounds).toBe(2)
+    expect(report?.validationTiedRounds).toBe(0)
     expect(report?.range.min).toBe(measurementWinner.multiplier)
     expect(report?.range.max).toBe(measurementWinner.multiplier)
   })

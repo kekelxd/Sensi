@@ -33,17 +33,21 @@ describe('calibration plan', () => {
 
     expect(plan.candidates.map((candidate) => candidate.sensitivity)).toEqual([0.102, 0.108, 0.114])
     expect(plan.measurementRoundCount).toBe(6)
+    expect(plan.mode).toBe('refinement')
+    expect(plan.refinementDepth).toBe(1)
     expect(new Set(plan.candidates.map((candidate) => candidate.sensitivity)).size).toBe(3)
   })
 
-  it('adds validation rounds with one new shared trajectory', () => {
+  it('adds two balanced validation blocks with shared trajectories inside each block', () => {
     const plan = createCalibrationPlan(1, GAME_BY_ID.cs2, 42)
     const finalists = plan.candidates.slice(0, 2).map((candidate) => candidate.id)
     const expanded = appendValidationRounds(plan, finalists)
     const validation = expanded.rounds.filter((round) => round.stage === 'validation')
 
-    expect(validation).toHaveLength(2)
-    expect(new Set(validation.map((round) => round.trajectorySeed)).size).toBe(1)
-    expect(expanded.validationRoundCount).toBe(2)
+    expect(validation).toHaveLength(4)
+    expect(new Set(validation.map((round) => round.trajectorySeed)).size).toBe(2)
+    expect(validation.filter((round) => round.blockIndex === plan.repetitions)).toHaveLength(2)
+    expect(validation.filter((round) => round.blockIndex === plan.repetitions + 1)).toHaveLength(2)
+    expect(expanded.validationRoundCount).toBe(4)
   })
 })

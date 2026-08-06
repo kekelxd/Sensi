@@ -3,12 +3,14 @@ import { normalizeSensitivity } from './sensitivity'
 
 export const BASE_CANDIDATE_MULTIPLIERS = [0.8, 0.9, 1, 1.1, 1.2] as const
 export const CALIBRATION_REPETITIONS = 2
+export const VALIDATION_REPETITIONS = 2
 export const VALIDATION_FINALIST_COUNT = 2
 export const MAX_CALIBRATION_CANDIDATES = 5
 export const MIN_CALIBRATION_CANDIDATES = 3
 export const MAX_CANDIDATE_DEVIATION = 0.35
 
 export type CalibrationStage = 'measurement' | 'validation'
+export type CalibrationMode = 'initial' | 'refinement'
 
 export type CalibrationCandidate = {
   id: string
@@ -29,9 +31,12 @@ export type CalibrationRoundPlan = {
 
 export type CalibrationPlan = {
   sessionSeed: number
+  mode: CalibrationMode
+  refinementDepth: 0 | 1
   candidates: CalibrationCandidate[]
   rounds: CalibrationRoundPlan[]
   repetitions: number
+  validationRepetitions: number
   measurementRoundCount: number
   validationRoundCount: number
 }
@@ -149,6 +154,7 @@ function createPlanFromCandidates(
   candidates: CalibrationCandidate[],
   sessionSeed: number,
   repetitions: number,
+  mode: CalibrationMode,
 ): CalibrationPlan {
   const baseOrder = seededShuffle(candidates, deriveSeed(sessionSeed, 101))
   const rounds: CalibrationRoundPlan[] = []
@@ -174,9 +180,12 @@ function createPlanFromCandidates(
 
   return {
     sessionSeed,
+    mode,
+    refinementDepth: mode === 'refinement' ? 1 : 0,
     candidates,
     rounds,
     repetitions,
+    validationRepetitions: VALIDATION_REPETITIONS,
     measurementRoundCount: rounds.length,
     validationRoundCount: 0,
   }
@@ -192,6 +201,7 @@ export function createCalibrationPlan(
     buildCalibrationCandidates(baseSensitivity, game),
     sessionSeed,
     repetitions,
+    'initial',
   )
 }
 
@@ -206,6 +216,7 @@ export function createRefinementPlan(
     buildCalibrationCandidatesFromMultipliers(baseSensitivity, game, multipliers),
     sessionSeed,
     repetitions,
+    'refinement',
   )
 }
 
@@ -215,19 +226,30 @@ export function appendValidationRounds(plan: CalibrationPlan, finalistIds: reado
     .filter((candidate): candidate is CalibrationCandidate => Boolean(candidate))
     .slice(0, VALIDATION_FINALIST_COUNT)
 
-  if (!uniqueFinalists.length || plan.validationRoundCount > 0) return plan
+  if (uniqueFinalists.length < 2 || plan.validationRoundCount > 0) return plan
 
-  const trajectorySeed = deriveSeed(plan.sessionSeed, 9001)
-  const orderedFinalists = seededShuffle(uniqueFinalists, deriveSeed(plan.sessionSeed, 9002))
-  const validationRounds = orderedFinalists.map((candidate, repetitionIndex): CalibrationRoundPlan => ({
-    id: `validation-${candidate.id}`,
-    stage: 'validation',
-    candidateId: candidate.id,
-    candidateIndex: plan.candidates.findIndex((item) => item.id === candidate.id),
-    blockIndex: plan.repetitions,
-    repetitionIndex,
-    trajectorySeed,
-  }))
+  const baseOrder = seededShuffle(uniqueFinalists, deriveSeed(plan.sessionSeed, 9002))
+  const validationRounds: CalibrationRoundPlan[] = []
+
+  for (let validationBlockIndex = 0; validationBlockIndex < VALIDATION_REPETITIONS; validationBlockIndex += 1) {
+    const blockIndex = plan.repetitions + validationBlockIndex
+    const trajectorySeed = deriveSeed(plan.sessionSeed, 9001 + validationBlockIndex)
+    const order = validationBlockIndex % 2 === 0
+      ? baseOrder
+      : [...baseOrder].reverse()
+
+    order.forEach((candidate) => {
+      validationRounds.push({
+        id: `validation-${validationBlockIndex}-${candidate.id}`,
+        stage: 'validation',
+        candidateId: candidate.id,
+        candidateIndex: plan.candidates.findIndex((item) => item.id === candidate.id),
+        blockIndex,
+        repetitionIndex: validationBlockIndex,
+        trajectorySeed,
+      })
+    })
+  }
 
   return {
     ...plan,

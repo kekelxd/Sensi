@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
-import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, type CalibrationPlan } from './calibrationPlan'
+import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, VALIDATION_REPETITIONS, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
@@ -82,7 +82,7 @@ function App() {
   const active = phase !== 'idle'
   const tracking = phase === 'running'
   const moving = phase === 'warmup' || phase === 'running'
-  const landingRounds = BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS + VALIDATION_FINALIST_COUNT
+  const landingRounds = BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS + VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS
   const totalRounds = plan?.rounds.length ?? landingRounds
   const currentRoundPlan = plan?.rounds[round] ?? null
   const currentCandidate = currentRoundPlan
@@ -123,6 +123,16 @@ function App() {
     : calibrationReport?.resultKind === 'range'
       ? 'calibration.resultTitleRange'
       : 'calibration.resultTitleInconclusive'
+  const canRefine = Boolean(
+    plan?.refinementDepth === 0
+    && calibrationReport
+    && calibrationReport.refinementMultipliers.length >= MIN_CALIBRATION_CANDIDATES
+    && (
+      calibrationReport.resultKind === 'range'
+      || calibrationReport.reason === 'split-candidates'
+      || calibrationReport.reason === 'validation-split'
+    ),
+  )
   useEffect(() => {
     if (phase === 'idle' || !inputReady) return
 
@@ -303,7 +313,7 @@ function App() {
   }
 
   const refineCalibration = () => {
-    if (!calibrationReport) return
+    if (!calibrationReport || !canRefine || plan?.refinementDepth !== 0) return
     const nextPlan = createRefinementPlan(
       baseSensitivity,
       confirmedGameConfig,
@@ -455,7 +465,7 @@ function App() {
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls" />
         <div className="dpi-status">{t('calibration.relativeMethod')}</div>
-      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
@@ -526,12 +536,12 @@ function App() {
       )}
 
       {view === 'calibration' && resultOpen && (
-        <div className="modal-backdrop">
-          <section className="modal result-modal calibration-result-modal">
+        <div className="modal-backdrop calibration-result-backdrop">
+          <section className="modal result-modal calibration-result-modal" role="dialog" aria-modal="true" aria-labelledby="calibration-result-title">
             <button className="modal-close" onClick={() => setResultOpen(false)} aria-label={t('common.close')}><X size={18} /></button>
             <Target size={24} className="modal-icon" />
             <div className="panel-label">{t('common.result')}</div>
-            <h2>{t(resultTitleKey)}</h2>
+            <h2 id="calibration-result-title">{t(resultTitleKey)}</h2>
             {calibrationReport && <CalibrationReportView
               report={calibrationReport}
               previous={previousCalibration}
@@ -540,8 +550,11 @@ function App() {
               recommendedSensitivity={recommendedSelected}
               recommendedRangeMin={recommendedRangeMin}
               recommendedRangeMax={recommendedRangeMax}
+              canRefine={canRefine}
+              isRefinement={plan?.mode === 'refinement'}
               onRefine={refineCalibration}
               onRedo={reset}
+              onClose={() => setResultOpen(false)}
             />}
           </section>
         </div>
