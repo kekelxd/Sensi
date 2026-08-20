@@ -52,7 +52,7 @@ function PadButton({ label, pressed, className = '' }: { label: string, pressed:
   return <div className={`gamepad-button ${pressed ? 'active' : ''} ${className}`.trim()}>{label}</div>
 }
 
-export function GamepadTest() {
+export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n()
   const [gamepads, setGamepads] = useState<GamepadSnapshot[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
@@ -103,12 +103,12 @@ export function GamepadTest() {
   }
 
   return (
-    <section className="gamepad-workspace">
-      <header className="gamepad-heading">
+    <section className={embedded ? 'gamepad-embedded' : 'gamepad-workspace'}>
+      {!embedded && <header className="gamepad-heading">
         <div className="panel-label"><Gamepad2 size={15} /> {t('gamepad.diagnostics')}</div>
         <h1>{t('gamepad.title')}</h1>
         <p>{t('gamepad.subtitle')}</p>
-      </header>
+      </header>}
 
       {!gamepads.length ? <div className="gamepad-empty"><Gamepad2 size={28} /><strong>{t('gamepad.waitingTitle')}</strong><span>{t('gamepad.waitingDescription')}</span></div> : <>
         <div className="gamepad-selector" role="tablist" aria-label={t('gamepad.connectedControllers')}>

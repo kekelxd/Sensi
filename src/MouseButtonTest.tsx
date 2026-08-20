@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Keyboard, Mouse, RotateCcw } from 'lucide-react'
+import { Gamepad2, Keyboard, Mouse, RotateCcw } from 'lucide-react'
+import { GamepadTest } from './GamepadTest'
 import { pressInput, releaseInput } from './inputState'
 import { useI18n, type TranslationKey } from './i18n'
 
@@ -51,7 +52,7 @@ const KEYBOARD_ROWS: KeyboardKey[][] = [
 ]
 
 const KEY_LABELS = new Map(KEYBOARD_ROWS.flat().map((key) => [key.code, key.label]))
-type TestDevice = 'mouse' | 'keyboard'
+type TestDevice = 'mouse' | 'keyboard' | 'gamepad'
 type WheelDirection = 'up' | 'down' | null
 
 export function MouseButtonTest() {
@@ -187,16 +188,17 @@ export function MouseButtonTest() {
   return (
     <section className="button-test-workspace">
       <div className="button-test-heading">
-        <div className="panel-label">{device === 'mouse' ? <Mouse size={15} /> : <Keyboard size={15} />} {t('buttons.diagnostics')}</div>
-        <h1>{t('buttons.title')}</h1>
-        <p>{t('buttons.subtitle')}</p>
+        <div className="panel-label">{device === 'mouse' ? <Mouse size={15} /> : device === 'keyboard' ? <Keyboard size={15} /> : <Gamepad2 size={15} />} {t('buttons.diagnostics')}</div>
+        <h1>{t('buttons.inputTitle')}</h1>
+        <p>{t('buttons.inputSubtitle')}</p>
         <div className="input-device-toggle" role="tablist" aria-label={t('buttons.device')}>
           <button type="button" role="tab" aria-selected={device === 'mouse'} className={device === 'mouse' ? 'active' : ''} onClick={() => selectDevice('mouse')}><Mouse size={16} /> {t('buttons.mouse')}</button>
           <button type="button" role="tab" aria-selected={device === 'keyboard'} className={device === 'keyboard' ? 'active' : ''} onClick={() => selectDevice('keyboard')}><Keyboard size={16} /> {t('buttons.keyboard')}</button>
+          <button type="button" role="tab" aria-selected={device === 'gamepad'} className={device === 'gamepad' ? 'active' : ''} onClick={() => selectDevice('gamepad')}><Gamepad2 size={16} /> {t('buttons.gamepad')}</button>
         </div>
       </div>
 
-      <div
+      {device === 'gamepad' ? <GamepadTest embedded /> : <><div
         ref={zoneRef}
         className={device === 'keyboard' ? 'button-test-zone keyboard-test-zone' : 'button-test-zone'}
         tabIndex={0}
@@ -254,7 +256,7 @@ export function MouseButtonTest() {
         </div>
       )}
 
-      <button className="secondary-button button-test-reset" onClick={reset}><RotateCcw size={16} /> {t('buttons.reset')}</button>
+      <button className="secondary-button button-test-reset" onClick={reset}><RotateCcw size={16} /> {t('buttons.reset')}</button></>}
     </section>
   )
 }
