@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
 import { CalibrationLanding } from './CalibrationLanding'
@@ -23,6 +23,12 @@ export function SensitivityFinderModal() {
   const sensitivity = search.sensitivity(game, parsedDpi)
   const result = useMemo(() => search.results.at(-1), [search.results])
 
+  useEffect(() => {
+    if (search.stage !== 'complete') return
+    document.exitPointerLock?.()
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+  }, [search.stage])
+
   const start = () => {
     if (!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0) return
     setSaved(false); setCopied(false); setSetupOpen(false)
@@ -38,13 +44,18 @@ export function SensitivityFinderModal() {
     await navigator.clipboard?.writeText(sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2))
     setCopied(true)
   }
+  const exitFinder = () => {
+    search.reset()
+    document.exitPointerLock?.()
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+  }
 
   if (search.currentTrial) {
     const currentSensitivity = game.yaw ? 360 * 2.54 / (search.currentTrial.cmPer360 * parsedDpi * game.yaw) : null
     if (currentSensitivity === null) return null
     return <section className="finder-run-workspace">
-      <div className="finder-run-top"><div><span>ACHADOR CEGO DE SENSIBILIDADE</span><strong>{search.results.length + 1} / {search.trials.length}</strong></div><p>{search.currentTrial.phase === 'bracket' ? 'Descobrindo sua faixa física de controle.' : search.currentTrial.phase === 'adaptive' ? 'Afunilando a faixa com comparações A/B ocultas.' : 'Validando o resultado refinado para o perfil do jogo.'}</p></div>
-      <FinderCanvas key={search.currentTrial.id} game={game} sensitivity={currentSensitivity} trial={search.currentTrial} onComplete={search.completeTrial} onExit={search.reset} />
+      <div className="finder-run-top"><div><span>ROUND</span><strong>{search.results.length + 1} / 11</strong></div><p>{search.currentTrial.phase === 'bracket' ? 'Descobrindo sua faixa física de controle.' : search.currentTrial.phase === 'adaptive' ? 'Afunilando a faixa com comparações A/B ocultas.' : 'Validando o resultado refinado para o perfil do jogo.'}</p></div>
+      <FinderCanvas game={game} sensitivity={currentSensitivity} trial={search.currentTrial} onComplete={search.completeTrial} onExit={exitFinder} />
     </section>
   }
 

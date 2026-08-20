@@ -92,6 +92,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
     }
     document.addEventListener('pointerlockchange', onLock)
     canvas.addEventListener('pointermove', onMove)
+    onLock()
 
     const draw = (now: number) => {
       const rect = canvas.getBoundingClientRect()
@@ -141,7 +142,6 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
             meanSpeed: meanSpeed * 1000,
             stability: smoothness,
           })
-          document.exitPointerLock?.()
           return
         }
       }
