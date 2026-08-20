@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
-import { TrustEngine } from './TrustEngine'
 import { CalibrationLanding } from './CalibrationLanding'
 import { GAME_BY_ID, type GameId } from './games'
 import { MOUSEPAD_RANGES, type MousepadSize } from './sensMath'
@@ -18,7 +17,6 @@ export function SensitivityFinderModal() {
   const [mousepad, setMousepad] = useState<MousepadSize>('medium')
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [trustOpen, setTrustOpen] = useState(false)
   const search = useBinarySensSearch()
   const game = GAME_BY_ID[gameId]
   const parsedDpi = Number(dpi)
@@ -84,10 +82,8 @@ export function SensitivityFinderModal() {
       <label>Jogo alvo<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
       <label>DPI do mouse<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="DPI personalizado" /></div></label>
       <label>Espaço disponível no mousepad<div className="finder-pad-picker">{(['small', 'medium', 'large'] as MousepadSize[]).map((size) => <button key={size} className={mousepad === size ? 'selected' : ''} onClick={() => setMousepad(size)}><strong>{size === 'small' ? 'Pequeno' : size === 'medium' ? 'Médio' : 'Grande / deskmat'}</strong><span>{MOUSEPAD_RANGES[size].min}–{MOUSEPAD_RANGES[size].max} cm/360°</span></button>)}</div></label>
-      <button type="button" className="trust-launch" onClick={() => setTrustOpen(true)}>Verificar precisão 1:1</button>
       <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0} onClick={start}>Iniciar achador cego</button>
     </section></div>}
-    {trustOpen && <TrustEngine game={game} dpi={parsedDpi} initialSensitivity="1" onClose={() => setTrustOpen(false)} />}
   </>
 }
 
