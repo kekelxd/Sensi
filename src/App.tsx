@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gamepad2, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationHistory, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
 import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, VALIDATION_REPETITIONS, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
+import { GamepadTest } from './GamepadTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
@@ -17,7 +18,7 @@ import { CalibrationReportView } from './CalibrationReport'
 import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
+type AppView = 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons' | 'gamepad'
 type CalibrationSetupStep = 1 | 2 | 3
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
@@ -399,6 +400,7 @@ function App() {
           <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
           <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
           <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /> {t('nav.buttons')}</button>
+          <button className={view === 'gamepad' ? 'active' : ''} onClick={() => setView('gamepad')} disabled={active}><Gamepad2 size={15} /> {t('nav.gamepad')}</button>
         </nav>
         <div className="brand"><span>$</span>ENSI</div>
         <div className="header-actions">
@@ -501,7 +503,7 @@ function App() {
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls" />
         <div className="dpi-status">{t('calibration.physicalProfile', { dpi: confirmedDpi, fov: confirmedHorizontalFov })}</div>
-      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : view === 'gamepad' ? <GamepadTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
