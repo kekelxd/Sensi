@@ -9,6 +9,7 @@ type Props = {
   game: GameConfig
   sensitivity: number
   trial: FinderTrial
+  round: number
   onComplete: (telemetry: FinderTelemetry) => void
   onExit: () => void
 }
@@ -32,15 +33,27 @@ function targetFor(elapsed: number, width: number, height: number, tactical: boo
   }
 }
 
-export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: Props) {
+export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onExit }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [locked, setLocked] = useState(false)
   const [started, setStarted] = useState(false)
   const [remaining, setRemaining] = useState(trial.duration)
+  const [readyTrialId, setReadyTrialId] = useState(trial.id)
   const callbackRef = useRef(onComplete)
   const lockedAtRef = useRef(0)
   const displayedRemainingRef = useRef(trial.duration)
   useEffect(() => { callbackRef.current = onComplete }, [onComplete])
+  useEffect(() => {
+    displayedRemainingRef.current = trial.duration
+    setRemaining(trial.duration)
+  }, [trial.duration, trial.id])
+  const isRoundTransition = started && readyTrialId !== trial.id
+
+  useEffect(() => {
+    if (!started || readyTrialId === trial.id) return
+    const timer = window.setTimeout(() => setReadyTrialId(trial.id), 1800)
+    return () => window.clearTimeout(timer)
+  }, [readyTrialId, started, trial.id])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -56,6 +69,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
     let overshoots = 0
     let jitterChanges = 0
     let movementSamples = 0
+    let completed = false
     const speeds: number[] = []
     let aim = { x: 0, y: 0 }
 
@@ -82,7 +96,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
       }
     }
     const onMove = (event: PointerEvent) => {
-      if (document.pointerLockElement !== canvas || !started) return
+      if (document.pointerLockElement !== canvas || !started || isRoundTransition) return
       const rect = canvas.getBoundingClientRect()
       const gain = getCanvasGain(game, sensitivity, 103, rect.width) ?? .5
       const movement = sanitizePointerMovement({ movementX: event.movementX, movementY: event.movementY, gain, width: rect.width, height: rect.height, elapsedSinceLock: performance.now() - lockedAtRef.current })
@@ -98,9 +112,10 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
       const rect = canvas.getBoundingClientRect()
       const ctx = canvas.getContext('2d')
       if (!ctx || !rect.width || !rect.height) return
-      if (started && !rafStartedAt) rafStartedAt = now
-      const elapsed = started ? Math.min(trial.duration * 1000, now - rafStartedAt) : 0
-      if (started) {
+      const running = started && !isRoundTransition
+      if (running && !rafStartedAt) rafStartedAt = now
+      const elapsed = running ? Math.min(trial.duration * 1000, now - rafStartedAt) : 0
+      if (running) {
         const nextRemaining = Math.max(0, trial.duration - elapsed / 1000)
         if (Math.abs(nextRemaining - displayedRemainingRef.current) >= .1) {
           displayedRemainingRef.current = nextRemaining
@@ -111,7 +126,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
       const radius = radiusFor(rect.width, rect.height)
       const delta = lastFrame ? Math.min(60, now - lastFrame) : 0
       lastFrame = now
-      if (started && document.pointerLockElement === canvas && delta > 0) {
+      if (running && document.pointerLockElement === canvas && delta > 0) {
         totalTime += delta
         const distance = Math.hypot(aim.x - target.x, aim.y - target.y)
         if (distance <= radius) timeOnTarget += delta
@@ -129,7 +144,8 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
         if (lastRelative && Math.hypot(lastRelative.x, lastRelative.y) > radius * .45 && lastRelative.x * relative.x + lastRelative.y * relative.y < -radius * radius * .16) overshoots += 1
         lastRelative = relative
         lastAim = { ...aim }
-        if (elapsed >= trial.duration * 1000) {
+        if (!completed && elapsed >= trial.duration * 1000) {
+          completed = true
           const meanSpeed = speeds.length ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length : 0
           const deviation = speeds.length ? Math.sqrt(speeds.reduce((sum, speed) => sum + (speed - meanSpeed) ** 2, 0) / speeds.length) : 0
           const smoothness = meanSpeed ? clamp(100 - deviation / meanSpeed * 55, 0, 100) : 0
@@ -159,7 +175,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
     }
     frame = window.requestAnimationFrame(draw)
     return () => { window.cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener('pointerlockchange', onLock); canvas.removeEventListener('pointermove', onMove) }
-  }, [game, sensitivity, started, trial])
+  }, [game, sensitivity, isRoundTransition, started, trial])
 
   const begin = async () => {
     const canvas = canvasRef.current
@@ -171,6 +187,7 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
   return <section className="finder-canvas-shell">
     <canvas ref={canvasRef} className="finder-canvas" />
     <div className="finder-hud"><span>{trial.phase === 'bracket' ? 'DESCOBERTA' : trial.phase === 'adaptive' ? 'BUSCA ADAPTATIVA' : 'VALIDAÇÃO FINAL'}</span><strong>{trial.variant === 'final' ? 'FINAL' : `VARIANTE ${trial.variant}`}</strong><b>{remaining.toFixed(0)}s</b></div>
+    {isRoundTransition && <div className="finder-round-transition"><span>PRÓXIMO ROUND</span><strong>{round}</strong><p>Prepare a mão. O próximo alvo começa em instantes.</p></div>}
     {!started && <div className="finder-canvas-prompt"><strong>Pronto para o teste cego</strong><span>Mantenha o alvo sob a mira. Os valores ficam ocultos durante todo o teste.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Iniciar teste</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Sair</button></div>}
     {started && !locked && <div className="finder-lock-message">Clique na arena para restaurar a captura do mouse.</div>}
   </section>

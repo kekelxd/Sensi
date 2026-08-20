@@ -55,7 +55,7 @@ export function SensitivityFinderModal() {
     if (currentSensitivity === null) return null
     return <section className="finder-run-workspace">
       <div className="finder-run-top"><div><span>ROUND</span><strong>{search.results.length + 1} / 11</strong></div><p>{search.currentTrial.phase === 'bracket' ? 'Descobrindo sua faixa física de controle.' : search.currentTrial.phase === 'adaptive' ? 'Afunilando a faixa com comparações A/B ocultas.' : 'Validando o resultado refinado para o perfil do jogo.'}</p></div>
-      <FinderCanvas game={game} sensitivity={currentSensitivity} trial={search.currentTrial} onComplete={search.completeTrial} onExit={exitFinder} />
+      <FinderCanvas game={game} sensitivity={currentSensitivity} trial={search.currentTrial} round={search.results.length + 1} onComplete={search.completeTrial} onExit={exitFinder} />
     </section>
   }
 
