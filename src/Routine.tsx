@@ -7,6 +7,7 @@ import { ROUTINE_PRESETS, type RoutinePreset } from './routineConfig'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
 import { WarmupArena, type ArenaHandle, type WarmupMetrics, type WarmupPhase } from './Warmup'
+import { getAimBiasLabel } from './warmupTelemetry'
 import { getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty } from './warmupConfig'
 import { EXERCISES } from './warmupExercises'
 import { createEmptyWarmupMetrics } from './warmupTelemetry'
@@ -239,6 +240,7 @@ export function Routine() {
           <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy)}%</strong></div>
           <div><span>{t('routine.phase', { current: stageIndex + 1, total: preset.exercises.length })}</span><strong>{stageIndex + 1}/{preset.exercises.length}</strong></div>
           <div><span>{t('warmup.level')}</span><strong>{difficultyLabel}</strong></div>
+          <div><span>Tendência de mira</span><strong>{getAimBiasLabel(metrics.aimBiasX, metrics.aimBiasY)}</strong></div>
         </div>
         {!lastStage && <div className="warmup-next-hint">
           {t('warmup.fixedNextHint', { level: difficultyLabel })}

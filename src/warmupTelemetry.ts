@@ -12,6 +12,8 @@ export type WarmupMetrics = {
   bestStreak: number
   bestTrackingStreakMs: number
   overshootCount: number
+  aimBiasX?: number
+  aimBiasY?: number
 }
 
 export type WarmupSessionSummary = Omit<WarmupMetrics, 'remaining'>
@@ -29,7 +31,15 @@ export function createEmptyWarmupMetrics(duration: number): WarmupMetrics {
     bestStreak: 0,
     bestTrackingStreakMs: 0,
     overshootCount: 0,
+    aimBiasX: 0,
+    aimBiasY: 0,
   }
+}
+
+export function getAimBiasLabel(x = 0, y = 0) {
+  if (Math.hypot(x, y) < .012) return 'Centrada'
+  if (Math.abs(x) >= Math.abs(y)) return x > 0 ? 'Direita' : 'Esquerda'
+  return y > 0 ? 'Abaixo' : 'Acima'
 }
 
 export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSummary {
@@ -44,6 +54,8 @@ export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSum
     bestStreak: metrics.bestStreak,
     bestTrackingStreakMs: metrics.bestTrackingStreakMs,
     overshootCount: metrics.overshootCount,
+    aimBiasX: metrics.aimBiasX,
+    aimBiasY: metrics.aimBiasY,
   }
 }
 

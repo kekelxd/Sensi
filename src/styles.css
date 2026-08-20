@@ -472,9 +472,10 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .report-section-heading > div { display: flex; align-items: center; gap: 7px; color: #e7e4dd; font-size: 10px; font-weight: 700; }
 .report-section-heading svg { color: var(--accent); }
 .report-section-heading small { color: #6f7681; font-size: 8px; }
-.report-insights-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 8px; margin-top: 8px; }
+.report-insights-grid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; margin-top: 8px; }
 .report-insights-grid > section, .report-insights-grid > button { min-width: 0; min-height: 82px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; background: #0b0e13; }
 .report-insights-grid p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.aim-bias-insight { position: relative; }.aim-bias-visual { position: relative; width: 45px; height: 45px; margin: 5px 0 7px; border: 1px solid rgba(141,251,211,.34); border-radius: 50%; background: radial-gradient(circle, rgba(141,251,211,.07), transparent 62%); }.aim-bias-visual::before, .aim-bias-visual::after { content: ''; position: absolute; left: 50%; top: 50%; background: rgba(255,255,255,.16); }.aim-bias-visual::before { width: 1px; height: 100%; transform: translate(-50%, -50%); }.aim-bias-visual::after { width: 100%; height: 1px; transform: translate(-50%, -50%); }.aim-bias-visual i { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--mint); }.aim-bias-visual b { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 50%; transform: translate(calc(-50% + var(--bias-x) * 110px), calc(-50% + var(--bias-y) * 110px)); background: var(--accent); box-shadow: 0 0 10px rgba(255,114,81,.55); }.aim-bias-insight p strong { color: var(--accent); }
 .session-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .session-comparison > div { padding-right: 8px; border-right: 1px solid var(--line); }
 .session-comparison > div:last-child { border-right: 0; }

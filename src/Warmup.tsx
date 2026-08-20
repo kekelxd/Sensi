@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, TrendingUp, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
@@ -8,7 +8,7 @@ import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WAR
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { EXERCISES } from './warmupExercises'
-import { createEmptyWarmupMetrics, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
+import { createEmptyWarmupMetrics, getAimBiasLabel, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
 
 export type { WarmupMetrics } from './warmupTelemetry'
 
@@ -90,6 +90,11 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
         <div><span>{t('warmup.bestStreak')}</span><strong>{trackingExercise ? `${format(metrics.bestTrackingStreakMs / 1000, 1)}s` : metrics.bestStreak}</strong></div>
       </div>
       <div className="report-insights-grid">
+        <section className="aim-bias-insight">
+          <div className="report-section-heading"><div><Target size={15} /><span>Tendência de mira</span></div></div>
+          <div className="aim-bias-visual" style={{ '--bias-x': metrics.aimBiasX ?? 0, '--bias-y': metrics.aimBiasY ?? 0 } as React.CSSProperties}><i /><b /></div>
+          <p><strong>{getAimBiasLabel(metrics.aimBiasX, metrics.aimBiasY)}</strong> em relação ao centro do alvo.</p>
+        </section>
         <section>
           <div className="report-section-heading"><div><TrendingUp size={15} /><span>{t('warmup.previousComparison')}</span></div></div>
           {previous ? <div className="session-comparison">
@@ -153,7 +158,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
     targetTrail: [] as Array<{ x: number, y: number, time: number }>, lastTrailSample: 0,
     targetVisibleAt: [0, 0, 0], targetAcquired: false,
     reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
-    lastAimSampleAt: 0,
+    lastAimSampleAt: 0, aimBiasXTotal: 0, aimBiasYTotal: 0, aimBiasSamples: 0,
     previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
     overshootCount: 0, lastOvershootAt: 0,
     hits: 0, shots: 0, score: 0, complete: false,
@@ -416,6 +421,9 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           }
           state.previousAimOffsetX = offsetX
           state.previousAimOffsetY = offsetY
+          state.aimBiasXTotal += offsetX
+          state.aimBiasYTotal += offsetY
+          state.aimBiasSamples += 1
           state.hasPreviousAimOffset = true
           state.lastAimSampleAt = time
         }
@@ -436,6 +444,8 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           bestStreak: state.bestStreak,
           bestTrackingStreakMs: state.bestOnTargetStreakMs,
           overshootCount: state.overshootCount,
+          aimBiasX: state.aimBiasSamples ? state.aimBiasXTotal / state.aimBiasSamples : 0,
+          aimBiasY: state.aimBiasSamples ? state.aimBiasYTotal / state.aimBiasSamples : 0,
         }
         if (time - state.lastMetricsAt >= 100) { state.lastMetricsAt = time; onMetricsRef.current(metrics) }
         if (remaining <= 0 && !state.complete) {
@@ -500,7 +510,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
       lastAimSampleAt: 0,
       previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
-      overshootCount: 0, lastOvershootAt: 0,
+      overshootCount: 0, lastOvershootAt: 0, aimBiasXTotal: 0, aimBiasYTotal: 0, aimBiasSamples: 0,
       hits: 0, shots: 0, score: 0, complete: false,
     })
     inputPausedAtRef.current = 0
