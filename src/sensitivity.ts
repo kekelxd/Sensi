@@ -1,4 +1,7 @@
 import { GameConfig } from './games'
+import { getCmPer360, getSensitivityForCmPer360 } from './aimModel'
+
+export { getCmPer360, getSensitivityForCmPer360 }
 
 export function parsePositiveNumberInput(value: string) {
   if (!value.trim()) return null

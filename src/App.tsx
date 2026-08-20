@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
-import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationSession, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
+import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationHistory, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
 import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, VALIDATION_REPETITIONS, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
+import { DEFAULT_HORIZONTAL_FOV, getCmPer360, MAX_HORIZONTAL_FOV, MIN_HORIZONTAL_FOV } from './aimModel'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
 import { Warmup } from './Warmup'
 import { Routine } from './Routine'
@@ -70,7 +71,11 @@ function App() {
   const [resultOpen, setResultOpen] = useState(false)
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
   const [sensitivityInput, setSensitivityInput] = useState('1')
+  const [dpiInput, setDpiInput] = useState('800')
+  const [fovInput, setFovInput] = useState(String(DEFAULT_HORIZONTAL_FOV))
   const [confirmedGame, setConfirmedGame] = useState<GameId>('cs2')
+  const [confirmedDpi, setConfirmedDpi] = useState(800)
+  const [confirmedHorizontalFov, setConfirmedHorizontalFov] = useState(DEFAULT_HORIZONTAL_FOV)
   const [speedMode, setSpeedMode] = useState<TargetSpeedMode>('normal')
   const [selectedSpeedMode, setSelectedSpeedMode] = useState<TargetSpeedMode>('normal')
   const [baseSensitivity, setBaseSensitivity] = useState(1)
@@ -78,6 +83,7 @@ function App() {
   const [selectedCrosshair, setSelectedCrosshair] = useState<CrosshairStyle>('classic')
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
   const [previousCalibration, setPreviousCalibration] = useState<CalibrationSessionSummary | null>(null)
+  const [calibrationHistory, setCalibrationHistory] = useState<CalibrationSessionSummary[]>([])
 
   const active = phase !== 'idle'
   const tracking = phase === 'running'
@@ -107,7 +113,13 @@ function App() {
   const multiplier = currentCandidate?.multiplier ?? 1
   const selectedGameConfig = GAME_BY_ID[selectedGame]
   const parsedSensitivityInput = parsePositiveNumberInput(sensitivityInput)
+  const parsedDpiInput = parsePositiveNumberInput(dpiInput)
+  const parsedFovInput = parsePositiveNumberInput(fovInput)
   const sensitivityPreview = parsedSensitivityInput === null ? null : normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
+  const fovPreview = parsedFovInput === null ? null : Math.min(MAX_HORIZONTAL_FOV, Math.max(MIN_HORIZONTAL_FOV, parsedFovInput))
+  const cmPer360Preview = sensitivityPreview === null || parsedDpiInput === null
+    ? null
+    : getCmPer360(selectedGameConfig, sensitivityPreview, parsedDpiInput)
   const setupCandidateCount = sensitivityPreview === null
     ? 0
     : buildCalibrationCandidates(sensitivityPreview, selectedGameConfig).length
@@ -184,10 +196,12 @@ function App() {
   }
 
   const saveSetup = () => {
-    if (parsedSensitivityInput === null) return
+    if (parsedSensitivityInput === null || parsedDpiInput === null || fovPreview === null) return
     const cleanSensitivity = normalizeSensitivity(parsedSensitivityInput, selectedGameConfig)
     const configurationChanged = selectedGame !== confirmedGame
       || cleanSensitivity !== baseSensitivity
+      || parsedDpiInput !== confirmedDpi
+      || fovPreview !== confirmedHorizontalFov
       || selectedSpeedMode !== speedMode
       || selectedCrosshair !== crosshair
     const nextPlan = configurationChanged || !plan
@@ -197,8 +211,12 @@ function App() {
 
     flushSync(() => {
       setSensitivityInput(String(cleanSensitivity))
+      setDpiInput(String(Math.round(parsedDpiInput)))
+      setFovInput(String(fovPreview))
       setConfirmedGame(selectedGame)
       setBaseSensitivity(cleanSensitivity)
+      setConfirmedDpi(parsedDpiInput)
+      setConfirmedHorizontalFov(fovPreview)
       setSpeedMode(selectedSpeedMode)
       setCrosshair(selectedCrosshair)
       setPlan(nextPlan)
@@ -208,7 +226,9 @@ function App() {
         setResults([])
         setRound(0)
         setResultOpen(false)
-        setPreviousCalibration(null)
+        const history = readCalibrationHistory(window.localStorage, selectedGame)
+        setCalibrationHistory(history)
+        setPreviousCalibration(history[0] ?? null)
       }
 
       if (startAfterSetup) {
@@ -244,6 +264,8 @@ function App() {
     if (active) return
     setSelectedGame(confirmedGame)
     setSensitivityInput(String(baseSensitivity))
+    setDpiInput(String(confirmedDpi))
+    setFovInput(String(confirmedHorizontalFov))
     setSelectedSpeedMode(speedMode)
     setSelectedCrosshair(crosshair)
     setStartAfterSetup(false)
@@ -294,13 +316,24 @@ function App() {
         const finalSensitivity = normalizeSensitivity(baseSensitivity * finalReport.recommendation, confirmedGameConfig)
         const rangeMinSensitivity = normalizeSensitivity(baseSensitivity * finalReport.range.min, confirmedGameConfig)
         const rangeMaxSensitivity = normalizeSensitivity(baseSensitivity * finalReport.range.max, confirmedGameConfig)
-        setPreviousCalibration(readCalibrationSession(window.localStorage, confirmedGame))
+        const history = readCalibrationHistory(window.localStorage, confirmedGame)
+        setPreviousCalibration(history[0] ?? null)
+        setCalibrationHistory(history)
         if (finalReport.resultKind === 'recommended' || finalReport.resultKind === 'range') {
-          writeCalibrationSession(
+          const savedHistory = writeCalibrationSession(
             window.localStorage,
             confirmedGame,
-            createCalibrationSessionSummary(finalReport, finalSensitivity, rangeMinSensitivity, rangeMaxSensitivity),
+            createCalibrationSessionSummary(
+              finalReport,
+              finalSensitivity,
+              rangeMinSensitivity,
+              rangeMaxSensitivity,
+              confirmedDpi,
+              confirmedHorizontalFov,
+              getCmPer360(confirmedGameConfig, finalSensitivity, confirmedDpi),
+            ),
           )
+          setCalibrationHistory(savedHistory)
         }
       }
       setRound(Math.max(0, plan.rounds.length - 1))
@@ -399,6 +432,9 @@ function App() {
           scoring={tracking && inputReady}
           paused={!inputReady}
           multiplier={multiplier}
+          game={confirmedGameConfig}
+          sensitivity={displayedCandidate}
+          horizontalFov={confirmedHorizontalFov}
           targetSpeed={targetSpeed}
           trajectorySeed={currentRoundPlan?.trajectorySeed ?? plan?.sessionSeed ?? 1}
           roundKey={currentRoundPlan?.id ?? 'idle'}
@@ -464,7 +500,7 @@ function App() {
       <footer>
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls" />
-        <div className="dpi-status">{t('calibration.relativeMethod')}</div>
+        <div className="dpi-status">{t('calibration.physicalProfile', { dpi: confirmedDpi, fov: confirmedHorizontalFov })}</div>
       </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
@@ -473,7 +509,7 @@ function App() {
             <button className="modal-close" onClick={closeSetup} aria-label={t('common.close')}><X size={18} /></button>
             <Settings2 size={22} className="modal-icon" />
             <h2>{t('calibration.setupTitle')}</h2>
-            <p>{t('calibration.setupDescription', { rounds: landingRounds, seconds: ROUND_DURATION })}</p>
+            <p>{t('calibration.setupDescriptionPhysical', { rounds: landingRounds, seconds: ROUND_DURATION })}</p>
 
             <div className="warmup-stepper" aria-label={t('calibration.setupTitle')}>
               {([['warmup.stepGame', 1], ['warmup.stepSettings', 2], ['warmup.stepCrosshair', 3]] as Array<[TranslationKey, CalibrationSetupStep]>).map(([label, step]) => (
@@ -498,6 +534,8 @@ function App() {
                 <h3>{t('warmup.settingsTitle')}</h3>
                 <div className="setup-fields">
                   <label>{t('calibration.currentSensitivity', { game: selectedGameConfig.label })}<input type="text" inputMode="decimal" value={sensitivityInput} onChange={(event) => setSensitivityInput(event.target.value)} aria-invalid={parsedSensitivityInput === null} /></label>
+                  <label>{t('common.mouseDpi')}<input type="text" inputMode="numeric" value={dpiInput} onChange={(event) => setDpiInput(event.target.value)} aria-invalid={parsedDpiInput === null} /></label>
+                  <label>{t('calibration.horizontalFov')}<input type="text" inputMode="decimal" value={fovInput} onChange={(event) => setFovInput(event.target.value)} aria-invalid={fovPreview === null} /></label>
                 </div>
                 <div className="option-group mode-group" role="radiogroup" aria-label={t('calibration.targetSpeed')}>
                   {(['normal', 'fast'] as TargetSpeedMode[]).map((mode) => (
@@ -509,7 +547,9 @@ function App() {
                 </div>
                 <div className="conversion single-conversion">
                   <span>{t('calibration.baseSensitivity', { game: selectedGameConfig.shortLabel })} <strong>{sensitivityPreview === null ? '--' : format(sensitivityPreview, 3)}</strong></span>
+                  <span>{t('calibration.cmPer360')} <strong>{cmPer360Preview === null ? t('calibration.cmPer360Unavailable') : `${format(cmPer360Preview, 2)} cm`}</strong></span>
                 </div>
+                {!selectedGameConfig.yaw && <small className="setup-validation-error">{t('calibration.relativeProfileNotice')}</small>}
                 {sensitivityPreview !== null && !setupCanCalibrate ? <small className="setup-validation-error">{t('calibration.insufficientCandidates')}</small> : null}
               </>}
 
@@ -528,8 +568,8 @@ function App() {
             <div className="warmup-wizard-actions">
               {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as CalibrationSetupStep)}>{t('warmup.back')}</button>}
               {setupStep < 3
-                ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as CalibrationSetupStep)} disabled={setupStep === 2 && (parsedSensitivityInput === null || !setupCanCalibrate)}>{t('warmup.next')}</button>
-                : <button className="primary-button" onClick={saveSetup} disabled={parsedSensitivityInput === null || !setupCanCalibrate}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>}
+                ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as CalibrationSetupStep)} disabled={setupStep === 2 && (parsedSensitivityInput === null || parsedDpiInput === null || fovPreview === null || !setupCanCalibrate)}>{t('warmup.next')}</button>
+                : <button className="primary-button" onClick={saveSetup} disabled={parsedSensitivityInput === null || parsedDpiInput === null || fovPreview === null || !setupCanCalibrate}>{startAfterSetup ? t('calibration.saveStart') : t('calibration.save')}</button>}
             </div>
           </section>
         </div>
@@ -545,6 +585,7 @@ function App() {
             {calibrationReport && <CalibrationReportView
               report={calibrationReport}
               previous={previousCalibration}
+              history={calibrationHistory}
               game={confirmedGameConfig}
               baseSensitivity={baseSensitivity}
               recommendedSensitivity={recommendedSelected}

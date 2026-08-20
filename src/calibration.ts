@@ -113,6 +113,8 @@ export type CalibrationReport = {
 }
 
 export type CalibrationSessionSummary = {
+  id: string
+  completedAt: string
   sensitivity: number
   rangeMinSensitivity: number
   rangeMaxSensitivity: number
@@ -127,6 +129,9 @@ export type CalibrationSessionSummary = {
   playerConsistencyScore: number
   recommendationStrengthScore: number
   resultKind: CalibrationResultKind
+  dpi: number
+  horizontalFov: number
+  cmPer360: number | null
 }
 
 export type TargetSpeedMode = 'normal' | 'fast'
@@ -693,8 +698,13 @@ export function createCalibrationSessionSummary(
   sensitivity: number,
   rangeMinSensitivity: number,
   rangeMaxSensitivity: number,
+  dpi: number,
+  horizontalFov: number,
+  cmPer360: number | null,
 ): CalibrationSessionSummary {
   return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    completedAt: new Date().toISOString(),
     sensitivity,
     rangeMinSensitivity,
     rangeMaxSensitivity,
@@ -709,31 +719,49 @@ export function createCalibrationSessionSummary(
     playerConsistencyScore: report.playerConsistencyScore,
     recommendationStrengthScore: report.recommendationStrengthScore,
     resultKind: report.resultKind,
+    dpi,
+    horizontalFov,
+    cmPer360,
   }
 }
 
-const calibrationSessionStorageKey = (game: string) => `sensi-calibration-session:v3:${game}`
+const calibrationHistoryStorageKey = (game: string) => `sensi-calibration-history:v1:${game}`
+const MAX_CALIBRATION_HISTORY = 24
 
-export function readCalibrationSession(storage: Storage, game: string): CalibrationSessionSummary | null {
+function isCalibrationSessionSummary(value: unknown): value is CalibrationSessionSummary {
+  if (!value || typeof value !== 'object') return false
+  const session = value as CalibrationSessionSummary
+  return typeof session.id === 'string'
+    && typeof session.completedAt === 'string'
+    && Number.isFinite(session.sensitivity)
+    && Number.isFinite(session.score)
+    && Number.isFinite(session.rangeMinSensitivity)
+    && Number.isFinite(session.rangeMaxSensitivity)
+    && Number.isFinite(session.dpi)
+    && Number.isFinite(session.horizontalFov)
+    && (session.cmPer360 === null || Number.isFinite(session.cmPer360))
+}
+
+export function readCalibrationHistory(storage: Storage, game: string): CalibrationSessionSummary[] {
   try {
-    const saved = storage.getItem(calibrationSessionStorageKey(game))
-    if (!saved) return null
-    const parsed = JSON.parse(saved) as CalibrationSessionSummary
-    return Number.isFinite(parsed.sensitivity)
-      && Number.isFinite(parsed.score)
-      && Number.isFinite(parsed.rangeMinSensitivity)
-      && Number.isFinite(parsed.rangeMaxSensitivity)
-      ? parsed
-      : null
+    const saved = storage.getItem(calibrationHistoryStorageKey(game))
+    if (!saved) return []
+    const parsed = JSON.parse(saved) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(isCalibrationSessionSummary)
+      .sort((left, right) => right.completedAt.localeCompare(left.completedAt))
+      .slice(0, MAX_CALIBRATION_HISTORY)
   } catch {
-    return null
+    return []
   }
 }
 
 export function writeCalibrationSession(storage: Storage, game: string, summary: CalibrationSessionSummary) {
+  const nextHistory = [summary, ...readCalibrationHistory(storage, game)].slice(0, MAX_CALIBRATION_HISTORY)
   try {
-    storage.setItem(calibrationSessionStorageKey(game), JSON.stringify(summary))
+    storage.setItem(calibrationHistoryStorageKey(game), JSON.stringify(nextHistory))
   } catch {
     // A calibração continua funcionando quando o armazenamento local está indisponível.
   }
+  return nextHistory
 }

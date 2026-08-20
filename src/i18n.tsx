@@ -75,7 +75,13 @@ const pt = {
   'calibration.validationTieShort': 'empate',
   'calibration.validationSplitTieCount': 'A comparação terminou {confirmed}–{alternative}, com {ties} empate(s). A média final ficou dentro da margem técnica de igualdade.',
   'calibration.closeReport': 'Fechar relatório',
-  'calibration.roundCountCompact': '{measurements} med. · {validation} finais',
+  'calibration.roundCountCompact': '{measurements} medições · {validation} finais',
+  'calibration.horizontalFov': 'FOV horizontal', 'calibration.cmPer360': 'Distância para 360°', 'calibration.cmPer360Unavailable': 'Perfil físico indisponível',
+  'calibration.historyTitle': 'Histórico de calibração', 'calibration.historyCount': '{count} sessões salvas', 'calibration.historyEmpty': 'Conclua uma calibração válida para iniciar o histórico deste jogo.', 'calibration.historyPhysicalAverage': 'Média física das sessões: {value} cm/360°. O histórico informa estabilidade, mas não altera o cálculo da sessão atual.',
+  'converter.cmPer360': 'Distância para 360°',
+  'calibration.vsBaseClear': 'em relação à sensibilidade base', 'calibration.formulaExplanationPhysical': 'A precisão mede o tempo dentro do alvo. O controle transforma o erro médio em nota. A suavidade usa uma medida robusta das mudanças de velocidade. Ultrapassagens do alvo descontam pontos.',
+  'calibration.setupDescriptionPhysical': 'Escolha o jogo, informe sua sensibilidade, DPI e FOV horizontal. A sessão usa até {rounds} rodadas de {seconds} segundos, incluindo duas comparações finais entre os dois valores mais fortes.',
+  'calibration.physicalProfile': 'Perfil físico · {dpi} DPI · FOV horizontal {fov}°', 'calibration.relativeProfileNotice': 'Este jogo ainda não possui uma escala linear confirmada no $ENSI. A calibração continua relativa e não exibe cm/360°.',
 
 }
 
@@ -154,7 +160,13 @@ const en: Record<TranslationKey, string> = {
   'calibration.validationTieShort': 'tie',
   'calibration.validationSplitTieCount': 'The comparison ended {confirmed}–{alternative}, with {ties} tie(s). The final average remained inside the technical tie margin.',
   'calibration.closeReport': 'Close report',
-  'calibration.roundCountCompact': '{measurements} meas. · {validation} final',
+  'calibration.roundCountCompact': '{measurements} measurements · {validation} final rounds',
+  'calibration.horizontalFov': 'Horizontal FOV', 'calibration.cmPer360': 'Distance for 360°', 'calibration.cmPer360Unavailable': 'Physical profile unavailable',
+  'calibration.historyTitle': 'Calibration history', 'calibration.historyCount': '{count} saved sessions', 'calibration.historyEmpty': 'Complete a valid calibration to start this game’s history.', 'calibration.historyPhysicalAverage': 'Physical session average: {value} cm/360°. History shows stability but does not change the current session calculation.',
+  'converter.cmPer360': 'Distance for 360°',
+  'calibration.vsBaseClear': 'vs. base sensitivity', 'calibration.formulaExplanationPhysical': 'Accuracy measures time inside the target. Control turns average error into a score. Smoothness uses a robust measure of speed changes. Target overshoots deduct points.',
+  'calibration.setupDescriptionPhysical': 'Choose the game, enter your sensitivity, DPI, and horizontal FOV. The session uses up to {rounds} rounds of {seconds} seconds, including two final comparisons between the strongest values.',
+  'calibration.physicalProfile': 'Physical profile · {dpi} DPI · horizontal FOV {fov}°', 'calibration.relativeProfileNotice': 'This game does not yet have a confirmed linear scale in $ENSI. Calibration remains relative and does not display cm/360°.',
 
 }
 
@@ -231,7 +243,13 @@ const es: Record<TranslationKey, string> = {
   'calibration.validationTieShort': 'empate',
   'calibration.validationSplitTieCount': 'La comparación terminó {confirmed}–{alternative}, con {ties} empate(s). El promedio final quedó dentro del margen técnico de igualdad.',
   'calibration.closeReport': 'Cerrar informe',
-  'calibration.roundCountCompact': '{measurements} med. · {validation} finales',
+  'calibration.roundCountCompact': '{measurements} mediciones · {validation} rondas finales',
+  'calibration.horizontalFov': 'FOV horizontal', 'calibration.cmPer360': 'Distancia para 360°', 'calibration.cmPer360Unavailable': 'Perfil físico no disponible',
+  'calibration.historyTitle': 'Historial de calibración', 'calibration.historyCount': '{count} sesiones guardadas', 'calibration.historyEmpty': 'Completa una calibración válida para iniciar el historial de este juego.', 'calibration.historyPhysicalAverage': 'Promedio físico de las sesiones: {value} cm/360°. El historial muestra estabilidad, pero no modifica el cálculo de la sesión actual.',
+  'converter.cmPer360': 'Distancia para 360°',
+  'calibration.vsBaseClear': 'frente a la sensibilidad base', 'calibration.formulaExplanationPhysical': 'La precisión mide el tiempo dentro del objetivo. El control convierte el error medio en puntuación. La suavidad usa una medida robusta de los cambios de velocidad. Las sobrepasadas del objetivo restan puntos.',
+  'calibration.setupDescriptionPhysical': 'Elige el juego e indica sensibilidad, DPI y FOV horizontal. La sesión usa hasta {rounds} rondas de {seconds} segundos, incluidas dos comparaciones finales entre los valores más sólidos.',
+  'calibration.physicalProfile': 'Perfil físico · {dpi} DPI · FOV horizontal {fov}°', 'calibration.relativeProfileNotice': 'Este juego aún no tiene una escala lineal confirmada en $ENSI. La calibración sigue siendo relativa y no muestra cm/360°.',
 
 }
 

@@ -1,4 +1,4 @@
-import { Activity, BrainCircuit, CheckCircle2, Target, TrendingUp, TriangleAlert } from 'lucide-react'
+import { Activity, BrainCircuit, CheckCircle2, History, Target, TrendingUp, TriangleAlert } from 'lucide-react'
 import { type CalibrationReport, type CalibrationSessionSummary } from './calibration'
 import type { GameConfig } from './games'
 import { formatSensitivity, normalizeSensitivity } from './sensitivity'
@@ -7,6 +7,7 @@ import { useI18n, type TranslationKey } from './i18n'
 type Props = {
   report: CalibrationReport
   previous: CalibrationSessionSummary | null
+  history: CalibrationSessionSummary[]
   game: GameConfig
   baseSensitivity: number
   recommendedSensitivity: number
@@ -67,6 +68,7 @@ function getConclusionKey(report: CalibrationReport): TranslationKey {
 export function CalibrationReportView({
   report,
   previous,
+  history,
   game,
   baseSensitivity,
   recommendedSensitivity,
@@ -155,6 +157,10 @@ export function CalibrationReportView({
     validationWinner: validationWinner ?? formatSensitivity(report.bestResult.sensitivity, 6),
     validationRecord,
   })
+  const physicalHistory = history.filter((session) => session.cmPer360 !== null)
+  const averageCmPer360 = physicalHistory.length
+    ? physicalHistory.reduce((sum, session) => sum + (session.cmPer360 ?? 0), 0) / physicalHistory.length
+    : null
 
   return (
     <>
@@ -207,8 +213,8 @@ export function CalibrationReportView({
           <div className="report-section-heading"><div><BrainCircuit size={16} /><span>{t('calibration.whyTitle')}</span></div></div>
           <p>{conclusionText}</p>
           <div className="calibration-reason-grid">
-            <div><span>{t('common.accuracy')}</span><strong>{format(report.bestResult.accuracy)}%</strong><small>{signed(report.bestResult.accuracy - baseline.accuracy, ' pp')} {t('calibration.vsBase')}</small></div>
-            <div><span>{t('common.meanError')}</span><strong>{format(report.bestResult.meanError)}px</strong><small>{signed(report.bestResult.meanError - baseline.meanError, ' px')} {t('calibration.vsBase')}</small></div>
+            <div><span>{t('common.accuracy')}</span><strong>{format(report.bestResult.accuracy)}%</strong><small>{signed(report.bestResult.accuracy - baseline.accuracy, ' pp')} {t('calibration.vsBaseClear')}</small></div>
+            <div><span>{t('common.meanError')}</span><strong>{format(report.bestResult.meanError)}px</strong><small>{signed(report.bestResult.meanError - baseline.meanError, ' px')} {t('calibration.vsBaseClear')}</small></div>
             <div><span>{t('common.score')}</span><strong>{format(report.bestResult.score)}</strong><small>{t('calibration.scoreGapHint', { gap: format(report.scoreGap) })}</small></div>
             <div><span>{t('calibration.playerConsistency')}</span><strong>{format(report.playerConsistencyScore)}%</strong><small>{t('calibration.playerConsistencyHint')}</small></div>
           </div>
@@ -220,7 +226,7 @@ export function CalibrationReportView({
           <div className="formula-line"><span>33%</span><strong>{t('calibration.errorControl')}</strong></div>
           <div className="formula-line"><span>15%</span><strong>{t('common.smoothness')}</strong></div>
           <div className="formula-line penalty"><span>−</span><strong>{t('calibration.overshootPenalty')}</strong></div>
-          <p>{t('calibration.formulaExplanationV2')}</p>
+          <p>{t('calibration.formulaExplanationPhysical')}</p>
           <small>{t('calibration.strengthExplanation')}</small>
         </section>
 
@@ -269,6 +275,23 @@ export function CalibrationReportView({
           </div>
         </section>
       ) : null}
+
+      <section className="calibration-history">
+        <div className="report-section-heading"><div><History size={16} /><span>{t('calibration.historyTitle')}</span></div><small>{t('calibration.historyCount', { count: history.length })}</small></div>
+        {history.length ? (
+          <div className="calibration-history-list">
+            {history.slice(0, 5).map((session) => (
+              <div key={session.id}>
+                <span>{new Intl.DateTimeFormat(undefined, { dateStyle: 'short' }).format(new Date(session.completedAt))}</span>
+                <strong>{formatSensitivity(session.sensitivity, 6)}</strong>
+                <small>{session.cmPer360 === null ? t('calibration.cmPer360Unavailable') : `${format(session.cmPer360, 2)} cm/360°`}</small>
+                <b>{format(session.recommendationStrengthScore, 0)}%</b>
+              </div>
+            ))}
+          </div>
+        ) : <p>{t('calibration.historyEmpty')}</p>}
+        {averageCmPer360 !== null && <small className="calibration-history-note">{t('calibration.historyPhysicalAverage', { value: format(averageCmPer360, 2) })}</small>}
+      </section>
 
       <small className="disclaimer">{t('calibration.disclaimerV3')}</small>
       <div className="calibration-result-actions">

@@ -4,6 +4,8 @@ import { ROUND_DURATION, ROUND_WARMUP, SAMPLE_INTERVAL_MS, SMOOTHNESS_SPEED_CHAN
 import { useI18n } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { createTargetTrajectory, sampleTargetTrajectory, type TargetTrajectory } from './targetTrajectory'
+import { getCanvasGain, getRelativeCanvasGain } from './aimModel'
+import type { GameConfig } from './games'
 
 export type CrosshairStyle = 'classic' | 'dot' | 'circle' | 'plus'
 
@@ -19,6 +21,9 @@ type Props = {
   scoring: boolean
   paused: boolean
   multiplier: number
+  game: GameConfig
+  sensitivity: number
+  horizontalFov: number
   targetSpeed: number
   trajectorySeed: number
   roundKey: string
@@ -108,6 +113,9 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
     scoring,
     paused,
     multiplier,
+    game,
+    sensitivity,
+    horizontalFov,
     targetSpeed,
     trajectorySeed,
     roundKey,
@@ -138,6 +146,9 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   const scoringRef = useRef(scoring)
   const pausedRef = useRef(paused)
   const multiplierRef = useRef(multiplier)
+  const gameRef = useRef(game)
+  const sensitivityRef = useRef(sensitivity)
+  const horizontalFovRef = useRef(horizontalFov)
   const crosshairRef = useRef(crosshair)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onRoundComplete)
@@ -179,6 +190,9 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
   useEffect(() => { scoringRef.current = scoring }, [scoring])
   useEffect(() => { pausedRef.current = paused }, [paused])
   useEffect(() => { multiplierRef.current = multiplier }, [multiplier])
+  useEffect(() => { gameRef.current = game }, [game])
+  useEffect(() => { sensitivityRef.current = sensitivity }, [sensitivity])
+  useEffect(() => { horizontalFovRef.current = horizontalFov }, [horizontalFov])
   useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onRoundComplete }, [onRoundComplete])
@@ -230,10 +244,16 @@ export const TrackingArena = forwardRef<TrackingArenaHandle, Props>(function Tra
       const elapsedSinceLock = performance.now() - pointerLockedAtRef.current
 
       for (const currentEvent of events) {
+        const gain = getCanvasGain(
+          gameRef.current,
+          sensitivityRef.current,
+          horizontalFovRef.current,
+          canvas.clientWidth,
+        ) ?? getRelativeCanvasGain(multiplierRef.current)
         const movement = sanitizePointerMovement({
           movementX: currentEvent.movementX,
           movementY: currentEvent.movementY,
-          gain: multiplierRef.current,
+          gain,
           width: canvas.clientWidth,
           height: canvas.clientHeight,
           elapsedSinceLock,

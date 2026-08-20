@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeftRight, Check, Copy, Info, RefreshCw } from 'lucide-react'
 import { GAME_BY_ID, GAMES, GameId } from './games'
-import { convertSensitivity, formatSensitivity, isSensitivityInRange } from './sensitivity'
+import { convertSensitivity, formatSensitivity, getCmPer360, isSensitivityInRange } from './sensitivity'
 import { useI18n } from './i18n'
 
 export function SensitivityConverter() {
@@ -23,6 +23,8 @@ export function SensitivityConverter() {
     [numericSourceDpi, numericTargetDpi, numericValue, source, target],
   )
   const formattedResult = result === null ? '--' : formatSensitivity(result)
+  const sourceCmPer360 = getCmPer360(source, numericValue, numericSourceDpi)
+  const targetCmPer360 = result === null ? null : getCmPer360(target, result, numericTargetDpi)
   const estimated = Boolean(source.conversionEstimate || target.conversionEstimate)
   const invalidInput = !Number.isFinite(numericValue) || numericValue <= 0
   const invalidDpi = !Number.isFinite(numericSourceDpi) || numericSourceDpi <= 0 || !Number.isFinite(numericTargetDpi) || numericTargetDpi <= 0
@@ -71,6 +73,10 @@ export function SensitivityConverter() {
               <span>{t('converter.sourceDpi')}</span>
               <input type="text" inputMode="numeric" value={sourceDpi} onChange={(event) => setSourceDpi(event.target.value)} aria-label={t('converter.sourceDpi')} />
             </label>
+            <div className="converter-field converter-physical">
+              <span>{t('converter.cmPer360')}</span>
+              <strong>{sourceCmPer360 === null ? '—' : `${sourceCmPer360.toFixed(2)} cm`}</strong>
+            </div>
           </div>
         </div>
 
@@ -94,6 +100,10 @@ export function SensitivityConverter() {
               <span>{t('converter.targetDpi')}</span>
               <input type="text" inputMode="numeric" value={targetDpi} onChange={(event) => setTargetDpi(event.target.value)} aria-label={t('converter.targetDpi')} />
             </label>
+            <div className="converter-field converter-physical">
+              <span>{t('converter.cmPer360')}</span>
+              <strong>{targetCmPer360 === null ? '—' : `${targetCmPer360.toFixed(2)} cm`}</strong>
+            </div>
           </div>
         </div>
       </div>
