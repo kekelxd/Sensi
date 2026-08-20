@@ -63,16 +63,16 @@ export function SensitivityFinderModal() {
     const profile = search.finalCmPer360 >= 45 ? 'Jogador de braço' : search.finalCmPer360 <= 30 ? 'Ponta dos dedos / híbrido' : 'Jogador de pulso'
     return <section className="finder-report-workspace">
       <div className="panel-label"><Check size={15} /> ACHADOR DE SENSIBILIDADE CONCLUÍDO</div>
-      <h1>Seu perfil físico de sensibilidade</h1>
-      <p>As comparações cegas convergiram para uma faixa física menor que 1,5 cm/360° antes da validação final.</p>
-      <div className="finder-result-hero"><div><span>Sensibilidade recomendada</span><strong>{sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2)}</strong><small>{game.label}</small></div><div><span>Distância física</span><strong>{search.finalCmPer360.toFixed(1)} <small>cm/360°</small></strong><small>{profile}</small></div></div>
+      <h1>Encontramos uma boa sensibilidade para você</h1>
+      <p>Nós testamos movimentos diferentes sem mostrar os números. A sensibilidade abaixo foi a que deixou sua mira mais fácil de controlar.</p>
+      <div className="finder-result-hero"><div><span>Use esta sensibilidade</span><strong>{sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2)}</strong><small>no {game.label}</small></div><div><span>Quanto você move o mouse para girar</span><strong>{search.finalCmPer360.toFixed(1)} <small>cm/360°</small></strong><small>{profile}</small></div></div>
       <div className="finder-telemetry-grid">
         <div><span>Tempo no alvo</span><strong>{result ? `${result.timeOnTarget.toFixed(1)}%` : '--'}</strong></div>
         <div><span>Suavidade</span><strong>{result ? `${result.smoothness.toFixed(1)}%` : '--'}</strong></div>
         <div><span>Velocidade de correção</span><strong>{result ? result.meanSpeed.toFixed(0) : '--'}</strong></div>
         <div><span>Índice de estabilidade</span><strong>{result ? `${result.stability.toFixed(1)}%` : '--'}</strong></div>
       </div>
-      <section className="finder-explanation"><Target size={17} /><p><strong>Por que este resultado:</strong> tempo no alvo e correção suave tiveram o maior peso. Ruído e ultrapassagens do alvo reduziram a pontuação em cada comparação cega, então o valor final se baseia em controle motor repetível, não em preferência por um número visível.</p></section>
+      <section className="finder-explanation"><Target size={17} /><p><strong>Por que escolhemos este número:</strong> com ele, sua mira ficou mais tempo perto do alvo e fez movimentos mais suaves. Quando a mira passou muito do alvo ou tremeu, isso contou menos pontos. Por isso este foi o melhor número para você hoje.</p></section>
       <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? 'Copiado' : 'Copiar valor'}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? 'Salvo nas configurações' : 'Salvar nas configurações'}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> Novo achador</button></div>
     </section>
   }
