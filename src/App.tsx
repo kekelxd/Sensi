@@ -7,6 +7,7 @@ import { GAME_BY_ID, GAMES, GameId } from './games'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
+import { SensitivityFinderModal } from './SensitivityFinderModal'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import { DEFAULT_HORIZONTAL_FOV, getCmPer360, MAX_HORIZONTAL_FOV, MIN_HORIZONTAL_FOV } from './aimModel'
 import { CrosshairStyle, TrackingArena, TrackingArenaHandle } from './TrackingArena'
@@ -86,6 +87,7 @@ function App() {
   const [calibrationHistory, setCalibrationHistory] = useState<CalibrationSessionSummary[]>([])
 
   const active = phase !== 'idle'
+  const showLegacyCalibration = false
   const tracking = phase === 'running'
   const moving = phase === 'warmup' || phase === 'running'
   const landingRounds = BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS + VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS
@@ -417,7 +419,7 @@ function App() {
         </div>
       </header>
 
-      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? calibrationStarted ? <><section className="workspace">
+      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <SensitivityFinderModal /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
