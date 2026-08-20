@@ -63,8 +63,8 @@ export function CalibrationLanding({ rounds, seconds, onStart, finder = false }:
       <div className="calibration-landing-inner">
         <div className="calibration-hero">
           <div className="calibration-hero-copy">
-            <h1>{finder ? 'Encontre sua sensibilidade pelo movimento, não por um valor inicial.' : t('calibration.landingTitle')}</h1>
-            <p>{finder ? 'Testes cegos A/B combinam DPI, yaw do jogo e o espaço disponível no mousepad para convergir em uma faixa física de sensibilidade. Os valores ficam ocultos até o relatório final.' : t('calibration.landingDescription')}</p>
+            <h1>{finder ? 'Encontre sua sensibilidade ideal.' : t('calibration.landingTitle')}</h1>
+            <p>{finder ? 'Testes cegos A/B combinam DPI, yaw do jogo e o espaço disponível no mousepad para definir sua sensibilidade ideal.' : t('calibration.landingDescription')}</p>
             <button className="calibration-start-button" type="button" onClick={onStart}><Target size={20} /> {finder ? 'Configurar achador de sensibilidade' : t('calibration.landingStart')}</button>
             <div className="calibration-facts">
               {facts.map((fact) => <div key={fact.label}><strong>{fact.value}</strong><span>{fact.label}</span></div>)}
