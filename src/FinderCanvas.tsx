@@ -59,23 +59,35 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
     const canvas = canvasRef.current
     if (!canvas) return
     let frame = 0
-    let rafStartedAt = 0
     let lastFrame = 0
-    let lastAim: Point | null = null
+    let elapsedMs = 0
+    let lastInputTimestamp = 0
+    let hasInput = false
     let lastRelative: Point | null = null
-    let previousMove: Point | null = null
     let timeOnTarget = 0
     let totalTime = 0
     let overshoots = 0
     let jitterChanges = 0
     let movementSamples = 0
     let completed = false
-    const speeds: number[] = []
+    let speedSum = 0
+    let speedSquaredSum = 0
+    let previousMoveX = 0
+    let previousMoveY = 0
+    let hasPreviousMove = false
+    let hasLocked = false
+    let locked = document.pointerLockElement === canvas
+    let width = 0
+    let height = 0
+    let gain = .5
     let aim = { x: 0, y: 0 }
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
       const scale = window.devicePixelRatio || 1
+      width = rect.width
+      height = rect.height
+      gain = getCanvasGain(game, sensitivity, 103, width) ?? .5
       canvas.width = Math.max(1, Math.round(rect.width * scale))
       canvas.height = Math.max(1, Math.round(rect.height * scale))
       const ctx = canvas.getContext('2d')
@@ -88,33 +100,67 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
 
     const onLock = () => {
       const isLocked = document.pointerLockElement === canvas
+      locked = isLocked
       setLocked(isLocked)
       if (isLocked) {
         lockedAtRef.current = performance.now()
-        const rect = canvas.getBoundingClientRect()
-        aim = { x: rect.width / 2, y: rect.height / 2 }
+        if (!hasLocked) {
+          aim = { x: width / 2, y: height / 2 }
+          hasLocked = true
+        }
       }
     }
     const onMove = (event: PointerEvent) => {
-      if (document.pointerLockElement !== canvas || !started || isRoundTransition) return
-      const rect = canvas.getBoundingClientRect()
-      const gain = getCanvasGain(game, sensitivity, 103, rect.width) ?? .5
-      const movement = sanitizePointerMovement({ movementX: event.movementX, movementY: event.movementY, gain, width: rect.width, height: rect.height, elapsedSinceLock: performance.now() - lockedAtRef.current })
-      if (!movement) return
-      aim.x = clamp(aim.x + movement.x, 0, rect.width)
-      aim.y = clamp(aim.y + movement.y, 0, rect.height)
+      if (!locked || !started || isRoundTransition) return
+      const inputEvents = event.getCoalescedEvents?.()
+      const samples = inputEvents && inputEvents.length ? inputEvents : [event]
+      for (const sample of samples) {
+        const movement = sanitizePointerMovement({ movementX: sample.movementX, movementY: sample.movementY, gain, width, height, elapsedSinceLock: performance.now() - lockedAtRef.current })
+        if (!movement) continue
+        aim.x = clamp(aim.x + movement.x, 0, width)
+        aim.y = clamp(aim.y + movement.y, 0, height)
+
+        const timestamp = Number.isFinite(sample.timeStamp) ? sample.timeStamp : performance.now()
+        if (hasInput) {
+          const delta = timestamp - lastInputTimestamp
+          if (delta > 0 && delta <= 100) {
+            const speed = Math.hypot(movement.x, movement.y) / delta
+            if (speed > .01) {
+              speedSum += speed
+              speedSquaredSum += speed * speed
+              movementSamples += 1
+              if (hasPreviousMove && Math.hypot(previousMoveX, previousMoveY) < 4 && movement.x * previousMoveX + movement.y * previousMoveY < 0) jitterChanges += 1
+              previousMoveX = movement.x
+              previousMoveY = movement.y
+              hasPreviousMove = true
+            }
+          }
+        }
+        hasInput = true
+        lastInputTimestamp = timestamp
+
+        const target = targetFor(elapsedMs, width, height, game.id === 'cs2' || game.id === 'valorant')
+        const relative = { x: aim.x - target.x, y: aim.y - target.y }
+        const radius = radiusFor(width, height)
+        if (lastRelative && Math.hypot(lastRelative.x, lastRelative.y) > radius * .45 && lastRelative.x * relative.x + lastRelative.y * relative.y < -radius * radius * .16) overshoots += 1
+        lastRelative = relative
+      }
     }
     document.addEventListener('pointerlockchange', onLock)
-    canvas.addEventListener('pointermove', onMove)
+    const eventName = 'onpointerrawupdate' in window ? 'pointerrawupdate' : 'pointermove'
+    canvas.addEventListener(eventName, onMove as EventListener, { passive: true })
     onLock()
 
     const draw = (now: number) => {
       const rect = canvas.getBoundingClientRect()
       const ctx = canvas.getContext('2d')
       if (!ctx || !rect.width || !rect.height) return
-      const running = started && !isRoundTransition
-      if (running && !rafStartedAt) rafStartedAt = now
-      const elapsed = running ? Math.min(trial.duration * 1000, now - rafStartedAt) : 0
+      const running = started && !isRoundTransition && locked
+      const rawDelta = lastFrame ? Math.max(0, now - lastFrame) : 0
+      const delta = Math.min(250, rawDelta)
+      lastFrame = now
+      if (running) elapsedMs = Math.min(trial.duration * 1000, elapsedMs + delta)
+      const elapsed = elapsedMs
       if (running) {
         const nextRemaining = Math.max(0, trial.duration - elapsed / 1000)
         if (Math.abs(nextRemaining - displayedRemainingRef.current) >= .1) {
@@ -124,30 +170,14 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
       }
       const target = targetFor(elapsed, rect.width, rect.height, game.id === 'cs2' || game.id === 'valorant')
       const radius = radiusFor(rect.width, rect.height)
-      const delta = lastFrame ? Math.min(60, now - lastFrame) : 0
-      lastFrame = now
-      if (running && document.pointerLockElement === canvas && delta > 0) {
+      if (running && delta > 0) {
         totalTime += delta
         const distance = Math.hypot(aim.x - target.x, aim.y - target.y)
         if (distance <= radius) timeOnTarget += delta
-        if (lastAim) {
-          const move = { x: aim.x - lastAim.x, y: aim.y - lastAim.y }
-          const speed = Math.hypot(move.x, move.y) / delta
-          if (speed > .01) {
-            speeds.push(speed)
-            movementSamples += 1
-            if (previousMove && Math.hypot(previousMove.x, previousMove.y) < 4 && (move.x * previousMove.x + move.y * previousMove.y) < 0) jitterChanges += 1
-            previousMove = move
-          }
-        }
-        const relative = { x: aim.x - target.x, y: aim.y - target.y }
-        if (lastRelative && Math.hypot(lastRelative.x, lastRelative.y) > radius * .45 && lastRelative.x * relative.x + lastRelative.y * relative.y < -radius * radius * .16) overshoots += 1
-        lastRelative = relative
-        lastAim = { ...aim }
         if (!completed && elapsed >= trial.duration * 1000) {
           completed = true
-          const meanSpeed = speeds.length ? speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length : 0
-          const deviation = speeds.length ? Math.sqrt(speeds.reduce((sum, speed) => sum + (speed - meanSpeed) ** 2, 0) / speeds.length) : 0
+          const meanSpeed = movementSamples ? speedSum / movementSamples : 0
+          const deviation = movementSamples ? Math.sqrt(Math.max(0, speedSquaredSum / movementSamples - meanSpeed * meanSpeed)) : 0
           const smoothness = meanSpeed ? clamp(100 - deviation / meanSpeed * 55, 0, 100) : 0
           const jitter = movementSamples ? clamp(jitterChanges / movementSamples * 100, 0, 100) : 100
           callbackRef.current({
@@ -174,7 +204,7 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
       frame = window.requestAnimationFrame(draw)
     }
     frame = window.requestAnimationFrame(draw)
-    return () => { window.cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener('pointerlockchange', onLock); canvas.removeEventListener('pointermove', onMove) }
+    return () => { window.cancelAnimationFrame(frame); observer.disconnect(); document.removeEventListener('pointerlockchange', onLock); canvas.removeEventListener(eventName, onMove as EventListener) }
   }, [game, sensitivity, isRoundTransition, started, trial])
 
   const begin = async () => {
@@ -185,7 +215,7 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
   }
 
   return <section className="finder-canvas-shell">
-    <canvas ref={canvasRef} className="finder-canvas" />
+    <canvas ref={canvasRef} className="finder-canvas" onMouseDown={() => { if (started && !locked) void requestStablePointerLock(canvasRef.current) }} />
     <div className="finder-hud"><span>{trial.phase === 'bracket' ? 'DESCOBERTA' : trial.phase === 'adaptive' ? 'BUSCA ADAPTATIVA' : 'VALIDAÇÃO FINAL'}</span><strong>{trial.variant === 'final' ? 'FINAL' : `VARIANTE ${trial.variant}`}</strong><b>{remaining.toFixed(0)}s</b></div>
     {isRoundTransition && <div className="finder-round-transition"><span>PRÓXIMO ROUND</span><strong>{round}</strong><p>Prepare a mão. O próximo alvo começa em instantes.</p></div>}
     {!started && <div className="finder-canvas-prompt"><strong>Pronto para o teste cego</strong><span>Mantenha o alvo sob a mira. Os valores ficam ocultos durante todo o teste.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Iniciar teste</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Sair</button></div>}

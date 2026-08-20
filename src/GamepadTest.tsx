@@ -56,8 +56,8 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
   const { t } = useI18n()
   const [gamepads, setGamepads] = useState<GamepadSnapshot[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
-  const [leftPoints, setLeftPoints] = useState<StickPoint[]>([])
-  const [rightPoints, setRightPoints] = useState<StickPoint[]>([])
+  const [leftPointsByPad, setLeftPointsByPad] = useState<Record<number, StickPoint[]>>({})
+  const [rightPointsByPad, setRightPointsByPad] = useState<Record<number, StickPoint[]>>({})
   const activeIndexRef = useRef(activeIndex)
 
   useEffect(() => { activeIndexRef.current = activeIndex }, [activeIndex])
@@ -72,8 +72,8 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
       if (selected) {
         const left = { x: rawAxis(selected.axes[0]), y: rawAxis(selected.axes[1]) }
         const right = { x: rawAxis(selected.axes[2]), y: rawAxis(selected.axes[3]) }
-        if (Math.hypot(left.x, left.y) > .08) setLeftPoints((points) => [...points.slice(-799), left])
-        if (Math.hypot(right.x, right.y) > .08) setRightPoints((points) => [...points.slice(-799), right])
+        if (Math.hypot(left.x, left.y) > .08) setLeftPointsByPad((points) => ({ ...points, [selected.index]: [...(points[selected.index] ?? []).slice(-799), left] }))
+        if (Math.hypot(right.x, right.y) > .08) setRightPointsByPad((points) => ({ ...points, [selected.index]: [...(points[selected.index] ?? []).slice(-799), right] }))
       }
       frame = window.requestAnimationFrame(poll)
     }
@@ -93,6 +93,8 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
   const leftY = rawAxis(active.axes[1])
   const rightX = rawAxis(active.axes[2])
   const rightY = rawAxis(active.axes[3])
+  const leftPoints = leftPointsByPad[active.index] ?? []
+  const rightPoints = rightPointsByPad[active.index] ?? []
   const leftError = circularityError(leftPoints)
   const rightError = circularityError(rightPoints)
   const pressedCount = active.buttons.filter((button) => button.pressed || button.value > .5).length
@@ -144,7 +146,7 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
         </div>
 
         <section className="gamepad-raw-values">
-          <div className="report-section-heading"><div><Gamepad2 size={15} /> {t('gamepad.rawAxes')}</div><button className="secondary-button" onClick={() => { setLeftPoints([]); setRightPoints([]) }}><RotateCcw size={14} /> {t('gamepad.resetPath')}</button></div>
+          <div className="report-section-heading"><div><Gamepad2 size={15} /> {t('gamepad.rawAxes')}</div><button className="secondary-button" onClick={() => { setLeftPointsByPad({}); setRightPointsByPad({}) }}><RotateCcw size={14} /> {t('gamepad.resetPath')}</button></div>
           <div>{active.axes.map((axis, index) => <span key={index}>AXIS {index}<b>{rawAxis(axis).toFixed(5)}</b></span>)}</div>
         </section>
       </>}
