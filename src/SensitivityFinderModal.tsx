@@ -66,7 +66,7 @@ export function SensitivityFinderModal() {
     </section>
   }
 
-  return <><CalibrationLanding finder rounds="2 + 8 + 1" seconds={15} onStart={() => setSetupOpen(true)} />
+  return <><CalibrationLanding finder rounds="Até 11" seconds="15–20 segundos" onStart={() => setSetupOpen(true)} />
     {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>Configure o achador</h2><p>Não é necessário informar a sensibilidade atual. Começamos pela faixa física permitida pelo seu espaço.</p>
       <label>Jogo alvo<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
       <label>DPI do mouse<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="DPI personalizado" /></div></label>

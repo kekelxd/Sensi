@@ -14,7 +14,7 @@ const TRAIL_POINTS = [
 
 type CalibrationLandingProps = {
   rounds: number | string
-  seconds: number
+  seconds: number | string
   onStart: () => void
   finder?: boolean
 }
@@ -45,8 +45,8 @@ function CalibrationDemo({ finder = false }: { finder?: boolean }) {
 export function CalibrationLanding({ rounds, seconds, onStart, finder = false }: CalibrationLandingProps) {
   const { t } = useI18n()
   const facts = [
-    { value: String(rounds), label: finder ? 'testes cegos' : t('calibration.landingRoundsLabel') },
-    { value: String(seconds), label: finder ? 'segundos por teste' : t('calibration.landingSecondsLabel') },
+    { value: String(rounds), label: finder ? 'rodadas no máximo' : t('calibration.landingRoundsLabel') },
+    { value: String(seconds), label: finder ? 'por rodada' : t('calibration.landingSecondsLabel') },
   ]
   const steps = finder ? [
     { title: 'Configure seu espaço', description: 'Escolha o jogo, DPI e a faixa disponível do mousepad.' },
