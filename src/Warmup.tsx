@@ -8,7 +8,7 @@ import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WAR
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { EXERCISES } from './warmupExercises'
-import { createEmptyWarmupMetrics, getAimBiasLabel, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
+import { createEmptyWarmupMetrics, getAimBiasLabel, getAimDiagnosis, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
 
 export type { WarmupMetrics } from './warmupTelemetry'
 
@@ -72,6 +72,7 @@ function signed(value: number, suffix = '') {
 function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: { metrics: WarmupMetrics, previous: WarmupSessionSummary | null, exercise: WarmupExercise, onSelectRecommendation: (exercise: WarmupExercise) => void }) {
   const { t } = useI18n()
   const trackingExercise = isTrackingExercise(exercise)
+  const diagnosis = getAimDiagnosis(metrics, exercise)
   const recommendationId = getWarmupRecommendation(metrics, exercise)
   const recommendation = EXERCISES.find((item) => item.id === recommendationId) ?? EXERCISES[0]
   const comparison = previous ? [
@@ -79,6 +80,18 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
     { label: t('common.accuracy'), value: signed(metrics.accuracy - previous.accuracy, '%') },
     { label: t('warmup.reactionSpeed'), value: metrics.reactionTimeMs && previous.reactionTimeMs ? signed(metrics.reactionTimeMs - previous.reactionTimeMs, 'ms') : '—' },
   ] : []
+  const overshootUnit = exercise === 'flick' || exercise === 'reflex' || exercise === 'gridshot'
+    ? t('warmup.doctorFlicks')
+    : t('warmup.doctorCorrections')
+  const diagnosisMessage = diagnosis.kind === 'overshoot'
+    ? t('warmup.doctorOvershoot', { rate: diagnosis.rate, unit: overshootUnit })
+    : diagnosis.kind === 'clicks'
+      ? t('warmup.doctorClicks', { rate: diagnosis.rate })
+      : diagnosis.kind === 'bias'
+        ? t('warmup.doctorBias', { direction: getAimBiasLabel(metrics.aimBiasX, metrics.aimBiasY).toLowerCase() })
+        : diagnosis.kind === 'tracking'
+          ? t('warmup.doctorTracking', { accuracy: diagnosis.rate })
+          : t('warmup.doctorBalanced')
 
   return (
     <div className="warmup-report">
@@ -89,6 +102,10 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
         <div><span>{t('warmup.clickErrors')}</span><strong>{metrics.clickErrors}</strong></div>
         <div><span>{t('warmup.bestStreak')}</span><strong>{trackingExercise ? `${format(metrics.bestTrackingStreakMs / 1000, 1)}s` : metrics.bestStreak}</strong></div>
       </div>
+      <section className={`aim-doctor-card ${diagnosis.kind}`}>
+        <div className="report-section-heading"><div><Activity size={15} /><span>{t('warmup.aimDoctor')}</span></div></div>
+        <p>{diagnosisMessage}</p>
+      </section>
       <div className="report-insights-grid">
         <section className="aim-bias-insight">
           <div className="report-section-heading"><div><Target size={15} /><span>Tendência de mira</span></div></div>
@@ -160,6 +177,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
     reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
     lastAimSampleAt: 0, aimBiasXTotal: 0, aimBiasYTotal: 0, aimBiasSamples: 0,
     previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
+    previousSampleAimX: 0, previousSampleAimY: 0, hasPreviousSampleAim: false, correctionCount: 0,
     overshootCount: 0, lastOvershootAt: 0,
     hits: 0, shots: 0, score: 0, complete: false,
   })
@@ -412,6 +430,10 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           ), telemetryTargets[0])
           const offsetX = (state.visualAimX - nearestTarget.x) / Math.max(1, width)
           const offsetY = (state.visualAimY - nearestTarget.y) / Math.max(1, height)
+          if (state.hasPreviousSampleAim && Math.hypot(state.visualAimX - state.previousSampleAimX, state.visualAimY - state.previousSampleAimY) > radius * .08) state.correctionCount += 1
+          state.previousSampleAimX = state.visualAimX
+          state.previousSampleAimY = state.visualAimY
+          state.hasPreviousSampleAim = true
           const crossedTarget = state.hasPreviousAimOffset
             && state.previousAimOffsetX * offsetX + state.previousAimOffsetY * offsetY < 0
             && time - state.lastOvershootAt > 140
@@ -444,6 +466,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           bestStreak: state.bestStreak,
           bestTrackingStreakMs: state.bestOnTargetStreakMs,
           overshootCount: state.overshootCount,
+          correctionCount: state.correctionCount,
           aimBiasX: state.aimBiasSamples ? state.aimBiasXTotal / state.aimBiasSamples : 0,
           aimBiasY: state.aimBiasSamples ? state.aimBiasYTotal / state.aimBiasSamples : 0,
         }
@@ -510,6 +533,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       reactionMsTotal: 0, reactionCount: 0, clickErrors: 0, currentStreak: 0, bestStreak: 0,
       lastAimSampleAt: 0,
       previousAimOffsetX: 0, previousAimOffsetY: 0, hasPreviousAimOffset: false,
+      previousSampleAimX: 0, previousSampleAimY: 0, hasPreviousSampleAim: false, correctionCount: 0,
       overshootCount: 0, lastOvershootAt: 0, aimBiasXTotal: 0, aimBiasYTotal: 0, aimBiasSamples: 0,
       hits: 0, shots: 0, score: 0, complete: false,
     })

@@ -12,6 +12,7 @@ export type WarmupMetrics = {
   bestStreak: number
   bestTrackingStreakMs: number
   overshootCount: number
+  correctionCount: number
   aimBiasX?: number
   aimBiasY?: number
 }
@@ -31,6 +32,7 @@ export function createEmptyWarmupMetrics(duration: number): WarmupMetrics {
     bestStreak: 0,
     bestTrackingStreakMs: 0,
     overshootCount: 0,
+    correctionCount: 0,
     aimBiasX: 0,
     aimBiasY: 0,
   }
@@ -54,9 +56,27 @@ export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSum
     bestStreak: metrics.bestStreak,
     bestTrackingStreakMs: metrics.bestTrackingStreakMs,
     overshootCount: metrics.overshootCount,
+    correctionCount: metrics.correctionCount,
     aimBiasX: metrics.aimBiasX,
     aimBiasY: metrics.aimBiasY,
   }
+}
+
+export type AimDiagnosis = {
+  kind: 'overshoot' | 'clicks' | 'bias' | 'tracking' | 'balanced'
+  rate: number
+}
+
+export function getAimDiagnosis(metrics: WarmupMetrics, exercise: WarmupExercise): AimDiagnosis {
+  const clickExercise = exercise === 'flick' || exercise === 'reflex' || exercise === 'gridshot'
+  const opportunities = clickExercise ? metrics.shots : metrics.correctionCount
+  const overshootRate = opportunities > 0 ? Math.min(100, Math.round(metrics.overshootCount / opportunities * 100)) : 0
+
+  if (metrics.overshootCount >= 2 && overshootRate >= 6) return { kind: 'overshoot', rate: overshootRate }
+  if (clickExercise && metrics.shots >= 5 && metrics.clickErrors / metrics.shots >= .25) return { kind: 'clicks', rate: Math.round(metrics.clickErrors / metrics.shots * 100) }
+  if (Math.hypot(metrics.aimBiasX ?? 0, metrics.aimBiasY ?? 0) >= .035) return { kind: 'bias', rate: 0 }
+  if (!clickExercise && metrics.accuracy < 68) return { kind: 'tracking', rate: Math.round(metrics.accuracy) }
+  return { kind: 'balanced', rate: 0 }
 }
 
 export function getWarmupRecommendation(metrics: WarmupMetrics, current: WarmupExercise): WarmupExercise {

@@ -460,6 +460,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .warmup-result-grid strong { margin-top: 5px; font: 500 12px DM Mono, monospace; }
 .warmup-result-actions { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
 .warmup-next-hint { margin-top: 14px; padding: 10px 12px; border: 1px solid rgba(141,251,211,.18); border-radius: 8px; color: var(--mint); background: rgba(141,251,211,.045); font-size: 9px; line-height: 1.5; }
+.aim-doctor-card { margin-top: 8px; padding: 12px 13px; border: 1px solid rgba(141,251,211,.24); border-radius: 9px; background: rgba(141,251,211,.04); text-align: left; }.aim-doctor-card.overshoot, .aim-doctor-card.clicks { border-color: rgba(255,114,81,.38); background: rgba(255,114,81,.055); }.aim-doctor-card p { margin: 7px 0 0; color: #c4c8cf; font-size: 10px; line-height: 1.6; }
 .warmup-result-actions button { display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .warmup-result-actions .primary-button { flex: 1; }
 .warmup-report { text-align: left; }
