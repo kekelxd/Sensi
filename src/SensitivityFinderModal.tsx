@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Check, Clipboard, Crosshair, MousePointer2, Save, Settings2, Target, X } from 'lucide-react'
+import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
+import { CalibrationLanding } from './CalibrationLanding'
 import { GAME_BY_ID, type GameId } from './games'
 import { MOUSEPAD_RANGES, type MousepadSize } from './sensMath'
 import { saveRecommendedSensitivity } from './settingsService'
@@ -42,39 +43,37 @@ export function SensitivityFinderModal() {
     const currentSensitivity = game.yaw ? 360 * 2.54 / (search.currentTrial.cmPer360 * parsedDpi * game.yaw) : null
     if (currentSensitivity === null) return null
     return <section className="finder-run-workspace">
-      <div className="finder-run-top"><div><span>BLIND SENSITIVITY FINDER</span><strong>{search.results.length + 1} / {search.trials.length}</strong></div><p>{search.currentTrial.phase === 'bracket' ? 'Discovering your physical control range.' : search.currentTrial.phase === 'adaptive' ? 'Narrowing the range with hidden A/B comparisons.' : 'Validating the refined result for your game profile.'}</p></div>
+      <div className="finder-run-top"><div><span>ACHADOR CEGO DE SENSIBILIDADE</span><strong>{search.results.length + 1} / {search.trials.length}</strong></div><p>{search.currentTrial.phase === 'bracket' ? 'Descobrindo sua faixa física de controle.' : search.currentTrial.phase === 'adaptive' ? 'Afunilando a faixa com comparações A/B ocultas.' : 'Validando o resultado refinado para o perfil do jogo.'}</p></div>
       <FinderCanvas key={search.currentTrial.id} game={game} sensitivity={currentSensitivity} trial={search.currentTrial} onComplete={search.completeTrial} onExit={search.reset} />
     </section>
   }
 
   if (search.stage === 'complete' && sensitivity !== null && search.finalCmPer360 !== null) {
-    const profile = search.finalCmPer360 >= 45 ? 'Arm Player' : search.finalCmPer360 <= 30 ? 'Fingertip / Hybrid' : 'Wrist Player'
+    const profile = search.finalCmPer360 >= 45 ? 'Jogador de braço' : search.finalCmPer360 <= 30 ? 'Ponta dos dedos / híbrido' : 'Jogador de pulso'
     return <section className="finder-report-workspace">
-      <div className="panel-label"><Check size={15} /> SENSITIVITY FINDER COMPLETE</div>
-      <h1>Your physical sensitivity profile</h1>
-      <p>Blind comparisons converged within a physical range smaller than 1.5 cm/360° before the final validation.</p>
-      <div className="finder-result-hero"><div><span>Recommended sensitivity</span><strong>{sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2)}</strong><small>{game.label}</small></div><div><span>Physical distance</span><strong>{search.finalCmPer360.toFixed(1)} <small>cm/360°</small></strong><small>{profile}</small></div></div>
+      <div className="panel-label"><Check size={15} /> ACHADOR DE SENSIBILIDADE CONCLUÍDO</div>
+      <h1>Seu perfil físico de sensibilidade</h1>
+      <p>As comparações cegas convergiram para uma faixa física menor que 1,5 cm/360° antes da validação final.</p>
+      <div className="finder-result-hero"><div><span>Sensibilidade recomendada</span><strong>{sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2)}</strong><small>{game.label}</small></div><div><span>Distância física</span><strong>{search.finalCmPer360.toFixed(1)} <small>cm/360°</small></strong><small>{profile}</small></div></div>
       <div className="finder-telemetry-grid">
-        <div><span>Time on target</span><strong>{result ? `${result.timeOnTarget.toFixed(1)}%` : '--'}</strong></div>
-        <div><span>Smoothness</span><strong>{result ? `${result.smoothness.toFixed(1)}%` : '--'}</strong></div>
-        <div><span>Correction speed</span><strong>{result ? result.meanSpeed.toFixed(0) : '--'}</strong></div>
-        <div><span>Stability index</span><strong>{result ? `${result.stability.toFixed(1)}%` : '--'}</strong></div>
+        <div><span>Tempo no alvo</span><strong>{result ? `${result.timeOnTarget.toFixed(1)}%` : '--'}</strong></div>
+        <div><span>Suavidade</span><strong>{result ? `${result.smoothness.toFixed(1)}%` : '--'}</strong></div>
+        <div><span>Velocidade de correção</span><strong>{result ? result.meanSpeed.toFixed(0) : '--'}</strong></div>
+        <div><span>Índice de estabilidade</span><strong>{result ? `${result.stability.toFixed(1)}%` : '--'}</strong></div>
       </div>
-      <section className="finder-explanation"><Target size={17} /><p><strong>Why this result:</strong> time on target and smooth correction carried the highest weight. Jitter and target overshoots reduced the score in every blind comparison, so the final value is based on repeatable motor control rather than a preference for a visible number.</p></section>
-      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? 'Copied' : 'Copy value'}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? 'Saved to settings' : 'Save to settings'}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> New finder</button></div>
+      <section className="finder-explanation"><Target size={17} /><p><strong>Por que este resultado:</strong> tempo no alvo e correção suave tiveram o maior peso. Ruído e ultrapassagens do alvo reduziram a pontuação em cada comparação cega, então o valor final se baseia em controle motor repetível, não em preferência por um número visível.</p></section>
+      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? 'Copiado' : 'Copiar valor'}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? 'Salvo nas configurações' : 'Salvar nas configurações'}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> Novo achador</button></div>
     </section>
   }
 
-  return <section className="finder-landing">
-    <div className="finder-landing-copy"><div className="panel-label"><Crosshair size={15} /> BLIND SENSITIVITY FINDER</div><h1>Find sensitivity from your movement, not a starting number.</h1><p>Controlled A/B trials use your DPI, game yaw and available mousepad space to converge on a physical sensitivity range. Values remain hidden until the report.</p><button className="primary-button finder-start" onClick={() => setSetupOpen(true)}><MousePointer2 size={17} /> Configure finder</button></div>
-    <div className="finder-method-card"><span>01</span><strong>Bracket the range</strong><p>Two hidden extremes expose control and reach limits.</p><span>02</span><strong>Binary search</strong><p>Blind A/B tracking narrows the best physical half.</p><span>03</span><strong>Validate</strong><p>A final profile-specific trial confirms the result.</p></div>
-    {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>Set up the finder</h2><p>No current sensitivity is needed. We begin with the physical range your desk space allows.</p>
-      <label>Target game<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
-      <label>Mouse DPI<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="Custom DPI" /></div></label>
-      <label>Available mousepad space<div className="finder-pad-picker">{(['small', 'medium', 'large'] as MousepadSize[]).map((size) => <button key={size} className={mousepad === size ? 'selected' : ''} onClick={() => setMousepad(size)}><strong>{size === 'small' ? 'Small' : size === 'medium' ? 'Medium' : 'Large / deskmat'}</strong><span>{MOUSEPAD_RANGES[size].min}–{MOUSEPAD_RANGES[size].max} cm/360°</span></button>)}</div></label>
-      <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0} onClick={start}>Start blind finder</button>
+  return <><CalibrationLanding finder rounds="2 + 8 + 1" seconds={15} onStart={() => setSetupOpen(true)} />
+    {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>Configure o achador</h2><p>Não é necessário informar a sensibilidade atual. Começamos pela faixa física permitida pelo seu espaço.</p>
+      <label>Jogo alvo<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
+      <label>DPI do mouse<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="DPI personalizado" /></div></label>
+      <label>Espaço disponível no mousepad<div className="finder-pad-picker">{(['small', 'medium', 'large'] as MousepadSize[]).map((size) => <button key={size} className={mousepad === size ? 'selected' : ''} onClick={() => setMousepad(size)}><strong>{size === 'small' ? 'Pequeno' : size === 'medium' ? 'Médio' : 'Grande / deskmat'}</strong><span>{MOUSEPAD_RANGES[size].min}–{MOUSEPAD_RANGES[size].max} cm/360°</span></button>)}</div></label>
+      <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0} onClick={start}>Iniciar achador cego</button>
     </section></div>}
-  </section>
+  </>
 }
 
 function RotateIcon() { return <span aria-hidden="true">↻</span> }

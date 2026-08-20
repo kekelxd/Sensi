@@ -170,8 +170,8 @@ export function FinderCanvas({ game, sensitivity, trial, onComplete, onExit }: P
 
   return <section className="finder-canvas-shell">
     <canvas ref={canvasRef} className="finder-canvas" />
-    <div className="finder-hud"><span>{trial.phase === 'bracket' ? 'DISCOVERY' : trial.phase === 'adaptive' ? 'ADAPTIVE SEARCH' : 'FINAL VALIDATION'}</span><strong>{trial.variant === 'final' ? 'FINAL' : `VARIANT ${trial.variant}`}</strong><b>{remaining.toFixed(0)}s</b></div>
-    {!started && <div className="finder-canvas-prompt"><strong>Ready for a blind test</strong><span>Keep the target under your crosshair. Values stay hidden during the whole test.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Start trial</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Exit</button></div>}
-    {started && !locked && <div className="finder-lock-message">Click the arena to restore mouse capture.</div>}
+    <div className="finder-hud"><span>{trial.phase === 'bracket' ? 'DESCOBERTA' : trial.phase === 'adaptive' ? 'BUSCA ADAPTATIVA' : 'VALIDAÇÃO FINAL'}</span><strong>{trial.variant === 'final' ? 'FINAL' : `VARIANTE ${trial.variant}`}</strong><b>{remaining.toFixed(0)}s</b></div>
+    {!started && <div className="finder-canvas-prompt"><strong>Pronto para o teste cego</strong><span>Mantenha o alvo sob a mira. Os valores ficam ocultos durante todo o teste.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Iniciar teste</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Sair</button></div>}
+    {started && !locked && <div className="finder-lock-message">Clique na arena para restaurar a captura do mouse.</div>}
   </section>
 }
