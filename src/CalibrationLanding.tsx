@@ -28,7 +28,7 @@ function CalibrationDemo({ finder = false }: { finder?: boolean }) {
       <div className="calibration-demo-label"><i />{finder ? t('finder.demo') : t('calibration.landingPreview')}</div>
       <div className="calibration-demo-metric metric-accuracy"><span>{t('common.accuracy')}</span><strong>87.4%</strong></div>
       <div className="calibration-demo-metric metric-error"><span>{t('common.meanError')}</span><strong>18.2<small>px</small></strong></div>
-      <div className="calibration-demo-metric metric-sensitivity"><span>{finder ? t('finder.sensitivityUnderTest') : t('calibration.testSensitivity')}</span><strong>{finder ? t('finder.hidden') : '0.920'}</strong></div>
+      {!finder && <div className="calibration-demo-metric metric-sensitivity"><span>{t('calibration.testSensitivity')}</span><strong>0.920</strong></div>}
 
       <svg className="calibration-demo-path" viewBox="0 0 700 430" preserveAspectRatio="none" aria-hidden="true">
         <path d="M86 336 C145 250 228 278 298 224 S410 104 490 157 S594 140 622 77" />
