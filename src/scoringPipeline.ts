@@ -39,3 +39,27 @@ export function calculateAdaptiveScore(data: HybridTelemetry, gameType: GameArch
 export function brakingCost(data: HybridTelemetry) {
   return Math.max(0, data.overshootPixels) + Math.max(0, data.settlingTimeMs) * .12 + Math.max(0, data.overshootOscillations) * 12
 }
+
+export type RoundTelemetry = {
+  hitPrecisionPct: number
+  overshootPenalty: number
+  settlingTimeMs: number
+  jitterVariance: number
+}
+
+export function toRoundTelemetry(data: HybridTelemetry): RoundTelemetry {
+  return {
+    hitPrecisionPct: data.flickAttempts ? clamp(data.flickHits / data.flickAttempts * 100) : 0,
+    overshootPenalty: clamp(data.overshootPixels / 2),
+    settlingTimeMs: Math.max(0, Number.isFinite(data.settlingTimeMs) ? data.settlingTimeMs : 10_000),
+    jitterVariance: clamp(data.jitterVariance),
+  }
+}
+
+export function calculateRoundScore(data: RoundTelemetry) {
+  const precisionScore = clamp(data.hitPrecisionPct) * .4
+  const settlingScore = Math.max(0, 100 - data.settlingTimeMs / 3) * .3
+  const overshootDeduction = clamp(data.overshootPenalty) * .2
+  const jitterDeduction = Math.min(20, clamp(data.jitterVariance) * 2)
+  return clamp(precisionScore + settlingScore - overshootDeduction - jitterDeduction)
+}

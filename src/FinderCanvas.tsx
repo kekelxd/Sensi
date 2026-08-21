@@ -139,7 +139,7 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
   const begin = async () => { const canvas = canvasRef.current; if (!canvas) return; await requestStablePointerLock(canvas); setStarted(true) }
   return <section className="finder-canvas-shell">
     <canvas ref={canvasRef} className="finder-canvas" onMouseDown={() => { if (started && !locked) void requestStablePointerLock(canvasRef.current) }} />
-    <div className="finder-hud"><span>{trial.phase === 'bracket' ? 'DESCOBERTA' : trial.phase === 'adaptive' ? 'BUSCA ADAPTATIVA' : 'VALIDAÇÃO FINAL'}</span><strong>{phaseLabel}</strong><b>{remaining.toFixed(0)}s</b></div>
+    <div className="finder-hud"><span>{trial.phase === 'baseline' ? 'LINHA DE BASE' : trial.phase === 'macro' ? 'EXPLORAÇÃO' : trial.phase === 'refinement' ? 'REFINAMENTO' : trial.phase === 'extension' ? 'CONVERGÊNCIA' : 'VALIDAÇÃO'}</span><strong>{phaseLabel}</strong><b>{remaining.toFixed(0)}s</b></div>
     {isRoundTransition && <div className="finder-round-transition"><span>PRÓXIMO ROUND</span><strong>{round}</strong><p>Prepare a mão. A próxima sequência começa em instantes.</p></div>}
     {!started && <div className="finder-canvas-prompt"><strong>Pronto para o teste cego</strong><span>Você fará micro-flick, frenagem e tracking. Os valores ficam ocultos durante todo o teste.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Iniciar teste</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Sair</button></div>}
     {started && !locked && <div className="finder-lock-message">Clique na arena para restaurar a captura do mouse.</div>}

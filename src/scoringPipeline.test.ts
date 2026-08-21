@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateAdaptiveScore } from './scoringPipeline'
+import { calculateAdaptiveScore, calculateRoundScore } from './scoringPipeline'
 import type { HybridTelemetry } from './hybridSensEngine'
 
 const stable: HybridTelemetry = {
@@ -23,5 +23,9 @@ describe('hybrid scoring pipeline', () => {
     const idle = { ...stable, flickAttempts: 0, flickHits: 0, timeToFirstHitMs: Number.NaN, timeOnTargetPct: 0, smoothnessIndex: 0, overshootPixels: 1_000, settlingTimeMs: 10_000, jitterVariance: Number.NaN }
     expect(calculateAdaptiveScore(idle, 'TACTICAL')).toBeGreaterThanOrEqual(0)
     expect(calculateAdaptiveScore(idle, 'TACTICAL')).toBeLessThanOrEqual(100)
+  })
+
+  it('uses the fixed round score deductions for settling, overshoot and jitter', () => {
+    expect(calculateRoundScore({ hitPrecisionPct: 80, settlingTimeMs: 120, overshootPenalty: 10, jitterVariance: 5 })).toBeCloseTo(38, 5)
   })
 })
