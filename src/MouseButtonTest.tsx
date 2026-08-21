@@ -214,8 +214,8 @@ export function MouseButtonTest() {
               <b>MMB</b>
               <i className={wheelDirection === 'down' ? 'wheel-down active' : 'wheel-down'} />
             </div>
-            <div className={mousePressed.has(3) ? 'mouse-side mouse-back active' : 'mouse-side mouse-back'}><span>M4</span></div>
-            <div className={mousePressed.has(4) ? 'mouse-side mouse-forward active' : 'mouse-side mouse-forward'}><span>M5</span></div>
+            <div className={mousePressed.has(4) ? 'mouse-side mouse-back active' : 'mouse-side mouse-back'}><span>M5</span></div>
+            <div className={mousePressed.has(3) ? 'mouse-side mouse-forward active' : 'mouse-side mouse-forward'}><span>M4</span></div>
             <div className="mouse-palm"><Mouse size={42} /></div>
           </div>
         ) : (
