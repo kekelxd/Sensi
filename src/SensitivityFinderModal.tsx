@@ -3,6 +3,7 @@ import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
 import { CalibrationLanding } from './CalibrationLanding'
 import { GAME_BY_ID, type GameId } from './games'
+import { gameArchetype } from './hybridSensEngine'
 import { MOUSEPAD_RANGES, type MousepadSize } from './sensMath'
 import { saveRecommendedSensitivity } from './settingsService'
 import { useBinarySensSearch } from './useBinarySensSearch'
@@ -32,7 +33,7 @@ export function SensitivityFinderModal() {
   const start = () => {
     if (!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0) return
     setSaved(false); setCopied(false); setSetupOpen(false)
-    search.start(MOUSEPAD_RANGES[mousepad])
+    search.start(MOUSEPAD_RANGES[mousepad], gameArchetype(game))
   }
   const save = () => {
     if (sensitivity === null || search.finalCmPer360 === null) return
@@ -67,17 +68,17 @@ export function SensitivityFinderModal() {
       <p>Nós testamos movimentos diferentes sem mostrar os números. A sensibilidade abaixo foi a que deixou sua mira mais fácil de controlar.</p>
       <div className="finder-result-hero"><div><span>Use esta sensibilidade</span><strong>{sensitivity.toFixed(game.sensitivityStep < .01 ? 3 : 2)}</strong><small>no {game.label}</small></div><div><span>Quanto você move o mouse para girar</span><strong>{search.finalCmPer360.toFixed(1)} <small>cm/360°</small></strong><small>{profile}</small></div></div>
       <div className="finder-telemetry-grid">
-        <div><span>Tempo no alvo</span><strong>{result ? `${result.timeOnTarget.toFixed(1)}%` : '--'}</strong></div>
-        <div><span>Suavidade</span><strong>{result ? `${result.smoothness.toFixed(1)}%` : '--'}</strong></div>
-        <div><span>Velocidade de correção</span><strong>{result ? result.meanSpeed.toFixed(0) : '--'}</strong></div>
-        <div><span>Índice de estabilidade</span><strong>{result ? `${result.stability.toFixed(1)}%` : '--'}</strong></div>
+        <div><span>Acertos no micro-flick</span><strong>{result ? `${result.flickHits}/${result.flickAttempts}` : '--'}</strong></div>
+        <div><span>Frenagem média</span><strong>{result ? `${result.settlingTimeMs.toFixed(0)} ms` : '--'}</strong></div>
+        <div><span>Tempo no alvo</span><strong>{result ? `${result.timeOnTargetPct.toFixed(1)}%` : '--'}</strong></div>
+        <div><span>Suavidade</span><strong>{result ? `${result.smoothnessIndex.toFixed(1)}%` : '--'}</strong></div>
       </div>
-      <section className="finder-explanation"><Target size={17} /><p><strong>Por que escolhemos este número:</strong> com ele, sua mira ficou mais tempo perto do alvo e fez movimentos mais suaves. Quando a mira passou muito do alvo ou tremeu, isso contou menos pontos. Por isso este foi o melhor número para você hoje.</p></section>
+      <section className="finder-explanation"><Target size={17} /><p><strong>Por que escolhemos este número:</strong> nós olhamos três coisas: se você acertou alvos pequenos, se conseguiu parar a mira sem passar muito do alvo e se acompanhou um alvo em movimento. Este valor juntou os melhores resultados sem deixar a mira tremida. É a melhor faixa para você hoje, não uma regra para sempre.</p></section>
       <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? 'Copiado' : 'Copiar valor'}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? 'Salvo nas configurações' : 'Salvar nas configurações'}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> Novo achador</button></div>
     </section>
   }
 
-  return <><CalibrationLanding finder rounds="Até 11" seconds="15–20 segundos" onStart={() => setSetupOpen(true)} />
+  return <><CalibrationLanding finder rounds="Até 11 rounds" seconds="30 segundos por round" onStart={() => setSetupOpen(true)} />
     {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>Configure o achador</h2><p>Não é necessário informar a sensibilidade atual. Começamos pela faixa física permitida pelo seu espaço.</p>
       <label>Jogo alvo<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
       <label>DPI do mouse<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="DPI personalizado" /></div></label>
