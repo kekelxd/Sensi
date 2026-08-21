@@ -6,11 +6,13 @@ import { GAME_BY_ID, type GameId } from './games'
 import { cmPer360FromSensitivity } from './sensMath'
 import { saveRecommendedSensitivity } from './settingsService'
 import { useBinarySensSearch } from './useBinarySensSearch'
+import { useI18n } from './i18n'
 
 const FINDER_GAMES: GameId[] = ['cs2', 'valorant', 'overwatch2', 'warzone']
 const DPI_PRESETS = [400, 800, 1600, 3200]
 
 export function SensitivityFinderModal() {
+  const { t } = useI18n()
   const [setupOpen, setSetupOpen] = useState(false)
   const [gameId, setGameId] = useState<GameId>('cs2')
   const [dpi, setDpi] = useState('800')
@@ -53,7 +55,7 @@ export function SensitivityFinderModal() {
 
   if (search.currentTrial) {
     return <section className="finder-run-workspace">
-      <div className="finder-run-top"><div><span>ROUND</span><strong>{search.results.length + 1} / {search.totalRounds}</strong></div><p>{search.currentTrial.phase === 'baseline' ? 'Criando a linha de base da sua mira.' : search.currentTrial.phase === 'macro' ? 'Comparando mudanças maiores a partir da sua sensibilidade base.' : search.currentTrial.phase === 'refinement' ? 'Refinando o lado que ficou mais estável.' : search.currentTrial.phase === 'extension' ? 'Refinando calibração para máxima consistência...' : 'Validando o melhor ponto encontrado.'}</p></div>
+      <div className="finder-run-top"><div><span>{t('finder.round')}</span><strong>{search.results.length + 1} / {search.totalRounds}</strong></div><p>{search.currentTrial.phase === 'baseline' ? t('finder.baseline') : search.currentTrial.phase === 'macro' ? t('finder.macro') : search.currentTrial.phase === 'refinement' ? t('finder.refinement') : search.currentTrial.phase === 'extension' ? t('finder.extension') : t('finder.validation')}</p></div>
       <FinderCanvas game={game} sensitivity={search.currentTrial.sensitivity} trial={search.currentTrial} round={search.results.length + 1} onComplete={search.completeTrial} onExit={exitFinder} />
     </section>
   }
@@ -65,27 +67,27 @@ export function SensitivityFinderModal() {
     const baseline = search.results[0]
     const best = [...search.results].sort((left, right) => right.score - left.score)[0]
     return <section className="finder-report-workspace">
-      <div className="panel-label"><Check size={15} /> CALIBRAÇÃO ADAPTATIVA CONCLUÍDA</div>
-      <h1>Encontramos sua sensibilidade refinada</h1>
-      <p>Partimos do seu valor atual e comparamos pequenos ajustes. O valor abaixo teve o melhor equilíbrio entre precisão, frenagem e estabilidade.</p>
-      <div className="finder-result-hero"><div><span>Use esta sensibilidade</span><strong>{sensitivity.toFixed(3)}</strong><small>no {game.label}</small></div><div><span>Comparado à sua base</span><strong>{difference >= 0 ? '+' : ''}{difference.toFixed(1)}%</strong><small>{search.baseSensitivity.toFixed(3)} original</small></div></div>
+      <div className="panel-label"><Check size={15} /> {t('finder.complete')}</div>
+      <h1>{t('finder.resultTitle')}</h1>
+      <p>{t('finder.resultDescription')}</p>
+      <div className="finder-result-hero"><div><span>{t('finder.useSensitivity')}</span><strong>{sensitivity.toFixed(3)}</strong><small>{game.label}</small></div><div><span>{t('finder.comparedBase')}</span><strong>{difference >= 0 ? '+' : ''}{difference.toFixed(1)}%</strong><small>{t('finder.original', { value: search.baseSensitivity.toFixed(3) })}</small></div></div>
       <div className="finder-telemetry-grid">
-        <div><span>Confiança da amostra</span><strong>{search.confidence?.toFixed(0) ?? '--'}%</strong></div>
-        <div><span>Ganho na frenagem</span><strong>{baseline && best ? `${Math.max(0, baseline.settlingTimeMs - best.settlingTimeMs).toFixed(0)} ms` : '--'}</strong></div>
-        <div><span>Redução de overshoot</span><strong>{baseline && best ? `${Math.max(0, baseline.overshootPixels - best.overshootPixels).toFixed(0)} px` : '--'}</strong></div>
-        <div><span>Distância física</span><strong>{cmPer360 ? `${cmPer360.toFixed(1)} cm/360°` : '--'}</strong></div>
+        <div><span>{t('finder.confidence')}</span><strong>{search.confidence?.toFixed(0) ?? '--'}%</strong></div>
+        <div><span>{t('finder.brakingGain')}</span><strong>{baseline && best ? `${Math.max(0, baseline.settlingTimeMs - best.settlingTimeMs).toFixed(0)} ms` : '--'}</strong></div>
+        <div><span>{t('finder.overshootReduction')}</span><strong>{baseline && best ? `${Math.max(0, baseline.overshootPixels - best.overshootPixels).toFixed(0)} px` : '--'}</strong></div>
+        <div><span>{t('finder.physicalDistance')}</span><strong>{cmPer360 ? `${cmPer360.toFixed(1)} cm/360°` : '--'}</strong></div>
       </div>
-      <section className="finder-explanation"><Target size={17} /><p><strong>Por que escolhemos este número:</strong> ele ajudou você a acertar alvos pequenos e parar a mira com menos correções. A diferença é pequena de propósito: a ideia é melhorar seu controle sem mudar a sensação que sua mão já conhece. {baseCmPer360 && cmPer360 ? ` Sua distância mudou de ${baseCmPer360.toFixed(1)} para ${cmPer360.toFixed(1)} cm por giro.` : ''}</p></section>
-      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? 'Copiado' : 'Copiar valor'}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? 'Salvo nas configurações' : 'Salvar nas configurações'}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> Novo achador</button></div>
+      <section className="finder-explanation"><Target size={17} /><p><strong>{t('finder.why')}</strong> {t('finder.whyDescription')} {baseCmPer360 && cmPer360 ? t('finder.distanceChanged', { from: baseCmPer360.toFixed(1), to: cmPer360.toFixed(1) }) : ''}</p></section>
+      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? t('finder.copied') : t('finder.copy')}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? t('finder.saved') : t('finder.save')}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> {t('finder.new')}</button></div>
     </section>
   }
 
-  return <><CalibrationLanding finder rounds="6 rounds + até 2 extras" seconds="30 segundos por round" onStart={() => setSetupOpen(true)} />
-    {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>Configure o calibrador</h2><p>Vamos partir da sua sensibilidade atual e testar ajustes pequenos para encontrar um ponto mais estável.</p>
-      <label>Jogo alvo<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
-      <label>Sensibilidade atual no {game.shortLabel}<input value={baseSensitivity} inputMode="decimal" onChange={(event) => setBaseSensitivity(event.target.value)} aria-label="Sensibilidade atual" /></label>
-      <label>DPI do mouse<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label="DPI personalizado" /></div></label>
-      <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0 || !Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax} onClick={start}>Iniciar calibração</button>
+  return <><CalibrationLanding finder rounds="6 + 2" seconds="30s" onStart={() => setSetupOpen(true)} />
+    {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)} aria-label={t('common.close')}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>{t('finder.setupTitle')}</h2><p>{t('finder.setupDescription')}</p>
+      <label>{t('finder.targetGame')}<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
+      <label>{t('finder.currentSensitivity', { game: game.shortLabel })}<input value={baseSensitivity} inputMode="decimal" onChange={(event) => setBaseSensitivity(event.target.value)} aria-label={t('finder.currentSensitivity', { game: game.shortLabel })} /></label>
+      <label>{t('common.mouseDpi')}<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label={t('common.mouseDpi')} /></div></label>
+      <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0 || !Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax} onClick={start}>{t('finder.start')}</button>
     </section></div>}
   </>
 }

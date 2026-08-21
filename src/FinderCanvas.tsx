@@ -7,6 +7,7 @@ import type { GameConfig } from './games'
 import { requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { stoppingTargetFor } from './stoppingPowerTest'
 import type { FinderTelemetry, FinderTrial } from './useBinarySensSearch'
+import { useI18n } from './i18n'
 
 type Props = { game: GameConfig, sensitivity: number, trial: FinderTrial, round: number, onComplete: (telemetry: FinderTelemetry) => void, onExit: () => void }
 type Point = TargetPoint
@@ -20,6 +21,7 @@ function trackingTargetFor(elapsedMs: number, width: number, height: number): Po
 }
 
 export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onExit }: Props) {
+  const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [locked, setLocked] = useState(false)
   const [started, setStarted] = useState(false)
@@ -139,9 +141,9 @@ export function FinderCanvas({ game, sensitivity, trial, round, onComplete, onEx
   const begin = async () => { const canvas = canvasRef.current; if (!canvas) return; await requestStablePointerLock(canvas); setStarted(true) }
   return <section className="finder-canvas-shell">
     <canvas ref={canvasRef} className="finder-canvas" onMouseDown={() => { if (started && !locked) void requestStablePointerLock(canvasRef.current) }} />
-    <div className="finder-hud"><span>{trial.phase === 'baseline' ? 'LINHA DE BASE' : trial.phase === 'macro' ? 'EXPLORAÇÃO' : trial.phase === 'refinement' ? 'REFINAMENTO' : trial.phase === 'extension' ? 'CONVERGÊNCIA' : 'VALIDAÇÃO'}</span><strong>{phaseLabel}</strong><b>{remaining.toFixed(0)}s</b></div>
-    {isRoundTransition && <div className="finder-round-transition"><span>PRÓXIMO ROUND</span><strong>{round}</strong><p>Prepare a mão. A próxima sequência começa em instantes.</p></div>}
-    {!started && <div className="finder-canvas-prompt"><strong>Pronto para o teste cego</strong><span>Você fará micro-flick, frenagem e tracking. Os valores ficam ocultos durante todo o teste.</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> Iniciar teste</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> Sair</button></div>}
-    {started && !locked && <div className="finder-lock-message">Clique na arena para restaurar a captura do mouse.</div>}
+    <div className="finder-hud"><span>{trial.phase === 'baseline' ? t('finder.phaseBaseline') : trial.phase === 'macro' ? t('finder.phaseMacro') : trial.phase === 'refinement' ? t('finder.phaseRefinement') : trial.phase === 'extension' ? t('finder.phaseExtension') : t('finder.phaseValidation')}</span><strong>{phaseLabel === 'FRENAGEM' ? t('finder.braking') : phaseLabel}</strong><b>{remaining.toFixed(0)}s</b></div>
+    {isRoundTransition && <div className="finder-round-transition"><span>{t('finder.nextRound')}</span><strong>{round}</strong><p>{t('finder.nextDescription')}</p></div>}
+    {!started && <div className="finder-canvas-prompt"><strong>{t('finder.ready')}</strong><span>{t('finder.readyDescription')}</span><button className="primary-button" onClick={() => { void begin() }}><Play size={16} /> {t('finder.start')}</button><button className="secondary-button" onClick={onExit}><RotateCcw size={15} /> {t('finder.exit')}</button></div>}
+    {started && !locked && <div className="finder-lock-message">{t('finder.restoreLock')}</div>}
   </section>
 }

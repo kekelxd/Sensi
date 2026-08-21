@@ -25,10 +25,10 @@ function CalibrationDemo({ finder = false }: { finder?: boolean }) {
   return (
     <div className="calibration-demo" aria-label={t('calibration.landingPreview')}>
       <div className="calibration-demo-grid" />
-      <div className="calibration-demo-label"><i />{finder ? 'DEMONSTRAÇÃO CEGA A/B' : t('calibration.landingPreview')}</div>
+      <div className="calibration-demo-label"><i />{finder ? t('finder.demo') : t('calibration.landingPreview')}</div>
       <div className="calibration-demo-metric metric-accuracy"><span>{t('common.accuracy')}</span><strong>87.4%</strong></div>
       <div className="calibration-demo-metric metric-error"><span>{t('common.meanError')}</span><strong>18.2<small>px</small></strong></div>
-      <div className="calibration-demo-metric metric-sensitivity"><span>{finder ? 'SENSIBILIDADE EM TESTE' : t('calibration.testSensitivity')}</span><strong>{finder ? 'OCULTA' : '0.920'}</strong></div>
+      <div className="calibration-demo-metric metric-sensitivity"><span>{finder ? t('finder.sensitivityUnderTest') : t('calibration.testSensitivity')}</span><strong>{finder ? t('finder.hidden') : '0.920'}</strong></div>
 
       <svg className="calibration-demo-path" viewBox="0 0 700 430" preserveAspectRatio="none" aria-hidden="true">
         <path d="M86 336 C145 250 228 278 298 224 S410 104 490 157 S594 140 622 77" />
@@ -45,13 +45,13 @@ function CalibrationDemo({ finder = false }: { finder?: boolean }) {
 export function CalibrationLanding({ rounds, seconds, onStart, finder = false }: CalibrationLandingProps) {
   const { t } = useI18n()
   const facts = [
-    { value: String(rounds), label: finder ? 'rodadas no máximo' : t('calibration.landingRoundsLabel') },
-    { value: String(seconds), label: finder ? 'por rodada' : t('calibration.landingSecondsLabel') },
+    { value: String(rounds), label: finder ? t('finder.roundsMaximum') : t('calibration.landingRoundsLabel') },
+    { value: String(seconds), label: finder ? t('finder.perRound') : t('calibration.landingSecondsLabel') },
   ]
   const steps = finder ? [
-    { title: 'Configure seu espaço', description: 'Escolha o jogo, DPI e a faixa disponível do mousepad.' },
-    { title: 'Compare testes ocultos', description: 'Acompanhe o alvo enquanto os valores físicos ficam ocultos.' },
-    { title: 'Veja o resultado', description: 'Receba cm/360°, sensibilidade no jogo e seu perfil de movimento.' },
+    { title: t('finder.stepSetup'), description: t('finder.stepSetupDescription') },
+    { title: t('finder.stepCompare'), description: t('finder.stepCompareDescription') },
+    { title: t('finder.stepResult'), description: t('finder.stepResultDescription') },
   ] : [
     { title: t('calibration.landingStepConfigure'), description: t('calibration.landingStepConfigureDescription') },
     { title: t('calibration.landingStepTrack'), description: t('calibration.landingStepTrackDescription') },
@@ -63,9 +63,9 @@ export function CalibrationLanding({ rounds, seconds, onStart, finder = false }:
       <div className="calibration-landing-inner">
         <div className="calibration-hero">
           <div className="calibration-hero-copy">
-            <h1>{finder ? 'Encontre sua sensibilidade ideal.' : t('calibration.landingTitle')}</h1>
-            <p>{finder ? 'Testes cegos A/B combinam DPI, yaw do jogo e o espaço disponível no mousepad para definir sua sensibilidade ideal.' : t('calibration.landingDescription')}</p>
-            <button className="calibration-start-button" type="button" onClick={onStart}><Target size={20} /> {finder ? 'Configurar achador de sensibilidade' : t('calibration.landingStart')}</button>
+            <h1>{finder ? t('finder.idealTitle') : t('calibration.landingTitle')}</h1>
+            <p>{finder ? t('finder.landingDescription') : t('calibration.landingDescription')}</p>
+            <button className="calibration-start-button" type="button" onClick={onStart}><Target size={20} /> {finder ? t('finder.startSetup') : t('calibration.landingStart')}</button>
             <div className="calibration-facts">
               {facts.map((fact) => <div key={fact.label}><strong>{fact.value}</strong><span>{fact.label}</span></div>)}
             </div>
