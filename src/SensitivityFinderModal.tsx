@@ -82,7 +82,7 @@ export function SensitivityFinderModal() {
     </section>
   }
 
-  return <><CalibrationLanding finder rounds="6 + 2" seconds="30s" onStart={() => setSetupOpen(true)} />
+  return <><CalibrationLanding finder rounds="Até 8" seconds="30s" onStart={() => setSetupOpen(true)} />
     {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)} aria-label={t('common.close')}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>{t('finder.setupTitle')}</h2><p>{t('finder.setupDescription')}</p>
       <label>{t('finder.targetGame')}<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
       <label>{t('finder.currentSensitivity', { game: game.shortLabel })}<input value={baseSensitivity} inputMode="decimal" onChange={(event) => setBaseSensitivity(event.target.value)} aria-label={t('finder.currentSensitivity', { game: game.shortLabel })} /></label>
