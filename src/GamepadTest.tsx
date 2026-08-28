@@ -132,7 +132,7 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
             <div className="gamepad-controller-body">
               <div className="gamepad-dpad"><PadButton label="↑" pressed={isPressed(active, 12)} /><PadButton label="←" pressed={isPressed(active, 14)} /><PadButton label="→" pressed={isPressed(active, 15)} /><PadButton label="↓" pressed={isPressed(active, 13)} /></div>
               <div className="gamepad-center-buttons"><PadButton label="BACK" pressed={isPressed(active, 8)} /><PadButton label="HOME" pressed={isPressed(active, 16)} /><PadButton label="START" pressed={isPressed(active, 9)} /></div>
-              <div className="gamepad-face-buttons"><PadButton label="Y" pressed={isPressed(active, 3)} /><PadButton label="X" pressed={isPressed(active, 2)} /><PadButton label="B" pressed={isPressed(active, 1)} /><PadButton label="A" pressed={isPressed(active, 0)} /></div>
+              <div className="gamepad-face-buttons"><PadButton label="Y" className="face-y" pressed={isPressed(active, 3)} /><PadButton label="X" className="face-x" pressed={isPressed(active, 2)} /><PadButton label="B" className="face-b" pressed={isPressed(active, 1)} /><PadButton label="A" className="face-a" pressed={isPressed(active, 0)} /></div>
               <div className="gamepad-stick-mini left" style={{ '--stick-x': clampAxis(leftX), '--stick-y': clampAxis(leftY) } as CSSProperties}><i /><span>L3</span><b className={isPressed(active, 10) ? 'active' : ''} /></div>
               <div className="gamepad-stick-mini right" style={{ '--stick-x': clampAxis(rightX), '--stick-y': clampAxis(rightY) } as CSSProperties}><i /><span>R3</span><b className={isPressed(active, 11) ? 'active' : ''} /></div>
             </div>
