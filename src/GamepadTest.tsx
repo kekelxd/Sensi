@@ -133,7 +133,6 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
               <svg className="gamepad-xbox-frame" viewBox="0 0 520 330" preserveAspectRatio="none" aria-hidden="true">
                 <defs><linearGradient id="xbox-shell" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#202934" /><stop offset=".52" stopColor="#121922" /><stop offset="1" stopColor="#090e14" /></linearGradient></defs>
                 <path d="M128 42C166 19 209 31 260 31C311 31 354 19 392 42C443 72 476 126 471 184L443 281C435 309 415 326 394 318C369 308 353 269 326 239H194C167 269 151 308 126 318C105 326 85 309 77 281L49 184C44 126 77 72 128 42Z" fill="url(#xbox-shell)" stroke="#414c5a" strokeWidth="2" />
-                <path d="M182 44C208 35 231 38 260 38C289 38 312 35 338 44L326 69H194Z" fill="#080c12" stroke="#3b4654" strokeWidth="1" />
                 <path d="M130 45C164 57 180 70 194 91M390 45C356 57 340 70 326 91" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="2" />
               </svg>
               <div className="gamepad-dpad"><PadButton label="↑" pressed={isPressed(active, 12)} /><PadButton label="←" pressed={isPressed(active, 14)} /><PadButton label="→" pressed={isPressed(active, 15)} /><PadButton label="↓" pressed={isPressed(active, 13)} /></div>

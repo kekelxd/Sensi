@@ -638,8 +638,9 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .gamepad-button { display: grid; place-items: center; border: 1px solid #38414d; border-radius: 50%; color: #7e8792; background: #10151c; font: 600 9px DM Mono, monospace; transition: color .05s, background .05s, box-shadow .05s, transform .05s; }
 .gamepad-button.active { color: #15100e; border-color: var(--accent); background: var(--accent); box-shadow: 0 0 18px rgba(255,114,81,.48); transform: scale(.92); }
 .gamepad-dpad, .gamepad-face-buttons { position: absolute; width: 92px; height: 92px; }
-.gamepad-dpad { bottom: 82px; left: 14%; display: grid; grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
-.gamepad-dpad .gamepad-button { border-color: #404a56; border-radius: 5px; background: #111820; }
+.gamepad-dpad { left: 27%; top: 138px; display: grid; grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; padding: 4px; border: 1px solid #46515e; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #28313c, #0a0f15 72%); box-shadow: inset 0 0 14px rgba(255,255,255,.04); }
+.gamepad-dpad .gamepad-button { border-color: transparent; border-radius: 5px; background: transparent; }
+.gamepad-dpad .gamepad-button.active { border-color: var(--accent); }
 .gamepad-dpad .gamepad-button:nth-child(1) { grid-area: 1 / 2; }.gamepad-dpad .gamepad-button:nth-child(2) { grid-area: 2 / 1; }.gamepad-dpad .gamepad-button:nth-child(3) { grid-area: 2 / 3; }.gamepad-dpad .gamepad-button:nth-child(4) { grid-area: 3 / 2; }
 .gamepad-face-buttons { top: 54px; right: 13%; display: grid; grid-template: 1fr 1fr 1fr / 1fr 1fr 1fr; }
 .gamepad-face-buttons .gamepad-button:nth-child(1) { grid-area: 1 / 2; }.gamepad-face-buttons .gamepad-button:nth-child(2) { grid-area: 2 / 1; }.gamepad-face-buttons .gamepad-button:nth-child(3) { grid-area: 2 / 3; }.gamepad-face-buttons .gamepad-button:nth-child(4) { grid-area: 3 / 2; }
@@ -647,7 +648,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .gamepad-center-buttons .gamepad-button { width: 31px; height: 21px; border-radius: 7px; font-size: 5px; }
 .gamepad-center-buttons .gamepad-button:nth-child(2) { width: 25px; height: 25px; border-radius: 50%; font-size: 5px; }
 .gamepad-stick-mini { position: absolute; width: 72px; height: 72px; border: 2px solid #46515f; border-radius: 50%; background: radial-gradient(circle at 36% 30%, #222b36, #090d13 72%); box-shadow: inset 0 0 14px rgba(255,255,255,.035); }
-.gamepad-stick-mini.left { left: 18%; top: 57px; }.gamepad-stick-mini.right { right: 29%; bottom: 78px; }
+.gamepad-stick-mini.left { left: 18%; top: 58px; }.gamepad-stick-mini.right { left: 55%; top: 137px; }
 .gamepad-stick-mini i, .gamepad-stick-scope > b { position: absolute; left: 50%; top: 50%; width: 34%; aspect-ratio: 1; border: 1px solid #5d6774; border-radius: 50%; background: #1a222c; transform: translate(calc(-50% + var(--stick-x) * 18px), calc(-50% + var(--stick-y) * 18px)); transition: transform .035s linear; }
 .gamepad-stick-mini span { position: absolute; inset: 0; display: grid; place-items: center; color: #757e89; font: 500 7px DM Mono, monospace; pointer-events: none; }
 .gamepad-stick-mini b { position: absolute; inset: -4px; border: 1px solid transparent; border-radius: 50%; }.gamepad-stick-mini b.active { border-color: var(--accent); box-shadow: 0 0 16px rgba(255,114,81,.42); }
@@ -802,8 +803,8 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .gamepad-device-card > button { grid-column: span 2; }
   .gamepad-controller-shell { min-height: 386px; padding: 15px 9px; }
   .gamepad-controller-body { width: 100%; height: 258px; }
-  .gamepad-dpad { left: 6%; }.gamepad-face-buttons { right: 6%; }
-  .gamepad-stick-mini.left { left: 20%; }.gamepad-stick-mini.right { right: 20%; }
+  .gamepad-dpad { left: 22%; top: 112px; }.gamepad-face-buttons { right: 9%; }
+  .gamepad-stick-mini.left { left: 15%; top: 46px; }.gamepad-stick-mini.right { left: 55%; right: auto; top: 116px; }
   .gamepad-raw-values > div:last-child { grid-template-columns: repeat(2, 1fr); }
   .calibration-landing-inner { gap: 22px; padding: 28px 14px 24px; }
   .calibration-hero-copy h1 { font-size: clamp(38px, 12vw, 52px); }
