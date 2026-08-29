@@ -1,4 +1,5 @@
-import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Sparkles, Target, TimerReset, type LucideIcon } from 'lucide-react'
+import { useState } from 'react'
+import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Sparkles, Target, TimerReset, type LucideIcon } from 'lucide-react'
 import { useI18n } from './i18n'
 
 export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
@@ -7,6 +8,7 @@ type Props = { onNavigate: (destination: HomeDestination) => void }
 
 function AimSight() {
   return <div className="home-aim-sight" aria-hidden="true">
+    <span className="home-aim-sight-grid" />
     <span className="home-aim-sight-glow" />
     <span className="home-aim-sight-ring home-aim-sight-ring-one" />
     <span className="home-aim-sight-ring home-aim-sight-ring-two" />
@@ -18,6 +20,8 @@ function AimSight() {
     <span className="home-aim-sight-contact home-aim-sight-contact-two" />
     <span className="home-aim-sight-contact home-aim-sight-contact-three" />
     <span className="home-aim-sight-core" />
+    <span className="home-aim-sight-lock home-aim-sight-lock-one" />
+    <span className="home-aim-sight-lock home-aim-sight-lock-two" />
     <small>{'TARGET://SENSI'}</small>
     <b>{'READY TO CALIBRATE'}</b>
   </div>
@@ -25,6 +29,7 @@ function AimSight() {
 
 export function Home({ onNavigate }: Props) {
   const { t } = useI18n()
+  const [cursor, setCursor] = useState({ x: -80, y: -80 })
   const method: Array<{ icon: LucideIcon, title: string, description: string }> = [
     { icon: MousePointer2, title: t('home.simpleSetupTitle'), description: t('home.simpleSetupDescription') },
     { icon: Activity, title: t('home.simpleMeasureTitle'), description: t('home.simpleMeasureDescription') },
@@ -41,16 +46,27 @@ export function Home({ onNavigate }: Props) {
     { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
 
-  return <section className="home-v2-workspace">
+  return <section
+    className="home-v2-workspace home-awwwards"
+    onPointerMove={(event) => setCursor({ x: event.clientX, y: event.clientY })}
+  >
+    <span className="home-custom-cursor" style={{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }} />
     <section className="home-v2-hero">
       <div className="home-v2-hero-copy">
         <span className="home-aim-label"><Sparkles size={14} /> {t('home.aimKicker')}</span>
         <h1><span>{t('home.aimLineOne')}</span><strong>{t('home.aimLineTwo')}</strong><span>{t('home.aimLineThree')}</span></h1>
         <p>{t('home.simpleHeroDescription')}</p>
-        <div className="home-aim-actions"><button className="home-aim-primary" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button><button className="home-aim-secondary" onClick={() => onNavigate('warmup')}><span /> {t('home.aimWarmupBadge')}</button></div>
+        <div className="home-aim-actions">
+          <button className="home-aim-primary" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button>
+          <button className="home-aim-secondary" onClick={() => onNavigate('warmup')}><span /> {t('home.aimWarmupBadge')}</button>
+        </div>
         <div className="home-aim-proof"><span><ShieldCheck size={15} /> {t('home.simpleLocal')}</span><span><Activity size={15} /> {t('home.simpleGuided')}</span></div>
       </div>
-      <AimSight />
+      <div className="home-hero-stage">
+        <AimSight />
+        <div className="home-live-panel home-live-panel-score"><small>CONTROL</small><strong>91</strong><span>stable tracking</span></div>
+        <div className="home-live-panel home-live-panel-error"><small>BIAS</small><strong>+4px</strong><span>right correction</span></div>
+      </div>
     </section>
 
     <section className="home-v2-method">
@@ -67,7 +83,17 @@ export function Home({ onNavigate }: Props) {
       <div className="home-v2-section-intro"><span>{t('home.simpleToolsKicker')}</span><h2>{t('home.simpleToolsTitle')}</h2></div>
       <div className="home-v2-tool-list">{tools.map((tool, index) => {
         const Icon = tool.icon
-        return <button key={tool.id} onClick={() => onNavigate(tool.id)}><span className="home-v2-tool-index">0{index + 1}</span><span className="home-v2-tool-icon"><Icon size={19} /></span><span className="home-v2-tool-copy"><strong>{tool.title}</strong><small>{tool.description}</small></span><span className="home-v2-tool-action">{tool.action} <ArrowRight size={15} /></span></button>
+        return <button key={tool.id} className={`home-tool-${tool.id}`} onClick={() => onNavigate(tool.id)}>
+          <span className="home-v2-tool-index">0{index + 1}</span>
+          <span className="home-v2-tool-icon"><Icon size={19} /></span>
+          <span className="home-v2-tool-copy"><strong>{tool.title}</strong><small>{tool.description}</small></span>
+          <span className="home-v2-tool-visual" aria-hidden="true">
+            {tool.id === 'calibration' && <><i /><b /><em /></>}
+            {tool.id === 'warmup' && <><i /><i /><i /><b /></>}
+            {tool.id === 'buttons' && <><Mouse size={17} /><Keyboard size={17} /><Gamepad2 size={17} /></>}
+          </span>
+          <span className="home-v2-tool-action">{tool.action} <ArrowRight size={15} /></span>
+        </button>
       })}</div>
     </section>
 
@@ -82,7 +108,7 @@ export function Home({ onNavigate }: Props) {
     <section className="home-v2-disclosure">
       <div className="home-v2-disclosure-heading"><span className="home-v2-disclosure-icon"><CircleAlert size={19} /></span><div><span>{t('home.simpleDisclosureKicker')}</span><h2>{t('home.simpleDisclosureTitle')}</h2></div></div>
       <p>{t('home.simpleDisclosureDescription')}</p>
-      <div className="home-v2-disclosure-points"><div><LockKeyhole size={17} /><strong>{t('home.simpleRawTitle')}</strong><span>{t('home.simpleRawDescription')}</span></div><div><Mouse size={17} /><strong>{t('home.simpleAccelerationTitle')}</strong><span>{t('home.simpleAccelerationDescription')}</span></div><div><LineChart size={17} /><strong>{t('home.simpleComparisonTitle')}</strong><span>{t('home.simpleComparisonDescription')}</span></div></div>
+      <div className="home-v2-disclosure-points"><div><LockKeyhole size={17} /><strong>{t('home.simpleRawTitle')}</strong><span>{t('home.simpleRawDescription')}</span></div><div><Gauge size={17} /><strong>{t('home.simpleAccelerationTitle')}</strong><span>{t('home.simpleAccelerationDescription')}</span></div><div><LineChart size={17} /><strong>{t('home.simpleComparisonTitle')}</strong><span>{t('home.simpleComparisonDescription')}</span></div></div>
     </section>
   </section>
 }
