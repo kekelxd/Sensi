@@ -1,35 +1,35 @@
-import { useState } from 'react'
-import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Sparkles, Target, TimerReset, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Target, TimerReset, type LucideIcon } from 'lucide-react'
 import { useI18n } from './i18n'
 
 export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
 
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
-function AimSight() {
-  return <div className="home-aim-sight" aria-hidden="true">
-    <span className="home-aim-sight-grid" />
-    <span className="home-aim-sight-glow" />
-    <span className="home-aim-sight-ring home-aim-sight-ring-one" />
-    <span className="home-aim-sight-ring home-aim-sight-ring-two" />
-    <span className="home-aim-sight-ring home-aim-sight-ring-three" />
-    <span className="home-aim-sight-line home-aim-sight-line-horizontal" />
-    <span className="home-aim-sight-line home-aim-sight-line-vertical" />
-    <span className="home-aim-sight-sweep" />
-    <span className="home-aim-sight-contact home-aim-sight-contact-one" />
-    <span className="home-aim-sight-contact home-aim-sight-contact-two" />
-    <span className="home-aim-sight-contact home-aim-sight-contact-three" />
-    <span className="home-aim-sight-core" />
-    <span className="home-aim-sight-lock home-aim-sight-lock-one" />
-    <span className="home-aim-sight-lock home-aim-sight-lock-two" />
-    <small>{'TARGET://SENSI'}</small>
-    <b>{'READY TO CALIBRATE'}</b>
+function GridshotPreview() {
+  return <div className="home-gridshot-preview" aria-hidden="true">
+    <span className="home-gridshot-noise" />
+    <span className="home-gridshot-line home-gridshot-line-one" />
+    <span className="home-gridshot-line home-gridshot-line-two" />
+    <span className="home-gridshot-crosshair" />
+    <span className="home-gridshot-target home-gridshot-target-one"><i /><b /><b /><b /></span>
+    <span className="home-gridshot-target home-gridshot-target-two"><i /><b /><b /><b /></span>
+    <span className="home-gridshot-target home-gridshot-target-three"><i /><b /><b /><b /></span>
+    <div className="home-gridshot-hud">
+      <small>GRIDSHOT</small>
+      <strong>+128</strong>
+      <span>target chain</span>
+    </div>
+    <div className="home-gridshot-feed">
+      <span />
+      <span />
+      <span />
+      <span />
+    </div>
   </div>
 }
 
 export function Home({ onNavigate }: Props) {
   const { t } = useI18n()
-  const [cursor, setCursor] = useState({ x: -80, y: -80 })
   const method: Array<{ icon: LucideIcon, title: string, description: string }> = [
     { icon: MousePointer2, title: t('home.simpleSetupTitle'), description: t('home.simpleSetupDescription') },
     { icon: Activity, title: t('home.simpleMeasureTitle'), description: t('home.simpleMeasureDescription') },
@@ -46,14 +46,9 @@ export function Home({ onNavigate }: Props) {
     { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
 
-  return <section
-    className="home-v2-workspace home-awwwards"
-    onPointerMove={(event) => setCursor({ x: event.clientX, y: event.clientY })}
-  >
-    <span className="home-custom-cursor" style={{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }} />
+  return <section className="home-v2-workspace home-awwwards">
     <section className="home-v2-hero">
       <div className="home-v2-hero-copy">
-        <span className="home-aim-label"><Sparkles size={14} /> {t('home.aimKicker')}</span>
         <h1><span>{t('home.aimLineOne')}</span><strong>{t('home.aimLineTwo')}</strong><span>{t('home.aimLineThree')}</span></h1>
         <p>{t('home.simpleHeroDescription')}</p>
         <div className="home-aim-actions">
@@ -63,9 +58,9 @@ export function Home({ onNavigate }: Props) {
         <div className="home-aim-proof"><span><ShieldCheck size={15} /> {t('home.simpleLocal')}</span><span><Activity size={15} /> {t('home.simpleGuided')}</span></div>
       </div>
       <div className="home-hero-stage">
-        <AimSight />
-        <div className="home-live-panel home-live-panel-score"><small>CONTROL</small><strong>91</strong><span>stable tracking</span></div>
-        <div className="home-live-panel home-live-panel-error"><small>BIAS</small><strong>+4px</strong><span>right correction</span></div>
+        <GridshotPreview />
+        <div className="home-live-panel home-live-panel-score"><small>ACCURACY</small><strong>92</strong><span>clean hits</span></div>
+        <div className="home-live-panel home-live-panel-error"><small>PACE</small><strong>0.41s</strong><span>reaction window</span></div>
       </div>
     </section>
 
