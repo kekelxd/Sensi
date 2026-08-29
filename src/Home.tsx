@@ -5,13 +5,17 @@ export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
 
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
-function CalibrationSimulation() {
-  return <div className="home-v2-simulation" aria-hidden="true">
-    <span className="home-v2-simulation-grid" />
-    <div className="home-v2-simulation-head"><span><i /> CALIBRATION SESSION</span><b>ROUND 04 / 08</b></div>
-    <div className="home-v2-simulation-track"><span /><i /><b><em /></b><strong /></div>
-    <div className="home-v2-simulation-readout"><div><small>PRECISION</small><strong>91.2<em>%</em></strong></div><div><small>STABILITY</small><strong>HIGH</strong></div></div>
-    <div className="home-v2-simulation-bars"><span><i /><b /></span><span><i /><b /></span><span><i /><b /></span><span><i /><b /></span></div>
+function AimSight() {
+  return <div className="home-aim-sight" aria-hidden="true">
+    <span className="home-aim-sight-glow" />
+    <span className="home-aim-sight-ring home-aim-sight-ring-one" />
+    <span className="home-aim-sight-ring home-aim-sight-ring-two" />
+    <span className="home-aim-sight-ring home-aim-sight-ring-three" />
+    <span className="home-aim-sight-line home-aim-sight-line-horizontal" />
+    <span className="home-aim-sight-line home-aim-sight-line-vertical" />
+    <span className="home-aim-sight-core" />
+    <small>{'TARGET://SENSI'}</small>
+    <b>{'READY TO CALIBRATE'}</b>
   </div>
 }
 
@@ -36,13 +40,13 @@ export function Home({ onNavigate }: Props) {
   return <section className="home-v2-workspace">
     <section className="home-v2-hero">
       <div className="home-v2-hero-copy">
-        <span className="home-v2-eyebrow"><Sparkles size={14} /> {t('home.simpleKicker')}</span>
-        <h1><span>$ENSI</span> {t('home.v2HeroTitle')}</h1>
+        <span className="home-aim-label"><Sparkles size={14} /> {t('home.aimKicker')}</span>
+        <h1><span>{t('home.aimLineOne')}</span><strong>{t('home.aimLineTwo')}</strong><span>{t('home.aimLineThree')}</span></h1>
         <p>{t('home.simpleHeroDescription')}</p>
-        <div className="home-v2-actions"><button className="primary-button" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button><button className="home-v2-text-action" onClick={() => onNavigate('warmup')}>{t('home.secondaryAction')} <ArrowRight size={16} /></button></div>
-        <div className="home-v2-proof"><span><ShieldCheck size={15} /> {t('home.simpleLocal')}</span><span><Activity size={15} /> {t('home.simpleGuided')}</span></div>
+        <div className="home-aim-actions"><button className="home-aim-primary" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button><button className="home-aim-secondary" onClick={() => onNavigate('warmup')}><span /> {t('home.aimWarmupBadge')}</button></div>
+        <div className="home-aim-proof"><span><ShieldCheck size={15} /> {t('home.simpleLocal')}</span><span><Activity size={15} /> {t('home.simpleGuided')}</span></div>
       </div>
-      <CalibrationSimulation />
+      <AimSight />
     </section>
 
     <section className="home-v2-method">
