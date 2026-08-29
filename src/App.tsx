@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gamepad2, Gauge, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeftRight, Circle, Crosshair, Dot, Flame, Gamepad2, Gauge, House, Languages, ListChecks, Mouse, MousePointer2, Plus, Settings2, Target, X, type LucideIcon } from 'lucide-react'
 import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationHistory, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
 import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, VALIDATION_REPETITIONS, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
@@ -15,10 +15,11 @@ import { Warmup } from './Warmup'
 import { Routine } from './Routine'
 import { CalibrationLanding } from './CalibrationLanding'
 import { CalibrationReportView } from './CalibrationReport'
+import { Home } from './Home'
 import { useI18n, type Locale, type TranslationKey } from './i18n'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
+type AppView = 'home' | 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
 type CalibrationSetupStep = 1 | 2 | 3
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
@@ -56,7 +57,7 @@ function App() {
   const { locale, setLocale, t } = useI18n()
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
-  const [view, setView] = useState<AppView>('routine')
+  const [view, setView] = useState<AppView>('home')
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
   const [plan, setPlan] = useState<CalibrationPlan | null>(null)
@@ -395,6 +396,7 @@ function App() {
     <main className={view === 'calibration' && calibrationStarted ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
         <nav className="app-tabs" aria-label="$ENSI">
+          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} disabled={active}><House size={15} /> {t('nav.home')}</button>
           <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
           <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
           <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
@@ -415,11 +417,11 @@ function App() {
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
               <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')} disabled={active}><Settings2 size={17} /></button>
             </>
-          ) : view === 'calibration' ? null : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
+          ) : view === 'home' || view === 'calibration' ? null : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
         </div>
       </header>
 
-      {view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <SensitivityFinderModal /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
+      {view === 'home' ? <Home onNavigate={(next) => setView(next)} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <SensitivityFinderModal /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
