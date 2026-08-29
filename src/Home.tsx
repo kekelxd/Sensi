@@ -1,4 +1,4 @@
-import { ArrowRight, Crosshair, Flame, Mouse, ShieldCheck, Sparkles, Target } from 'lucide-react'
+import { Activity, ArrowRight, Crosshair, Flame, Gauge, Mouse, ShieldCheck, Sparkles, Target } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useI18n } from './i18n'
 
@@ -40,6 +40,11 @@ export function Home({ onNavigate }: Props) {
     { id: 'warmup', icon: Flame, title: t('home.warmupTitle'), description: t('home.warmupDescription'), action: t('home.warmupAction'), preview: <WarmupPreview /> },
     { id: 'buttons', icon: Mouse, title: t('home.diagnosticsTitle'), description: t('home.diagnosticsDescription'), action: t('home.diagnosticsAction'), preview: <DiagnosticsPreview /> },
   ]
+  const steps = [
+    { icon: Target, title: t('home.stepGameTitle'), description: t('home.stepGameDescription') },
+    { icon: Crosshair, title: t('home.stepTestTitle'), description: t('home.stepTestDescription') },
+    { icon: Sparkles, title: t('home.stepResultTitle'), description: t('home.stepResultDescription') },
+  ]
 
   return <section className="home-workspace">
     <div className="home-hero">
@@ -64,5 +69,24 @@ export function Home({ onNavigate }: Props) {
         </button>
       })}
     </div>
+
+    <section className="home-explainer">
+      <div className="home-section-heading"><div><span>{t('home.howKicker')}</span><h2>{t('home.howTitle')}</h2></div><p>{t('home.howDescription')}</p></div>
+      <div className="home-steps">
+        {steps.map((step, index) => {
+          const Icon = step.icon
+          return <div className="home-step" key={step.title}><span className="home-step-number">0{index + 1}</span><span className="home-step-icon"><Icon size={18} /></span><strong>{step.title}</strong><p>{step.description}</p></div>
+        })}
+      </div>
+    </section>
+
+    <section className="home-confidence">
+      <div className="home-confidence-copy"><span className="panel-label"><ShieldCheck size={15} /> {t('home.confidenceKicker')}</span><h2>{t('home.confidenceTitle')}</h2><p>{t('home.confidenceDescription')}</p><small>{t('home.confidenceNote')}</small></div>
+      <div className="home-confidence-signals">
+        <div><Mouse size={18} /><strong>{t('home.signalInputTitle')}</strong><p>{t('home.signalInputDescription')}</p></div>
+        <div><Gauge size={18} /><strong>{t('home.signalGameTitle')}</strong><p>{t('home.signalGameDescription')}</p></div>
+        <div><Activity size={18} /><strong>{t('home.signalTelemetryTitle')}</strong><p>{t('home.signalTelemetryDescription')}</p></div>
+      </div>
+    </section>
   </section>
 }
