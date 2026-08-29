@@ -2175,6 +2175,85 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   color: #aeb5bf;
   font: 600 12px/1.7 'Plus Jakarta Sans', sans-serif;
 }
+.home-awwwards .home-v2-worth-points > div.home-worth-featured {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 160px;
+  background:
+    radial-gradient(circle at 68% 72%, rgba(141,251,211,.1), transparent 28%),
+    linear-gradient(145deg, rgba(255,48,74,.06), rgba(11,14,18,.75));
+}
+.home-worth-visual {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  height: 118px;
+  pointer-events: none;
+}
+.home-worth-visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  box-shadow: inset 0 0 36px rgba(0,0,0,.42);
+  mask-image: linear-gradient(transparent, #000 18%, #000);
+}
+.home-worth-visual::after {
+  content: '';
+  position: absolute;
+  left: 54%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(141,251,211,.64);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 24px rgba(141,251,211,.16);
+}
+.home-worth-visual i,
+.home-worth-visual b,
+.home-worth-visual em {
+  position: absolute;
+  display: block;
+}
+.home-worth-visual i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--home-red);
+  box-shadow: 0 0 18px rgba(255,48,74,.65);
+  animation: home-worth-correction 3s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.home-worth-visual i:nth-child(1) { left: 18%; top: 54%; }
+.home-worth-visual i:nth-child(2) { left: 68%; top: 26%; animation-delay: -.7s; }
+.home-worth-visual i:nth-child(3) { left: 75%; top: 72%; animation-delay: -1.4s; }
+.home-worth-visual b {
+  left: 54%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--mint);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 7px rgba(141,251,211,.1), 0 0 24px rgba(141,251,211,.7);
+}
+.home-worth-visual em {
+  left: 18%;
+  right: 26%;
+  top: 55%;
+  height: 1px;
+  transform: rotate(-11deg);
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(255,48,74,.08), rgba(255,48,74,.72), rgba(141,251,211,.72));
+  box-shadow: 0 0 18px rgba(255,48,74,.18);
+}
 .home-awwwards .home-v2-disclosure {
   margin-top: 86px;
   padding: 30px;
@@ -2231,6 +2310,9 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 }
 @keyframes home-mini-pop { 50% { transform: scale(.62); opacity: .42; } }
 @keyframes home-dot-run { 50% { transform: translate(82px, -30px); } }
+@keyframes home-worth-correction {
+  50% { transform: translate(-18px, 8px) scale(.72); opacity: .48; }
+}
 
 @media (max-width: 1050px) {
   .home-awwwards .home-v2-hero {
@@ -2276,6 +2358,10 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
     grid-row: auto;
     transform: none;
   }
+  .home-awwwards .home-v2-worth-points > div.home-worth-featured {
+    padding-bottom: 22px;
+  }
+  .home-worth-visual { display: none; }
   .home-awwwards .home-v2-tool-list button,
   .home-awwwards .home-tool-calibration {
     grid-area: auto;

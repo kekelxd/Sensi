@@ -40,8 +40,8 @@ export function Home({ onNavigate }: Props) {
     { id: 'warmup', icon: Flame, title: t('home.warmupTitle'), description: t('home.simpleWarmupDescription'), action: t('home.warmupAction') },
     { id: 'buttons', icon: Mouse, title: t('home.diagnosticsTitle'), description: t('home.simpleDiagnosticsDescription'), action: t('home.diagnosticsAction') },
   ]
-  const benefits: Array<{ icon: LucideIcon, title: string, description: string }> = [
-    { icon: CheckCircle2, title: t('home.benefitLessGuessTitle'), description: t('home.benefitLessGuessDescription') },
+  const benefits: Array<{ icon: LucideIcon, title: string, description: string, visual?: 'comparison' }> = [
+    { icon: CheckCircle2, title: t('home.benefitLessGuessTitle'), description: t('home.benefitLessGuessDescription'), visual: 'comparison' },
     { icon: Lightbulb, title: t('home.benefitUnderstandTitle'), description: t('home.benefitUnderstandDescription') },
     { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
@@ -96,7 +96,18 @@ export function Home({ onNavigate }: Props) {
       <div className="home-v2-worth-copy"><span>{t('home.benefitKicker')}</span><h2>{t('home.benefitTitle')}</h2><p>{t('home.benefitDescription')}</p><button className="home-v2-text-action" onClick={() => onNavigate('calibration')}>{t('home.benefitAction')} <ArrowRight size={16} /></button></div>
       <div className="home-v2-worth-points">{benefits.map((benefit) => {
         const Icon = benefit.icon
-        return <div key={benefit.title}><Icon size={19} /><strong>{benefit.title}</strong><p>{benefit.description}</p></div>
+        return <div key={benefit.title} className={benefit.visual ? 'home-worth-featured' : undefined}>
+          <Icon size={19} />
+          <strong>{benefit.title}</strong>
+          <p>{benefit.description}</p>
+          {benefit.visual === 'comparison' && <span className="home-worth-visual" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <b />
+            <em />
+          </span>}
+        </div>
       })}</div>
     </section>
 
