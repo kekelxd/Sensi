@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Clipboard, Crosshair, Edit3, Gamepad2, Gauge, HardDrive, Mouse, Plus, Save, Sparkles, Target, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { CheckCircle2, Clipboard, Crosshair, Edit3, Gamepad2, Gauge, HardDrive, Mouse, Plus, Save, Sparkles, Target, Trash2, X } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { useI18n, type Locale } from './i18n'
 
@@ -28,6 +28,11 @@ type PlayerProfileData = {
 }
 
 const STORAGE_KEY = 'xensi-player-profile'
+const RANK_OPTIONS = ['Bronze', 'Silver', 'Gold', 'Diamond Control', 'Radiant', 'Apex Predator']
+const POLLING_OPTIONS = ['125Hz', '500Hz', '1000Hz', '4000Hz', '8000Hz']
+const MOUSEPAD_OPTIONS = ['Tecido Control', 'Tecido Speed', 'Vidro', 'Híbrido', 'E-sports Control']
+const SKATE_OPTIONS = ['Stock', 'Dot Skates 100% PTFE', 'Glass Skates']
+const ASPECT_OPTIONS = ['16:9', '4:3 stretched', '16:10']
 
 const copy = {
   pt: {
@@ -63,6 +68,8 @@ const copy = {
     rank: 'Rank',
     avatar: 'URL do avatar',
     game: 'Jogo',
+    addNewGame: 'Adicionar novo jogo',
+    removeGame: 'Remover jogo',
     save: 'Salvar',
     cancel: 'Cancelar',
   },
@@ -99,6 +106,8 @@ const copy = {
     rank: 'Rank',
     avatar: 'Avatar URL',
     game: 'Game',
+    addNewGame: 'Add new game',
+    removeGame: 'Remove game',
     save: 'Save',
     cancel: 'Cancel',
   },
@@ -135,6 +144,8 @@ const copy = {
     rank: 'Rango',
     avatar: 'URL del avatar',
     game: 'Juego',
+    addNewGame: 'Añadir nuevo juego',
+    removeGame: 'Eliminar juego',
     save: 'Guardar',
     cancel: 'Cancelar',
   },
@@ -251,6 +262,18 @@ export function PlayerProfile() {
       games: current.games.map((game, gameIndex) => gameIndex === index ? { ...game, ...patch } : game),
     }))
   }
+  const addDraftGame = () => {
+    setDraft((current) => ({
+      ...current,
+      games: [...current.games, { id: 'overwatch2', dpi: 800, sensitivity: 4.5, fov: 103, aspectRatio: '16:9' }],
+    }))
+  }
+  const removeDraftGame = (index: number) => {
+    setDraft((current) => ({
+      ...current,
+      games: current.games.length <= 1 ? current.games : current.games.filter((_, gameIndex) => gameIndex !== index),
+    }))
+  }
 
   return <section className="profile-workspace">
     <div className="profile-shell">
@@ -336,29 +359,48 @@ export function PlayerProfile() {
       <div className="setup-modal profile-editor">
         <button className="modal-close" onClick={() => setEditing(false)}><X size={18} /></button>
         <span className="modal-kicker"><Edit3 size={15} /> {text.editTitle}</span>
-        <div className="profile-editor-grid">
-          <label>{text.nickname}<input value={draft.nickname} onChange={(event) => setDraft({ ...draft, nickname: event.target.value })} /></label>
-          <label>{text.tag}<input value={draft.tag} onChange={(event) => setDraft({ ...draft, tag: event.target.value })} /></label>
-          <label>{text.rank}<input value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })} /></label>
-          <label>{text.precisionLevel}<input type="number" value={draft.accuracyLevel} onChange={(event) => setDraft({ ...draft, accuracyLevel: Math.max(0, Math.min(100, numberOr(event.target.value, draft.accuracyLevel))) })} /></label>
-          <label>{text.avatar}<input value={draft.avatarUrl} onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })} /></label>
-          <label>{text.mouse}<input value={draft.mouseModel} onChange={(event) => setDraft({ ...draft, mouseModel: event.target.value })} /></label>
-          <label>{text.weight}<input value={draft.mouseWeight} onChange={(event) => setDraft({ ...draft, mouseWeight: event.target.value })} /></label>
-          <label>{text.mousepad}<input value={draft.mousepad} onChange={(event) => setDraft({ ...draft, mousepad: event.target.value })} /></label>
-          <label>{text.polling}<input value={draft.pollingRate} onChange={(event) => setDraft({ ...draft, pollingRate: event.target.value })} /></label>
-          <label>{text.skates}<input value={draft.skates} onChange={(event) => setDraft({ ...draft, skates: event.target.value })} /></label>
-          <label>{text.training}<input value={draft.preferredTraining} onChange={(event) => setDraft({ ...draft, preferredTraining: event.target.value })} /></label>
-          <label>{text.crosshair}<input value={draft.crosshair} onChange={(event) => setDraft({ ...draft, crosshair: event.target.value })} /></label>
+        <div className="profile-editor-section">
+          <strong>{text.identity}</strong>
+          <div className="profile-editor-grid">
+            <label className="profile-field">{text.nickname}<span className="profile-prefixed-field"><b>@</b><input value={draft.nickname} onChange={(event) => setDraft({ ...draft, nickname: event.target.value })} /></span></label>
+            <label className="profile-field">{text.tag}<span className="profile-prefixed-field"><b>#</b><input value={draft.tag.replace(/^#/, '')} onChange={(event) => setDraft({ ...draft, tag: `#${event.target.value.replace(/^#/, '')}` })} /></span></label>
+            <label className="profile-field">{text.rank}<select value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })}>{RANK_OPTIONS.map((rank) => <option key={rank} value={rank}>{rank}</option>)}</select></label>
+            <label className="profile-field profile-slider-field">{text.precisionLevel}<span>{draft.accuracyLevel}%</span><input type="range" min="0" max="100" value={draft.accuracyLevel} style={{ '--profile-range': `${draft.accuracyLevel}%` } as CSSProperties} onChange={(event) => setDraft({ ...draft, accuracyLevel: Number(event.target.value) })} /></label>
+            <label className="profile-field profile-wide-field">{text.avatar}<input value={draft.avatarUrl} onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })} /></label>
+          </div>
+        </div>
+        <div className="profile-editor-section">
+          <strong>{text.hardware}</strong>
+          <div className="profile-editor-grid">
+            <label className="profile-field">{text.mouse}<input list="profile-mouse-models" value={draft.mouseModel} onChange={(event) => setDraft({ ...draft, mouseModel: event.target.value })} /></label>
+            <label className="profile-field">{text.weight}<input value={draft.mouseWeight} onChange={(event) => setDraft({ ...draft, mouseWeight: event.target.value })} /></label>
+            <label className="profile-field">{text.mousepad}<select value={draft.mousepad} onChange={(event) => setDraft({ ...draft, mousepad: event.target.value })}>{MOUSEPAD_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+            <label className="profile-field profile-wide-field">{text.polling}<span className="profile-chip-row">{POLLING_OPTIONS.map((option) => <button key={option} type="button" className={draft.pollingRate === option ? 'selected' : ''} onClick={() => setDraft({ ...draft, pollingRate: option })}>{option}</button>)}</span></label>
+            <label className="profile-field profile-wide-field">{text.skates}<span className="profile-chip-row">{SKATE_OPTIONS.map((option) => <button key={option} type="button" className={draft.skates === option ? 'selected' : ''} onClick={() => setDraft({ ...draft, skates: option })}>{option}</button>)}</span></label>
+            <label className="profile-field">{text.training}<input value={draft.preferredTraining} onChange={(event) => setDraft({ ...draft, preferredTraining: event.target.value })} /></label>
+            <label className="profile-field">{text.crosshair}<input value={draft.crosshair} onChange={(event) => setDraft({ ...draft, crosshair: event.target.value })} /></label>
+          </div>
+          <datalist id="profile-mouse-models">
+            <option value="Logitech G Pro X Superlight" />
+            <option value="Razer Viper V3 Pro" />
+            <option value="Zowie EC2-CW" />
+            <option value="Finalmouse UltralightX" />
+          </datalist>
         </div>
         <div className="profile-editor-games">
-          {draft.games.map((preset, index) => <div key={`${preset.id}-${index}`}>
-            <select value={preset.id} onChange={(event) => updateDraftGame(index, { id: event.target.value as GameId })}>
+          <div className="profile-editor-games-head">
+            <strong>{text.gamePresets}</strong>
+            <button type="button" onClick={addDraftGame}><Plus size={14} /> {text.addNewGame}</button>
+          </div>
+          {draft.games.map((preset, index) => <div className="profile-game-row" key={`${preset.id}-${index}`}>
+            <label>{text.game}<select value={preset.id} onChange={(event) => updateDraftGame(index, { id: event.target.value as GameId })}>
               {GAMES.map((game) => <option key={game.id} value={game.id}>{game.label}</option>)}
-            </select>
-            <input type="number" value={preset.dpi} aria-label={text.dpi} onChange={(event) => updateDraftGame(index, { dpi: numberOr(event.target.value, preset.dpi) })} />
-            <input type="number" step="0.001" value={preset.sensitivity} aria-label={text.sens} onChange={(event) => updateDraftGame(index, { sensitivity: numberOr(event.target.value, preset.sensitivity) })} />
-            <input type="number" value={preset.fov} aria-label={text.fov} onChange={(event) => updateDraftGame(index, { fov: numberOr(event.target.value, preset.fov) })} />
-            <input value={preset.aspectRatio} aria-label={text.aspect} onChange={(event) => updateDraftGame(index, { aspectRatio: event.target.value })} />
+            </select></label>
+            <label>{text.dpi}<input type="number" value={preset.dpi} aria-label={text.dpi} onChange={(event) => updateDraftGame(index, { dpi: numberOr(event.target.value, preset.dpi) })} /></label>
+            <label>{text.sens}<input type="number" step="0.001" value={preset.sensitivity} aria-label={text.sens} onChange={(event) => updateDraftGame(index, { sensitivity: numberOr(event.target.value, preset.sensitivity) })} /></label>
+            <label className="profile-game-fov">{text.fov}<span>{preset.fov}°</span><input type="range" min="60" max="120" value={preset.fov} style={{ '--profile-range': `${((preset.fov - 60) / 60) * 100}%` } as CSSProperties} onChange={(event) => updateDraftGame(index, { fov: Number(event.target.value) })} /></label>
+            <label className="profile-game-aspect">{text.aspect}<span className="profile-chip-row">{ASPECT_OPTIONS.map((option) => <button key={option} type="button" className={preset.aspectRatio === option ? 'selected' : ''} onClick={() => updateDraftGame(index, { aspectRatio: option })}>{option}</button>)}</span></label>
+            <button className="profile-remove-game" type="button" aria-label={text.removeGame} onClick={() => removeDraftGame(index)} disabled={draft.games.length <= 1}><Trash2 size={16} /></button>
           </div>)}
         </div>
         <div className="modal-actions">
