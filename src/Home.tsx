@@ -32,8 +32,8 @@ export function Home({ onNavigate }: Props) {
     <section className="home-v2-hero">
       <div className="home-v2-hero-copy">
         <span className="home-v2-eyebrow"><Sparkles size={14} /> {t('home.v2Kicker')}</span>
-        <h1>{t('home.v2Title')}</h1>
-        <p>{t('home.v2Description')}</p>
+        <h1><span>$ENSI</span> {t('home.v2HeroTitle')}</h1>
+        <p>{t('home.v2HeroDescription')}</p>
         <div className="home-v2-actions"><button className="primary-button" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button><button className="home-v2-text-action" onClick={() => onNavigate('warmup')}>{t('home.secondaryAction')} <ArrowRight size={16} /></button></div>
         <div className="home-v2-proof"><span><ShieldCheck size={15} /> {t('home.trustLocal')}</span><span><Activity size={15} /> {t('home.trustGuided')}</span></div>
       </div>
