@@ -69,20 +69,20 @@ function XboxController({ gamepad, leftX, leftY, rightX, rightY }: { gamepad: Ga
       <linearGradient id="xbox-body" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#2a3440" /><stop offset=".55" stopColor="#151d27" /><stop offset="1" stopColor="#0c1118" /></linearGradient>
       <radialGradient id="xbox-stick" cx="35%" cy="28%"><stop stopColor="#3b4654" /><stop offset="1" stopColor="#10161e" /></radialGradient>
     </defs>
-    <path className="xbox-body" d="M151 78C192 48 247 55 302 61C337 64 383 64 418 61C473 55 528 48 569 78C621 117 650 181 641 244L619 334C609 377 584 400 558 391C527 381 505 330 476 294H244C215 330 193 381 162 391C136 400 111 377 101 334L79 244C70 181 99 117 151 78Z" />
+    <path className="xbox-body" d="M151 78C192 48 247 55 302 61C337 64 383 64 418 61C473 55 528 48 569 78C621 117 650 181 641 244L619 334C609 377 584 400 558 391C527 381 505 365 476 338H244C215 365 193 381 162 391C136 400 111 377 101 334L79 244C70 181 99 117 151 78Z" />
     <path className="xbox-top-seam" d="M158 80C205 98 221 115 231 139M562 80C515 98 499 115 489 139" />
     <rect className="xbox-trigger" x="104" y="22" width="130" height="31" rx="12" /><rect className="xbox-trigger-fill" x="104" y="22" width={130 * buttonValue(gamepad, 6)} height="31" rx="12" /><text className="xbox-trigger-label" x="169" y="42" textAnchor="middle">LT</text>
     <rect className="xbox-trigger" x="486" y="22" width="130" height="31" rx="12" /><rect className="xbox-trigger-fill" x="486" y="22" width={130 * buttonValue(gamepad, 7)} height="31" rx="12" /><text className="xbox-trigger-label" x="551" y="42" textAnchor="middle">RT</text>
     <rect className={`xbox-bumper ${isPressed(gamepad, 4) ? 'active' : ''}`} x="126" y="62" width="126" height="24" rx="10" /><text className="xbox-bumper-label" x="189" y="78" textAnchor="middle">LB</text>
     <rect className={`xbox-bumper ${isPressed(gamepad, 5) ? 'active' : ''}`} x="468" y="62" width="126" height="24" rx="10" /><text className="xbox-bumper-label" x="531" y="78" textAnchor="middle">RB</text>
-    <circle className={`xbox-home ${isPressed(gamepad, 16) ? 'active' : ''}`} cx="360" cy="111" r="19" /><text className="xbox-home-mark" x="360" y="117" textAnchor="middle">X</text>
+    <circle className={`xbox-home ${isPressed(gamepad, 16) ? 'active' : ''}`} cx="360" cy="111" r="19" /><text className="xbox-home-mark" x="360" y="116" textAnchor="middle">⊙</text>
     <g className="xbox-menu-buttons"><rect className={`xbox-menu ${isPressed(gamepad, 8) ? 'active' : ''}`} x="313" y="145" width="32" height="19" rx="8" /><text x="329" y="158" textAnchor="middle">◫</text><rect className={`xbox-menu ${isPressed(gamepad, 9) ? 'active' : ''}`} x="375" y="145" width="32" height="19" rx="8" /><text x="391" y="158" textAnchor="middle">☰</text></g>
     <XboxStick x={220} y={172} label="L3" pressed={isPressed(gamepad, 10)} axisX={leftX} axisY={leftY} />
-    <g className="xbox-dpad">
+    <g className="xbox-dpad" transform="translate(0 -12)">
       <circle className="xbox-dpad-base" cx="273" cy="279" r="54" />
       <path className={isPressed(gamepad, 12) ? 'active' : ''} d="M256 228H290V262H256Z" /><path className={isPressed(gamepad, 14) ? 'active' : ''} d="M222 262H256V296H222Z" /><path className={isPressed(gamepad, 15) ? 'active' : ''} d="M290 262H324V296H290Z" /><path className={isPressed(gamepad, 13) ? 'active' : ''} d="M256 296H290V330H256Z" />
     </g>
-    <XboxStick x={445} y={274} label="R3" pressed={isPressed(gamepad, 11)} axisX={rightX} axisY={rightY} />
+    <XboxStick x={445} y={262} label="R3" pressed={isPressed(gamepad, 11)} axisX={rightX} axisY={rightY} />
     <XboxButton x={535} y={132} label="Y" tone="y" pressed={isPressed(gamepad, 3)} /><XboxButton x={503} y={164} label="X" tone="x" pressed={isPressed(gamepad, 2)} /><XboxButton x={567} y={164} label="B" tone="b" pressed={isPressed(gamepad, 1)} /><XboxButton x={535} y={196} label="A" tone="a" pressed={isPressed(gamepad, 0)} />
   </svg>
 }
