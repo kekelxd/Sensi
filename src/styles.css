@@ -1685,6 +1685,8 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   position: relative;
   padding: 34px clamp(18px, 5vw, 74px) 70px;
   color: var(--home-paper);
@@ -1696,6 +1698,12 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
     linear-gradient(315deg, rgba(141,251,211,.055), transparent 31%);
   background-size: 42px 42px, 42px 42px, auto, auto;
   cursor: none;
+}
+.home-awwwards::-webkit-scrollbar,
+.home-v2-workspace::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 .home-awwwards *, .home-awwwards *::before, .home-awwwards *::after { letter-spacing: 0; }
 .home-awwwards::before {
