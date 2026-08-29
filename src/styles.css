@@ -695,6 +695,108 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .finder-round-transition { position: absolute; z-index: 4; inset: 0; display: grid; place-content: center; justify-items: center; gap: 7px; padding: 24px; background: rgba(5,7,10,.76); backdrop-filter: blur(8px); color: #f1eee7; text-align: center; pointer-events: none; animation: finder-round-fade 1.8s ease both; }.finder-round-transition span { color: var(--accent); font: 500 10px DM Mono, monospace; letter-spacing: .16em; }.finder-round-transition strong { color: #fff; font: 500 clamp(54px, 10vw, 108px) DM Mono, monospace; line-height: .9; text-shadow: 0 0 30px rgba(255,114,81,.3); }.finder-round-transition p { margin: 4px 0 0; color: #a8afb8; font-size: 11px; }.finder-round-transition::after { content: ''; width: min(240px, 60vw); height: 2px; margin-top: 8px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: finder-round-line 1.8s ease both; }@keyframes finder-round-fade { 0% { opacity: 0; } 16%, 78% { opacity: 1; } 100% { opacity: 0; } }@keyframes finder-round-line { from { transform: scaleX(0); opacity: .2; } 50% { transform: scaleX(1); opacity: 1; } to { transform: scaleX(.55); opacity: 0; } }
 .finder-report-workspace { text-align: center; }.finder-report-workspace > .panel-label { justify-content: center; color: var(--mint); }.finder-report-workspace h1, .finder-report-workspace > p { margin-left: auto; margin-right: auto; }.finder-result-hero { width: min(760px, 100%); margin: 30px auto 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }.finder-result-hero > div { padding: 20px; border: 1px solid var(--line); border-radius: 11px; background: rgba(13,16,22,.88); text-align: left; }.finder-result-hero span, .finder-result-hero strong, .finder-result-hero small { display: block; }.finder-result-hero span { color: #7c8490; font-size: 9px; }.finder-result-hero strong { margin: 6px 0; color: var(--mint); font: 500 35px DM Mono, monospace; letter-spacing: -.08em; }.finder-result-hero strong small { display: inline; font-size: 10px; letter-spacing: 0; }.finder-result-hero > div:first-child strong { color: var(--accent); }.finder-result-hero > div > small { color: #9298a2; font-size: 9px; }.finder-telemetry-grid { width: min(760px, 100%); margin: 8px auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }.finder-telemetry-grid div { padding: 12px 8px; border: 1px solid var(--line); border-radius: 8px; background: #0b0e13; }.finder-telemetry-grid span, .finder-telemetry-grid strong { display: block; }.finder-telemetry-grid span { color: #7c838e; font-size: 8px; }.finder-telemetry-grid strong { margin-top: 5px; color: #ece9e1; font: 500 13px DM Mono, monospace; }.finder-explanation { width: min(760px, 100%); margin: 16px auto; display: flex; align-items: flex-start; gap: 10px; padding: 13px; border: 1px solid rgba(141,251,211,.18); border-radius: 9px; background: rgba(141,251,211,.04); color: var(--mint); text-align: left; }.finder-explanation p { margin: 0; color: #adb3bb; font-size: 9px; line-height: 1.65; }.finder-explanation strong { color: #e6e3dc; }.finder-report-actions { display: flex; justify-content: center; gap: 8px; margin-top: 22px; }.finder-report-actions button { display: flex; align-items: center; gap: 6px; }
 
+/* Tactical player profile */
+.profile-workspace {
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(26px, 5vh, 58px) clamp(16px, 5vw, 76px) 54px;
+  color: #f4f0e8;
+  background:
+    radial-gradient(circle at 76% 12%, rgba(255,42,85,.13), transparent 27%),
+    linear-gradient(rgba(255,42,85,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,42,85,.035) 1px, transparent 1px),
+    #090a0d;
+  background-size: auto, 42px 42px, 42px 42px, auto;
+}
+.profile-shell { width: min(1180px, 100%); margin: 0 auto; }
+.profile-hero { display: flex; align-items: end; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
+.profile-kicker { display: inline-flex; align-items: center; gap: 8px; color: var(--nav-red); font: 800 10px 'DM Mono', monospace; letter-spacing: .16em; text-transform: uppercase; }
+.profile-hero h1 { margin: 13px 0 8px; color: #fff; font: 800 clamp(36px, 5vw, 68px)/.9 Syne, sans-serif; letter-spacing: -.06em; text-transform: uppercase; }
+.profile-hero p { max-width: 620px; margin: 0; color: #aeb5bf; font: 600 13px/1.7 'Plus Jakarta Sans', sans-serif; }
+.profile-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.profile-actions button { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 13px; border: 1px solid rgba(255,255,255,.1); border-radius: 9px; color: #e8e5df; background: rgba(12,15,20,.8); font: 800 10px 'Plus Jakarta Sans', sans-serif; transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.profile-actions button:hover { transform: translateY(-2px); border-color: rgba(255,42,85,.55); box-shadow: 0 12px 28px rgba(255,42,85,.08); }
+.profile-actions .profile-export { color: #07090c; border-color: transparent; background: var(--nav-red); }
+.profile-status { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 10px; color: var(--mint); font: 800 10px 'Plus Jakarta Sans', sans-serif; }
+.profile-grid { display: grid; grid-template-columns: 1.05fr .95fr 1.4fr; grid-template-areas: "identity hardware presets" "tactical hardware presets"; gap: 14px; }
+.profile-card { position: relative; overflow: hidden; min-height: 210px; padding: 22px; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; background: linear-gradient(145deg, rgba(14,17,22,.88), rgba(7,9,12,.92)); box-shadow: inset 0 0 55px rgba(255,42,85,.025); animation: profile-card-in .36s ease both; }
+.profile-card::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(#000, transparent 82%); }
+.profile-card > span { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; color: var(--mint); font: 800 10px 'DM Mono', monospace; letter-spacing: .13em; text-transform: uppercase; }
+.profile-identity { grid-area: identity; }
+.profile-hardware { grid-area: hardware; }
+.profile-presets { grid-area: presets; min-height: 438px; }
+.profile-tactical { grid-area: tactical; }
+.profile-agent { position: relative; z-index: 1; display: flex; align-items: center; gap: 16px; margin-top: 24px; }
+.profile-avatar { width: 92px; height: 92px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(255,42,85,.82); border-radius: 24px; background: radial-gradient(circle at 50% 32%, rgba(255,42,85,.44), rgba(15,18,24,.98)); box-shadow: 0 0 0 6px rgba(255,42,85,.08), 0 18px 42px rgba(0,0,0,.28); }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-avatar strong { color: #fff; font: 800 30px Syne, sans-serif; }
+.profile-agent h2 { margin: 0; color: #fff; font: 800 30px/1 Syne, sans-serif; letter-spacing: -.04em; }
+.profile-agent small { color: var(--nav-red); font: 800 11px 'DM Mono', monospace; letter-spacing: .12em; }
+.profile-rank { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 22px; }
+.profile-rank div, .profile-tactical-values div { padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(6,8,11,.6); }
+.profile-rank small, .profile-tactical-values small { display: block; color: #7d8794; font: 700 8px 'DM Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+.profile-rank strong, .profile-tactical-values strong { display: block; margin-top: 5px; color: #f4f1eb; font: 800 13px 'Plus Jakarta Sans', sans-serif; }
+.profile-progress { position: relative; z-index: 1; height: 7px; overflow: hidden; margin-top: 14px; border-radius: 999px; background: rgba(255,255,255,.07); }
+.profile-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--nav-red), var(--mint)); box-shadow: 0 0 20px rgba(255,42,85,.34); }
+.profile-hardware dl { position: relative; z-index: 1; display: grid; gap: 10px; margin: 22px 0 0; }
+.profile-hardware dl div { padding: 13px 14px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(6,8,11,.62); }
+.profile-hardware dt { color: #7f8894; font: 800 8px 'DM Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+.profile-hardware dd { margin: 5px 0 0; color: #f0ede7; font: 800 13px 'Plus Jakarta Sans', sans-serif; }
+.profile-game-tabs { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(5, minmax(72px, 1fr)); gap: 8px; margin-top: 20px; }
+.profile-game-tabs button { min-height: 88px; display: grid; gap: 6px; justify-items: center; padding: 8px; border: 1px solid rgba(255,255,255,.09); border-radius: 12px; color: #aeb6c0; background: rgba(6,8,11,.7); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.profile-game-tabs button:hover { transform: translateY(-2px); border-color: rgba(255,42,85,.45); }
+.profile-game-tabs button.selected { color: #fff; border-color: var(--nav-red); box-shadow: 0 0 0 1px rgba(255,42,85,.22), 0 18px 35px rgba(255,42,85,.08); }
+.profile-game-tabs strong { font: 900 9px 'Plus Jakarta Sans', sans-serif; }
+.profile-game-icon { width: 48px; height: 48px; display: block; overflow: hidden; border-radius: 10px; background: #0a0d12; }
+.profile-game-icon img { width: 100%; height: 100%; object-fit: cover; }
+.profile-game-panel { position: relative; z-index: 1; margin-top: 16px; padding: 18px; border: 1px solid rgba(255,42,85,.18); border-radius: 14px; background: radial-gradient(circle at 75% 18%, rgba(255,42,85,.14), transparent 30%), rgba(8,10,14,.78); animation: profile-panel-in .22s ease both; }
+.profile-game-title { display: flex; align-items: center; gap: 12px; }
+.profile-game-title .profile-game-icon { width: 58px; height: 58px; }
+.profile-game-title small, .profile-game-title strong { display: block; }
+.profile-game-title small { color: #929ba6; font: 800 9px 'DM Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
+.profile-game-title strong { margin-top: 4px; color: #fff; font: 800 36px/1 Syne, sans-serif; }
+.profile-stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 18px; }
+.profile-stat-grid div { min-height: 92px; padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(5,7,10,.64); }
+.profile-stat-grid svg { color: var(--nav-red); }
+.profile-stat-grid span, .profile-stat-grid strong { display: block; }
+.profile-stat-grid span { margin-top: 12px; color: #808996; font: 800 8px 'DM Mono', monospace; letter-spacing: .12em; text-transform: uppercase; }
+.profile-stat-grid strong { margin-top: 4px; color: #f7f3eb; font: 800 15px 'Plus Jakarta Sans', sans-serif; overflow-wrap: anywhere; }
+.profile-tactical-ring { position: relative; z-index: 1; width: 135px; height: 135px; margin: 24px auto 18px; border: 1px solid rgba(255,42,85,.55); border-radius: 999px; background: radial-gradient(circle, rgba(255,42,85,.18), transparent 62%); animation: profile-ring 6s linear infinite; }
+.profile-tactical-ring::before, .profile-tactical-ring::after { content: ''; position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: rgba(255,42,85,.34); }
+.profile-tactical-ring::after { transform: rotate(90deg); }
+.profile-tactical-ring i { position: absolute; inset: 34px; border: 1px solid rgba(141,251,211,.52); border-radius: inherit; }
+.profile-tactical-ring b { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; border-radius: 999px; background: var(--mint); transform: translate(-50%, -50%); box-shadow: 0 0 24px rgba(141,251,211,.68); }
+.profile-tactical-values { position: relative; z-index: 1; display: grid; gap: 8px; }
+.profile-editor { width: min(920px, calc(100vw - 24px)); }
+.profile-editor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+.profile-editor-games { display: grid; gap: 8px; margin-top: 18px; }
+.profile-editor-games div { display: grid; grid-template-columns: minmax(150px, 1.3fr) repeat(4, minmax(72px, .7fr)); gap: 7px; }
+.profile-editor select { height: 42px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: #e9e6df; background: #0a0d12; font: 700 10px 'Plus Jakarta Sans', sans-serif; }
+@keyframes profile-card-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes profile-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes profile-ring { to { transform: rotate(360deg); } }
+@media (max-width: 1050px) {
+  .profile-hero { align-items: flex-start; flex-direction: column; }
+  .profile-actions { justify-content: flex-start; }
+  .profile-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "identity hardware"
+      "presets presets"
+      "tactical tactical";
+  }
+}
+@media (max-width: 720px) {
+  .profile-workspace { padding: 24px 14px 42px; }
+  .profile-grid { grid-template-columns: 1fr; grid-template-areas: "identity" "hardware" "presets" "tactical"; }
+  .profile-agent, .profile-rank, .profile-stat-grid, .profile-editor-grid { grid-template-columns: 1fr; }
+  .profile-agent { align-items: flex-start; }
+  .profile-game-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-editor-games div { grid-template-columns: 1fr 1fr; }
+  .profile-editor-games select { grid-column: 1 / -1; }
+}
+
 .home-workspace { min-height: 0; overflow-y: auto; padding: clamp(30px, 5vh, 68px) clamp(18px, 7vw, 116px) 58px; background: radial-gradient(circle at 67% 18%, rgba(255,114,81,.1), transparent 25%), radial-gradient(circle at 13% 70%, rgba(141,251,211,.045), transparent 23%), #090c11; }
 .home-hero { width: min(1160px, 100%); min-height: 410px; margin: 0 auto; display: grid; grid-template-columns: minmax(300px, .9fr) minmax(430px, 1.1fr); align-items: center; gap: clamp(36px, 7vw, 100px); }
 .home-hero-copy .panel-label { display: flex; align-items: center; gap: 7px; color: var(--accent); }.home-hero-copy h1 { max-width: 580px; margin: 17px 0 14px; color: #f2f0e9; font-size: clamp(42px, 5.5vw, 70px); line-height: .98; letter-spacing: -.075em; }.home-hero-copy > p { max-width: 500px; margin: 0; color: #9da4ae; font-size: 14px; line-height: 1.8; }
