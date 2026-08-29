@@ -13,6 +13,10 @@ function AimSight() {
     <span className="home-aim-sight-ring home-aim-sight-ring-three" />
     <span className="home-aim-sight-line home-aim-sight-line-horizontal" />
     <span className="home-aim-sight-line home-aim-sight-line-vertical" />
+    <span className="home-aim-sight-sweep" />
+    <span className="home-aim-sight-contact home-aim-sight-contact-one" />
+    <span className="home-aim-sight-contact home-aim-sight-contact-two" />
+    <span className="home-aim-sight-contact home-aim-sight-contact-three" />
     <span className="home-aim-sight-core" />
     <small>{'TARGET://SENSI'}</small>
     <b>{'READY TO CALIBRATE'}</b>
