@@ -395,30 +395,32 @@ function App() {
   return (
     <main className={view === 'calibration' && calibrationStarted ? 'app-shell' : 'app-shell tool-shell'}>
       <header className="app-header">
-        <nav className="app-tabs" aria-label="$ENSI">
-          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} disabled={active}><House size={15} /> {t('nav.home')}</button>
-          <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
-          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
-          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
-          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
-          <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> Polling Rate</button>
-          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /><Gamepad2 size={15} /> {t('nav.input')}</button>
-        </nav>
-        <div className="brand"><span>$</span>ENSI</div>
-        <div className="header-actions">
+        <div className="app-topbar">
+          <div className="brand"><span>X</span>ENSI</div>
           <label className="language-switcher" aria-label={t('language.selector')}>
             <Languages size={15} />
             <select value={locale} onChange={(event) => setLocale(event.target.value as Locale)} aria-label={t('language.selector')}>
               <option value="pt">Português</option><option value="en">English</option><option value="es">Español</option>
             </select>
           </label>
-          {view === 'calibration' && calibrationStarted ? (
+        </div>
+        <nav className="app-tabs" aria-label="XENSI">
+          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} disabled={active}><House size={15} /> {t('nav.home')}</button>
+          <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
+          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
+          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
+          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
+          <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> {t('nav.polling')}</button>
+          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /><Gamepad2 size={15} /> {t('nav.input')}</button>
+        </nav>
+        {view === 'calibration' && calibrationStarted && (
+          <div className="header-context">
             <>
               <span>{t('header.rounds', { completed: results.length, total: totalRounds })}</span>
               <button className="icon-button" onClick={openSetup} aria-label={t('header.openSettings')} disabled={active}><Settings2 size={17} /></button>
             </>
-          ) : view === 'home' || view === 'calibration' ? null : view === 'routine' ? <span>{t('header.dailyRoutine')}</span> : view !== 'warmup' && <span>{view === 'converter' ? t('header.conversion') : view === 'buttons' ? t('header.inputDiagnostics') : t('header.mouseDiagnostics')}</span>}
-        </div>
+          </div>
+        )}
       </header>
 
       {view === 'home' ? <Home onNavigate={(next) => setView(next)} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup /> : view === 'calibration' ? <SensitivityFinderModal /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
