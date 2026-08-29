@@ -1,4 +1,4 @@
-import { Activity, ArrowRight, CircleAlert, Crosshair, Flame, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Sparkles, Target, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Sparkles, Target, TimerReset, type LucideIcon } from 'lucide-react'
 import { useI18n } from './i18n'
 
 export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
@@ -26,6 +26,11 @@ export function Home({ onNavigate }: Props) {
     { id: 'calibration', icon: Crosshair, title: t('home.calibrationTitle'), description: t('home.simpleCalibrationDescription'), action: t('home.calibrationAction') },
     { id: 'warmup', icon: Flame, title: t('home.warmupTitle'), description: t('home.simpleWarmupDescription'), action: t('home.warmupAction') },
     { id: 'buttons', icon: Mouse, title: t('home.diagnosticsTitle'), description: t('home.simpleDiagnosticsDescription'), action: t('home.diagnosticsAction') },
+  ]
+  const benefits: Array<{ icon: LucideIcon, title: string, description: string }> = [
+    { icon: CheckCircle2, title: t('home.benefitLessGuessTitle'), description: t('home.benefitLessGuessDescription') },
+    { icon: Lightbulb, title: t('home.benefitUnderstandTitle'), description: t('home.benefitUnderstandDescription') },
+    { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
 
   return <section className="home-v2-workspace">
@@ -55,6 +60,14 @@ export function Home({ onNavigate }: Props) {
       <div className="home-v2-tool-list">{tools.map((tool, index) => {
         const Icon = tool.icon
         return <button key={tool.id} onClick={() => onNavigate(tool.id)}><span className="home-v2-tool-index">0{index + 1}</span><span className="home-v2-tool-icon"><Icon size={19} /></span><span className="home-v2-tool-copy"><strong>{tool.title}</strong><small>{tool.description}</small></span><span className="home-v2-tool-action">{tool.action} <ArrowRight size={15} /></span></button>
+      })}</div>
+    </section>
+
+    <section className="home-v2-worth">
+      <div className="home-v2-worth-copy"><span>{t('home.benefitKicker')}</span><h2>{t('home.benefitTitle')}</h2><p>{t('home.benefitDescription')}</p><button className="home-v2-text-action" onClick={() => onNavigate('calibration')}>{t('home.benefitAction')} <ArrowRight size={16} /></button></div>
+      <div className="home-v2-worth-points">{benefits.map((benefit) => {
+        const Icon = benefit.icon
+        return <div key={benefit.title}><Icon size={19} /><strong>{benefit.title}</strong><p>{benefit.description}</p></div>
       })}</div>
     </section>
 
