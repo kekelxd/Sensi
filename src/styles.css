@@ -15,6 +15,7 @@
 }
 
 * { box-sizing: border-box; }
+html, #root { max-width: 100%; overflow-x: hidden; }
 body { margin: 0; min-width: 320px; min-height: 100vh; overflow: hidden; }
 button, input { font: inherit; }
 button { cursor: pointer; }
@@ -22,6 +23,8 @@ button { cursor: pointer; }
 .app-shell {
   height: 100vh;
   min-height: 650px;
+  max-width: 100%;
+  overflow-x: hidden;
   display: grid;
   grid-template-rows: 122px 1fr 70px;
   background:
@@ -3229,8 +3232,10 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   position: relative;
   width: 100%;
   max-width: 100vw;
-  min-height: calc(100dvh - 116px);
-  overflow: hidden;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at 74% 14%, rgba(255, 42, 85, .18), transparent 34rem),
     radial-gradient(circle at 10% 70%, rgba(141, 251, 211, .08), transparent 26rem),
