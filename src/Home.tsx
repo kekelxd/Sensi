@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Target, TimerReset, type LucideIcon } from 'lucide-react'
 import { useI18n } from './i18n'
 
@@ -6,14 +7,157 @@ export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
 function GridshotPreview() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+
+    let animationFrame = 0
+    let width = 0
+    let height = 0
+    let dpr = 1
+    const targets = [
+      { x: 0.24, y: 0.30 },
+      { x: 0.74, y: 0.27 },
+      { x: 0.56, y: 0.70 },
+      { x: 0.32, y: 0.62 },
+    ]
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect()
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      width = Math.max(1, Math.floor(rect.width))
+      height = Math.max(1, Math.floor(rect.height))
+      canvas.width = Math.floor(width * dpr)
+      canvas.height = Math.floor(height * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+
+    const drawGrid = (time: number) => {
+      ctx.clearRect(0, 0, width, height)
+      ctx.fillStyle = '#07090c'
+      ctx.fillRect(0, 0, width, height)
+
+      const offset = (time * 0.012) % 38
+      ctx.strokeStyle = 'rgba(255,255,255,.045)'
+      ctx.lineWidth = 1
+      for (let x = -offset; x < width; x += 38) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, height)
+        ctx.stroke()
+      }
+      for (let y = -offset; y < height; y += 38) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+
+      const gradient = ctx.createRadialGradient(width * .55, height * .5, 8, width * .55, height * .5, width * .45)
+      gradient.addColorStop(0, 'rgba(255,48,74,.16)')
+      gradient.addColorStop(1, 'rgba(255,48,74,0)')
+      ctx.fillStyle = gradient
+      ctx.fillRect(0, 0, width, height)
+    }
+
+    const drawTarget = (x: number, y: number, radius: number, alpha: number) => {
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.strokeStyle = '#ff304a'
+      ctx.lineWidth = 2
+      ctx.shadowColor = 'rgba(255,48,74,.52)'
+      ctx.shadowBlur = 18
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
+      ctx.stroke()
+      ctx.fillStyle = '#ff304a'
+      ctx.beginPath()
+      ctx.arc(x, y, radius * .32, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
+
+    const drawCrosshair = (x: number, y: number) => {
+      ctx.save()
+      ctx.strokeStyle = '#8dfbd3'
+      ctx.lineWidth = 2
+      ctx.shadowColor = 'rgba(141,251,211,.55)'
+      ctx.shadowBlur = 7
+      ctx.beginPath()
+      ctx.moveTo(x - 13, y)
+      ctx.lineTo(x + 13, y)
+      ctx.moveTo(x, y - 13)
+      ctx.lineTo(x, y + 13)
+      ctx.stroke()
+      ctx.restore()
+    }
+
+    const drawImpact = (x: number, y: number, progress: number) => {
+      const alpha = Math.max(0, 1 - progress)
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.strokeStyle = '#ff304a'
+      ctx.lineWidth = 2
+      ctx.shadowColor = 'rgba(255,48,74,.7)'
+      ctx.shadowBlur = 16
+      ctx.beginPath()
+      ctx.arc(x, y, 22 + progress * 28, 0, Math.PI * 2)
+      ctx.stroke()
+      for (let i = 0; i < 8; i += 1) {
+        const angle = (Math.PI * 2 * i) / 8
+        const inner = 18 + progress * 18
+        const outer = 34 + progress * 42
+        ctx.beginPath()
+        ctx.moveTo(x + Math.cos(angle) * inner, y + Math.sin(angle) * inner)
+        ctx.lineTo(x + Math.cos(angle) * outer, y + Math.sin(angle) * outer)
+        ctx.stroke()
+      }
+      ctx.restore()
+    }
+
+    const render = (time: number) => {
+      drawGrid(time)
+      const cycle = 1180
+      const raw = time / cycle
+      const index = Math.floor(raw) % targets.length
+      const previous = targets[(index + targets.length - 1) % targets.length]
+      const current = targets[index]
+      const local = raw - Math.floor(raw)
+      const travel = Math.min(1, local / .42)
+      const ease = 1 - Math.pow(1 - travel, 3)
+      const targetX = current.x * width
+      const targetY = current.y * height
+      const crossX = (previous.x + (current.x - previous.x) * ease) * width
+      const crossY = (previous.y + (current.y - previous.y) * ease) * height
+      const hitProgress = local > .52 && local < .82 ? (local - .52) / .3 : -1
+      const targetAlpha = hitProgress >= 0 ? Math.max(0, 1 - hitProgress * 1.5) : 1
+      const radius = 34 + (hitProgress > 0 ? hitProgress * 6 : Math.sin(time * .006) * 2)
+
+      drawTarget(targetX, targetY, radius, targetAlpha)
+      if (hitProgress >= 0) drawImpact(targetX, targetY, hitProgress)
+      drawCrosshair(crossX, crossY)
+      animationFrame = window.requestAnimationFrame(render)
+    }
+
+    resize()
+    const observer = 'ResizeObserver' in window ? new ResizeObserver(resize) : null
+    observer?.observe(canvas)
+    if (!observer) window.addEventListener('resize', resize)
+    animationFrame = window.requestAnimationFrame(render)
+
+    return () => {
+      observer?.disconnect()
+      if (!observer) window.removeEventListener('resize', resize)
+      window.cancelAnimationFrame(animationFrame)
+    }
+  }, [])
+
   return <div className="home-gridshot-preview" aria-hidden="true">
+    <canvas ref={canvasRef} className="home-gridshot-canvas" />
     <span className="home-gridshot-noise" />
-    <span className="home-gridshot-line home-gridshot-line-one" />
-    <span className="home-gridshot-line home-gridshot-line-two" />
-    <span className="home-gridshot-crosshair" />
-    <span className="home-gridshot-target home-gridshot-target-one"><i /><b /><b /><b /></span>
-    <span className="home-gridshot-target home-gridshot-target-two"><i /><b /><b /><b /></span>
-    <span className="home-gridshot-target home-gridshot-target-three"><i /><b /><b /><b /></span>
     <div className="home-gridshot-hud">
       <small>GRIDSHOT</small>
       <strong>+128</strong>

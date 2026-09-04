@@ -2730,6 +2730,14 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   box-shadow: inset 0 0 74px rgba(255,48,74,.055), 0 34px 96px rgba(0,0,0,.36);
   backdrop-filter: blur(6px);
 }
+.home-gridshot-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 .home-gridshot-preview::before {
   content: '';
   position: absolute;
@@ -2757,6 +2765,7 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   transform: translateX(-100%);
   animation: home-gridshot-scan 3.6s linear infinite;
   will-change: transform;
+  pointer-events: none;
 }
 .home-gridshot-line {
   position: absolute;
@@ -2823,6 +2832,11 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
 .home-gridshot-target-two b { animation-delay: -1.2s; }
 .home-gridshot-target-three { left: 49%; bottom: 16%; animation-delay: -2.4s; }
 .home-gridshot-target-three b { animation-delay: -2.4s; }
+.home-gridshot-line,
+.home-gridshot-crosshair,
+.home-gridshot-target {
+  display: none;
+}
 .home-gridshot-hud {
   position: absolute;
   left: 18px;
