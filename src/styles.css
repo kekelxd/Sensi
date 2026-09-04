@@ -1863,6 +1863,23 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   }
 }
 
+body:has(.home-reboot) {
+  overflow: hidden;
+}
+
+.app-shell:has(.home-reboot) {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: 122px minmax(0, 1fr) 70px;
+  overflow: hidden;
+}
+
+.app-shell:has(.home-reboot) .home-reboot {
+  height: 100%;
+  min-height: 0;
+}
+
 @media (min-width: 900px) and (max-height: 680px) {
   .calibration-result-modal {
     padding: 7px 11px;
@@ -3876,5 +3893,874 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
   .home-taste-worth-main button:hover,
   .home-taste-tool:hover {
     transform: none;
+  }
+}
+
+/* XENSI home reboot. Isolated from previous home passes. */
+.home-reboot {
+  --home-bg: #08090d;
+  --home-panel: rgba(13, 15, 21, .82);
+  --home-panel-strong: rgba(18, 20, 28, .94);
+  --home-line: rgba(255, 255, 255, .105);
+  --home-line-hot: rgba(255, 42, 85, .44);
+  --home-text: #f7f3ec;
+  --home-muted: #a8b0bd;
+  --home-soft: #6f7784;
+  --home-accent: #ff3f52;
+  --home-accent-2: #ff6b4a;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  color: var(--home-text);
+  background:
+    radial-gradient(circle at 78% 16%, rgba(255, 42, 85, .20), transparent 32rem),
+    radial-gradient(circle at 12% 82%, rgba(255, 63, 82, .10), transparent 28rem),
+    linear-gradient(rgba(255, 42, 85, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 42, 85, .035) 1px, transparent 1px),
+    var(--home-bg);
+  background-size: auto, auto, 52px 52px, 52px 52px, auto;
+  isolation: isolate;
+}
+
+.home-reboot::-webkit-scrollbar {
+  display: none;
+}
+
+.home-reboot::before,
+.home-reboot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.home-reboot::before {
+  background:
+    radial-gradient(circle at 52% 34%, rgba(255, 63, 82, .13), transparent 18rem),
+    linear-gradient(120deg, transparent 0 42%, rgba(255, 63, 82, .075) 48%, transparent 56%);
+  opacity: .8;
+}
+
+.home-reboot::after {
+  background-image: linear-gradient(110deg, transparent 0 44%, rgba(255, 255, 255, .045) 49%, transparent 54%);
+  background-size: 230% 100%;
+  opacity: .46;
+}
+
+.home-reboot-shell {
+  width: min(1160px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: clamp(28px, 5vh, 56px) 0 64px;
+}
+
+.home-reboot-hero {
+  display: grid;
+  grid-template-columns: minmax(320px, .92fr) minmax(420px, 1.08fr);
+  align-items: center;
+  gap: clamp(28px, 5vw, 68px);
+  min-height: min(640px, calc(100dvh - 154px));
+}
+
+.home-reboot-copy {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.home-reboot-title {
+  display: grid;
+  gap: 0;
+  max-width: 660px;
+  margin: 0;
+  color: var(--home-text);
+  font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+  font-size: clamp(3.15rem, 6.3vw, 5.85rem);
+  line-height: .91;
+  letter-spacing: -.075em;
+  text-transform: uppercase;
+}
+
+.home-reboot-title span {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+
+.home-reboot-title span:nth-child(2) {
+  color: var(--home-accent-2);
+}
+
+.home-reboot-title-brand {
+  font-size: .72em;
+  letter-spacing: -.045em;
+}
+
+.home-reboot-description {
+  width: min(520px, 100%);
+  margin: 0;
+  color: #c4cedb;
+  font-size: clamp(1rem, 1.5vw, 1.11rem);
+  line-height: 1.7;
+}
+
+.home-reboot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.home-reboot-primary,
+.home-reboot-secondary,
+.home-reboot-worth-main button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 22px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font: 900 .9rem 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: translate3d(0, 0, 0);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.home-reboot-primary {
+  color: #0a0b0f;
+  background: linear-gradient(135deg, var(--home-accent), var(--home-accent-2));
+  box-shadow: 0 18px 42px rgba(255, 42, 85, .22);
+}
+
+.home-reboot-secondary,
+.home-reboot-worth-main button {
+  color: var(--home-text);
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(255, 255, 255, .13);
+}
+
+.home-reboot-primary:hover,
+.home-reboot-secondary:hover,
+.home-reboot-worth-main button:hover {
+  transform: translate3d(0, -2px, 0);
+  border-color: rgba(255, 63, 82, .58);
+  box-shadow: 0 18px 42px rgba(255, 42, 85, .14);
+}
+
+.home-reboot-primary:active,
+.home-reboot-secondary:active,
+.home-reboot-worth-main button:active,
+.home-reboot-tool:active {
+  transform: translate3d(0, 1px, 0) scale(.99);
+}
+
+.home-reboot-visual {
+  min-width: 0;
+  transform: rotate(.5deg);
+}
+
+.home-reboot-preview {
+  position: relative;
+  min-height: clamp(330px, 39vw, 470px);
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 52% 52%, rgba(255, 63, 82, .15), transparent 22rem),
+    linear-gradient(135deg, rgba(255, 255, 255, .035), transparent 54%),
+    rgba(8, 10, 15, .88);
+  box-shadow: inset 0 0 74px rgba(255, 63, 82, .055), 0 30px 70px rgba(0, 0, 0, .34);
+  contain: layout paint style;
+}
+
+.home-reboot-preview-grid {
+  position: absolute;
+  inset: -52px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px);
+  background-size: 36px 36px;
+  opacity: .6;
+  transform: translate3d(0, 0, 0);
+}
+
+.home-reboot-preview-path {
+  position: absolute;
+  left: 14%;
+  right: 12%;
+  top: 49%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 63, 82, .8), transparent);
+  transform: rotate(-11deg);
+  opacity: .55;
+}
+
+.home-reboot-target,
+.home-reboot-impact,
+.home-reboot-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+}
+
+.home-reboot-target {
+  width: 58px;
+  height: 58px;
+  border: 2px solid var(--home-accent);
+  box-shadow: 0 0 0 10px rgba(255, 63, 82, .055), 0 0 22px rgba(255, 63, 82, .32);
+}
+
+.home-reboot-target i {
+  position: absolute;
+  inset: 19px;
+  border-radius: inherit;
+  background: var(--home-accent);
+  box-shadow: 0 0 24px rgba(255, 63, 82, .75);
+}
+
+.home-reboot-target-one {
+  transform: translate(-50%, -50%) translate3d(-130px, -76px, 0);
+}
+
+.home-reboot-target-two {
+  transform: translate(-50%, -50%) translate3d(118px, -94px, 0);
+}
+
+.home-reboot-target-three {
+  transform: translate(-50%, -50%) translate3d(46px, 102px, 0);
+}
+
+.home-reboot-crosshair {
+  width: 30px;
+  height: 30px;
+  background:
+    linear-gradient(var(--home-text), var(--home-text)) center / 2px 100% no-repeat,
+    linear-gradient(90deg, var(--home-text), var(--home-text)) center / 100% 2px no-repeat;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, .28));
+}
+
+.home-reboot-impact {
+  width: 74px;
+  height: 74px;
+  border: 1px solid var(--home-accent);
+  opacity: 0;
+}
+
+.home-reboot-impact-one {
+  transform: translate(-50%, -50%) translate3d(-130px, -76px, 0);
+}
+
+.home-reboot-impact-two {
+  transform: translate(-50%, -50%) translate3d(118px, -94px, 0);
+}
+
+.home-reboot-impact-three {
+  transform: translate(-50%, -50%) translate3d(46px, 102px, 0);
+}
+
+.home-reboot-preview-hud {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  display: grid;
+  gap: 5px;
+  min-width: 144px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+  background: rgba(8, 9, 13, .78);
+}
+
+.home-reboot-preview-hud small {
+  color: var(--home-soft);
+  font: 700 .62rem 'DM Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.home-reboot-preview-hud strong {
+  color: var(--home-text);
+  font: 900 1rem 'Plus Jakarta Sans', sans-serif;
+}
+
+.home-reboot-tools,
+.home-reboot-method,
+.home-reboot-worth,
+.home-reboot-disclosure {
+  margin-top: clamp(42px, 8vw, 88px);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 560px;
+}
+
+.home-reboot-section-heading {
+  display: grid;
+  gap: 12px;
+  max-width: 680px;
+  margin-bottom: 20px;
+}
+
+.home-reboot-section-heading h2,
+.home-reboot-worth-main h2 {
+  margin: 0;
+  color: var(--home-text);
+  font: 900 clamp(2rem, 4.4vw, 4.35rem)/.98 'Syne', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -.06em;
+  text-wrap: balance;
+}
+
+.home-reboot-section-heading p,
+.home-reboot-worth-main p {
+  margin: 0;
+  color: var(--home-muted);
+  line-height: 1.65;
+}
+
+.home-reboot-bento {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(300px, .88fr);
+  grid-auto-rows: minmax(174px, auto);
+  gap: 14px;
+}
+
+.home-reboot-tool {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px 20px;
+  align-content: start;
+  min-height: 196px;
+  padding: 24px;
+  border: 1px solid var(--home-line);
+  border-radius: 20px;
+  color: var(--home-text);
+  background: var(--home-panel);
+  text-align: left;
+  cursor: pointer;
+  transform: translate3d(0, 0, 0);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+  contain: layout paint style;
+}
+
+.home-reboot-tool::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% -52% 35%;
+  height: 82%;
+  background: radial-gradient(circle, rgba(255, 63, 82, .24), transparent 62%);
+  opacity: .72;
+  transform: translate3d(0, 0, 0);
+}
+
+.home-reboot-tool:hover {
+  transform: translate3d(0, -4px, 0);
+  border-color: var(--home-line-hot);
+  background: var(--home-panel-strong);
+}
+
+.home-reboot-tool-calibration {
+  grid-row: span 2;
+}
+
+.home-reboot-tool-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 63, 82, .48);
+  border-radius: 14px;
+  color: var(--home-accent);
+  background: rgba(255, 63, 82, .08);
+}
+
+.home-reboot-tool-text,
+.home-reboot-tool-action {
+  position: relative;
+  z-index: 1;
+}
+
+.home-reboot-tool-text {
+  display: grid;
+  gap: 8px;
+  max-width: 470px;
+}
+
+.home-reboot-tool-text strong {
+  font: 900 clamp(1.35rem, 2.4vw, 2rem)/1 'Syne', 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -.05em;
+}
+
+.home-reboot-tool-text small {
+  color: #c2cad5;
+  font-size: .94rem;
+  line-height: 1.58;
+}
+
+.home-reboot-tool-action {
+  grid-column: 2;
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--home-accent-2);
+  font-size: .82rem;
+  font-weight: 900;
+}
+
+.home-reboot-tool-visual {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  width: 168px;
+  height: 106px;
+  opacity: .76;
+}
+
+.home-reboot-tool-calibration .home-reboot-tool-visual i,
+.home-reboot-tool-calibration .home-reboot-tool-visual b,
+.home-reboot-tool-calibration .home-reboot-tool-visual em {
+  position: absolute;
+}
+
+.home-reboot-tool-calibration .home-reboot-tool-visual i {
+  right: 24px;
+  top: 20px;
+  width: 72px;
+  height: 72px;
+  border: 2px solid var(--home-accent);
+  border-radius: 999px;
+}
+
+.home-reboot-tool-calibration .home-reboot-tool-visual b {
+  right: 54px;
+  top: 50px;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--home-accent);
+  box-shadow: 0 0 18px rgba(255, 63, 82, .7);
+}
+
+.home-reboot-tool-calibration .home-reboot-tool-visual em {
+  left: 6px;
+  top: 56px;
+  width: 130px;
+  height: 1px;
+  background: var(--home-accent);
+  transform: rotate(-13deg);
+  opacity: .64;
+}
+
+.home-reboot-tool-warmup .home-reboot-tool-visual i {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--home-accent);
+  border-radius: 999px;
+}
+
+.home-reboot-tool-warmup .home-reboot-tool-visual i:nth-child(1) {
+  left: 16px;
+  top: 20px;
+}
+
+.home-reboot-tool-warmup .home-reboot-tool-visual i:nth-child(2) {
+  right: 24px;
+  top: 36px;
+}
+
+.home-reboot-tool-warmup .home-reboot-tool-visual i:nth-child(3) {
+  left: 78px;
+  bottom: 14px;
+}
+
+.home-reboot-tool-warmup .home-reboot-tool-visual b {
+  position: absolute;
+  left: 72px;
+  top: 38px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--home-text);
+}
+
+.home-reboot-tool-buttons .home-reboot-tool-visual {
+  display: flex;
+  align-items: end;
+  justify-content: end;
+  gap: 10px;
+  height: auto;
+}
+
+.home-reboot-tool-buttons .home-reboot-tool-visual svg {
+  box-sizing: content-box;
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--home-text);
+  background: rgba(255, 63, 82, .13);
+  border: 1px solid rgba(255, 63, 82, .28);
+}
+
+.home-reboot-steps {
+  display: grid;
+  grid-template-columns: 1.1fr .9fr 1fr;
+  gap: 14px;
+}
+
+.home-reboot-step,
+.home-reboot-benefit,
+.home-reboot-disclosure-grid article {
+  border: 1px solid var(--home-line);
+  border-radius: 18px;
+  background: rgba(12, 14, 20, .72);
+  padding: 22px;
+  box-shadow: inset 0 0 42px rgba(255, 63, 82, .035);
+}
+
+.home-reboot-step svg,
+.home-reboot-benefit svg,
+.home-reboot-disclosure-grid svg {
+  color: var(--home-accent);
+}
+
+.home-reboot-step h3,
+.home-reboot-benefit h3,
+.home-reboot-disclosure-grid h3 {
+  margin: 16px 0 8px;
+  color: var(--home-text);
+  font-size: 1.08rem;
+  letter-spacing: -.035em;
+}
+
+.home-reboot-step p,
+.home-reboot-benefit p,
+.home-reboot-disclosure-grid p {
+  margin: 0;
+  color: var(--home-muted);
+  line-height: 1.6;
+}
+
+.home-reboot-worth {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  gap: 14px;
+}
+
+.home-reboot-worth-main {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: clamp(26px, 5vw, 48px);
+  border: 1px solid rgba(255, 63, 82, .25);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 63, 82, .16), rgba(13, 15, 21, .82) 58%);
+}
+
+.home-reboot-worth-main button {
+  justify-self: start;
+}
+
+.home-reboot-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-reboot-benefit-wide {
+  grid-row: span 2;
+}
+
+.home-reboot-bars {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  height: 84px;
+  margin-top: 24px;
+}
+
+.home-reboot-bars i,
+.home-reboot-bars b {
+  width: 15px;
+  border-radius: 999px 999px 2px 2px;
+  background: var(--home-accent);
+  transform-origin: bottom;
+}
+
+.home-reboot-bars i:nth-child(1) { height: 34px; }
+.home-reboot-bars i:nth-child(2) { height: 54px; }
+.home-reboot-bars i:nth-child(3) { height: 44px; }
+.home-reboot-bars b { height: 72px; }
+
+.home-reboot-disclosure {
+  padding: clamp(24px, 4vw, 40px);
+  border: 1px solid var(--home-line);
+  border-radius: 22px;
+  background: rgba(12, 14, 20, .72);
+}
+
+.home-reboot-disclosure-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .home-reboot::after {
+    animation: homeRebootScan 16s linear infinite;
+  }
+
+  .home-reboot-title span,
+  .home-reboot-description,
+  .home-reboot-actions,
+  .home-reboot-visual,
+  .home-reboot-tool,
+  .home-reboot-step,
+  .home-reboot-worth-main,
+  .home-reboot-benefit,
+  .home-reboot-disclosure {
+    animation: homeRebootEnter .72s cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  .home-reboot-title span:nth-child(1) { animation-delay: .04s; }
+  .home-reboot-title span:nth-child(2) { animation-delay: .12s; }
+  .home-reboot-title span:nth-child(3) { animation-delay: .20s; }
+  .home-reboot-description { animation-delay: .28s; }
+  .home-reboot-actions { animation-delay: .36s; }
+  .home-reboot-visual { animation-delay: .22s; }
+  .home-reboot-tool:nth-child(1) { animation-delay: .04s; }
+  .home-reboot-tool:nth-child(2) { animation-delay: .11s; }
+  .home-reboot-tool:nth-child(3) { animation-delay: .18s; }
+
+  .home-reboot-preview-grid {
+    animation: homeRebootGrid 13s linear infinite;
+  }
+
+  .home-reboot-crosshair {
+    animation: homeRebootCrosshair 3.6s cubic-bezier(.72, 0, .16, 1) infinite;
+  }
+
+  .home-reboot-target-one {
+    animation: homeRebootTargetOne 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-target-two {
+    animation: homeRebootTargetTwo 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-target-three {
+    animation: homeRebootTargetThree 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-impact-one {
+    animation: homeRebootImpactOne 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-impact-two {
+    animation: homeRebootImpactTwo 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-impact-three {
+    animation: homeRebootImpactThree 3.6s ease-in-out infinite;
+  }
+
+  .home-reboot-tool-warmup .home-reboot-tool-visual i {
+    animation: homeRebootPulse 2.5s ease-in-out infinite;
+  }
+
+  .home-reboot-tool-warmup .home-reboot-tool-visual i:nth-child(2) {
+    animation-delay: .6s;
+  }
+
+  .home-reboot-tool-warmup .home-reboot-tool-visual i:nth-child(3) {
+    animation-delay: 1.2s;
+  }
+
+  .home-reboot-bars i,
+  .home-reboot-bars b {
+    animation: homeRebootBars 1.8s ease-in-out infinite alternate;
+  }
+
+  .home-reboot-bars i:nth-child(2) { animation-delay: .18s; }
+  .home-reboot-bars i:nth-child(3) { animation-delay: .36s; }
+  .home-reboot-bars b { animation-delay: .54s; }
+}
+
+@keyframes homeRebootEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes homeRebootScan {
+  from { background-position: 0 0; }
+  to { background-position: 230% 0; }
+}
+
+@keyframes homeRebootGrid {
+  to { transform: translate3d(36px, 36px, 0); }
+}
+
+@keyframes homeRebootCrosshair {
+  0%, 11% { transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(1); }
+  18% { transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(1.16); }
+  34%, 44% { transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(1); }
+  51% { transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(1.16); }
+  67%, 78% { transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(1); }
+  85% { transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(1.16); }
+  100% { transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(1); }
+}
+
+@keyframes homeRebootTargetOne {
+  0%, 13%, 100% { opacity: 1; transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(1); }
+  21%, 28% { opacity: 0; transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(.54); }
+}
+
+@keyframes homeRebootTargetTwo {
+  0%, 45%, 100% { opacity: 1; transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(1); }
+  53%, 60% { opacity: 0; transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(.54); }
+}
+
+@keyframes homeRebootTargetThree {
+  0%, 78%, 100% { opacity: 1; transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(1); }
+  86%, 93% { opacity: 0; transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(.54); }
+}
+
+@keyframes homeRebootImpactOne {
+  0%, 14%, 33%, 100% { opacity: 0; transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(.62); }
+  23% { opacity: .82; transform: translate(-50%, -50%) translate3d(-130px, -76px, 0) scale(1.25); }
+}
+
+@keyframes homeRebootImpactTwo {
+  0%, 46%, 64%, 100% { opacity: 0; transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(.62); }
+  55% { opacity: .82; transform: translate(-50%, -50%) translate3d(118px, -94px, 0) scale(1.25); }
+}
+
+@keyframes homeRebootImpactThree {
+  0%, 79%, 97%, 100% { opacity: 0; transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(.62); }
+  88% { opacity: .82; transform: translate(-50%, -50%) translate3d(46px, 102px, 0) scale(1.25); }
+}
+
+@keyframes homeRebootPulse {
+  0%, 72%, 100% {
+    opacity: .45;
+    transform: scale(.84);
+  }
+  22%, 42% {
+    opacity: 1;
+    transform: scale(1.16);
+  }
+}
+
+@keyframes homeRebootBars {
+  from {
+    opacity: .65;
+    transform: scaleY(.75);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@media (max-width: 1040px) {
+  .home-reboot-hero,
+  .home-reboot-bento,
+  .home-reboot-worth {
+    grid-template-columns: 1fr;
+  }
+
+  .home-reboot-hero {
+    min-height: auto;
+  }
+
+  .home-reboot-tool-calibration {
+    grid-row: auto;
+  }
+
+  .home-reboot-title {
+    font-size: clamp(2.8rem, 9.8vw, 5.2rem);
+  }
+}
+
+@media (max-width: 760px) {
+  .home-reboot-shell {
+    width: min(100% - 22px, 1160px);
+    padding-top: 24px;
+  }
+
+  .home-reboot-title {
+    font-size: clamp(2.3rem, 11.4vw, 3.65rem);
+    line-height: .95;
+    letter-spacing: -.06em;
+  }
+
+  .home-reboot-title span {
+    text-wrap: auto;
+  }
+
+  .home-reboot-actions,
+  .home-reboot-primary,
+  .home-reboot-secondary {
+    width: 100%;
+  }
+
+  .home-reboot-preview {
+    min-height: 315px;
+  }
+
+  .home-reboot-bento,
+  .home-reboot-steps,
+  .home-reboot-benefits,
+  .home-reboot-disclosure-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-reboot-tool {
+    grid-template-columns: 1fr;
+    min-height: 184px;
+    padding: 22px;
+  }
+
+  .home-reboot-tool-action {
+    grid-column: auto;
+  }
+
+  .home-reboot-tool-visual {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .home-reboot-target-one,
+  .home-reboot-impact-one {
+    transform: translate(-50%, -50%) translate3d(-82px, -68px, 0);
+  }
+
+  .home-reboot-target-two,
+  .home-reboot-impact-two {
+    transform: translate(-50%, -50%) translate3d(78px, -72px, 0);
+  }
+
+  .home-reboot-target-three,
+  .home-reboot-impact-three {
+    transform: translate(-50%, -50%) translate3d(28px, 74px, 0);
   }
 }
