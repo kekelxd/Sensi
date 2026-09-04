@@ -3223,3 +3223,653 @@ footer { border-top: 1px solid var(--line); padding: 0 18px; justify-content: sp
     animation: none;
   }
 }
+
+/* Taste-skill homepage redesign: tactical, animated, and compositor-friendly. */
+.home-taste {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  min-height: calc(100dvh - 116px);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 74% 14%, rgba(255, 42, 85, .18), transparent 34rem),
+    radial-gradient(circle at 10% 70%, rgba(141, 251, 211, .08), transparent 26rem),
+    linear-gradient(135deg, rgba(255, 42, 85, .05) 0 1px, transparent 1px 72px),
+    linear-gradient(90deg, rgba(255, 42, 85, .045) 0 1px, transparent 1px 72px),
+    #07080b;
+  color: #f8f4ee;
+  isolation: isolate;
+}
+
+.home-taste::before,
+.home-taste::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-taste::before {
+  background:
+    linear-gradient(105deg, transparent 0 43%, rgba(255, 42, 85, .12) 48%, transparent 54%),
+    radial-gradient(circle at 68% 38%, rgba(255, 48, 74, .16), transparent 21rem);
+  opacity: .7;
+  transform: translate3d(-2%, 0, 0);
+  animation: homeTasteSweep 18s linear infinite alternate;
+  will-change: transform, opacity;
+}
+
+.home-taste::after {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .12) 0 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px);
+  background-size: 120px 120px, 100% 9px;
+  mix-blend-mode: screen;
+  opacity: .18;
+}
+
+.home-taste-shell {
+  width: min(1180px, calc(100% - 32px));
+  max-width: calc(100vw - 32px);
+  margin: 0 auto;
+  padding: clamp(42px, 6vw, 86px) 0 72px;
+}
+
+.home-taste-hero {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(420px, 1.08fr);
+  align-items: center;
+  gap: clamp(32px, 6vw, 82px);
+  min-height: clamp(560px, calc(100dvh - 148px), 760px);
+}
+
+.home-taste-copy {
+  display: grid;
+  gap: 28px;
+  animation: homeTasteReveal .7s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.home-taste-title {
+  display: grid;
+  margin: 0;
+  max-width: 670px;
+  font-size: clamp(3.8rem, 8.4vw, 8.25rem);
+  line-height: .84;
+  letter-spacing: -.085em;
+  text-transform: uppercase;
+}
+
+.home-taste-title span {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  text-shadow: 0 24px 80px rgba(255, 42, 85, .16);
+}
+
+.home-taste-title span:nth-child(2) {
+  color: #ff5f48;
+}
+
+.home-taste-description {
+  width: min(520px, 100%);
+  margin: 0;
+  color: #c9d8e7;
+  font-size: clamp(1rem, 1.8vw, 1.14rem);
+  line-height: 1.75;
+}
+
+.home-taste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.home-taste-primary,
+.home-taste-secondary,
+.home-taste-worth-main button {
+  appearance: none;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 24px;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 900;
+  letter-spacing: -.03em;
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  transform: translate3d(0, 0, 0);
+}
+
+.home-taste-primary {
+  background: #ff4f3f;
+  color: #08080b;
+  box-shadow: 0 18px 42px rgba(255, 42, 85, .22);
+}
+
+.home-taste-secondary {
+  background: rgba(255, 255, 255, .035);
+  border-color: rgba(255, 255, 255, .12);
+  color: #83ffd6;
+}
+
+.home-taste-primary:hover,
+.home-taste-secondary:hover,
+.home-taste-worth-main button:hover {
+  transform: translate3d(0, -3px, 0);
+  border-color: rgba(255, 42, 85, .65);
+}
+
+.home-taste-preview {
+  position: relative;
+  min-width: 0;
+  animation: homeTasteReveal .85s .1s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.home-taste-preview::before {
+  content: "";
+  position: absolute;
+  inset: -18px 26px 26px -18px;
+  border: 1px solid rgba(255, 42, 85, .2);
+  border-radius: 28px;
+  transform: rotate(-2deg);
+  opacity: .78;
+}
+
+.home-taste .home-gridshot-preview {
+  min-height: clamp(360px, 47vw, 520px);
+  border-radius: 24px;
+  background: rgba(10, 12, 16, .86);
+  border-color: rgba(255, 255, 255, .11);
+  box-shadow: inset 0 0 70px rgba(255, 42, 85, .07), 0 34px 80px rgba(0, 0, 0, .38);
+}
+
+.home-taste .home-gridshot-hud {
+  left: 22px;
+  top: 22px;
+  min-width: 132px;
+  background: rgba(9, 10, 13, .78);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+.home-taste .home-gridshot-hud strong {
+  color: #83ffd6;
+  font-size: 1.7rem;
+  letter-spacing: -.04em;
+}
+
+.home-taste-section-heading {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.home-taste-section-heading > span,
+.home-taste-worth-main > span {
+  color: #83ffd6;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.home-taste-section-heading h2,
+.home-taste-worth-main h2 {
+  margin: 0;
+  color: #fff8f0;
+  font-size: clamp(2rem, 4.2vw, 4.2rem);
+  line-height: .95;
+  letter-spacing: -.065em;
+  text-wrap: balance;
+}
+
+.home-taste-section-heading p,
+.home-taste-worth-main p {
+  max-width: 650px;
+  margin: 0;
+  color: #b8c6d3;
+  line-height: 1.7;
+}
+
+.home-taste-tools,
+.home-taste-method,
+.home-taste-worth,
+.home-taste-disclosure {
+  margin-top: clamp(38px, 8vw, 92px);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
+}
+
+.home-taste-bento {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+  grid-auto-rows: minmax(190px, auto);
+  gap: 16px;
+}
+
+.home-taste-tool {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 18px 22px;
+  min-height: 210px;
+  padding: 28px;
+  text-align: left;
+  color: #f8f4ee;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 42, 85, .12), transparent 52%),
+    rgba(10, 12, 16, .72);
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, background-color .2s ease;
+  transform: translate3d(0, 0, 0);
+  contain: layout paint style;
+}
+
+.home-taste-tool::after {
+  content: "";
+  position: absolute;
+  inset: auto -18% -46% 32%;
+  height: 74%;
+  background: radial-gradient(circle, rgba(255, 42, 85, .23), transparent 62%);
+  opacity: .7;
+  transform: translate3d(0, 0, 0);
+}
+
+.home-taste-tool:hover {
+  border-color: rgba(255, 42, 85, .58);
+  transform: translate3d(0, -4px, 0);
+}
+
+.home-taste-tool-calibration {
+  grid-row: span 2;
+}
+
+.home-taste-tool-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255, 42, 85, .52);
+  border-radius: 15px;
+  color: #ff4f3f;
+  background: rgba(255, 42, 85, .08);
+}
+
+.home-taste-tool-text {
+  display: grid;
+  gap: 10px;
+  max-width: 460px;
+}
+
+.home-taste-tool-text strong {
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  line-height: 1;
+  letter-spacing: -.055em;
+}
+
+.home-taste-tool-text small {
+  color: #bdcad8;
+  font-size: .96rem;
+  line-height: 1.65;
+}
+
+.home-taste-tool-action {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #83ffd6;
+  font-size: .84rem;
+  font-weight: 900;
+}
+
+.home-taste-tool-visual {
+  position: absolute;
+  right: 30px;
+  bottom: 28px;
+  width: 180px;
+  height: 118px;
+  opacity: .72;
+}
+
+.home-taste-tool-calibration .home-taste-tool-visual i,
+.home-taste-tool-calibration .home-taste-tool-visual b,
+.home-taste-tool-calibration .home-taste-tool-visual em {
+  position: absolute;
+  border-radius: 999px;
+}
+
+.home-taste-tool-calibration .home-taste-tool-visual i {
+  inset: 22px 26px 18px 72px;
+  border: 2px solid #ff4f3f;
+}
+
+.home-taste-tool-calibration .home-taste-tool-visual b {
+  width: 16px;
+  height: 16px;
+  right: 70px;
+  top: 54px;
+  background: #ff4f3f;
+  box-shadow: 0 0 22px rgba(255, 42, 85, .6);
+}
+
+.home-taste-tool-calibration .home-taste-tool-visual em {
+  left: 4px;
+  top: 62px;
+  width: 144px;
+  height: 1px;
+  background: #ff4f3f;
+  transform: rotate(-11deg);
+  opacity: .65;
+}
+
+.home-taste-tool-warmup .home-taste-tool-visual i {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #ff2a55;
+  border-radius: 999px;
+  animation: homeTastePop 2.6s ease-in-out infinite;
+}
+
+.home-taste-tool-warmup .home-taste-tool-visual i:nth-child(1) {
+  left: 20px;
+  top: 24px;
+}
+
+.home-taste-tool-warmup .home-taste-tool-visual i:nth-child(2) {
+  right: 28px;
+  top: 44px;
+  animation-delay: .65s;
+}
+
+.home-taste-tool-warmup .home-taste-tool-visual i:nth-child(3) {
+  left: 86px;
+  bottom: 18px;
+  animation-delay: 1.3s;
+}
+
+.home-taste-tool-warmup .home-taste-tool-visual b {
+  position: absolute;
+  left: 74px;
+  top: 38px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #83ffd6;
+  box-shadow: 0 0 18px rgba(131, 255, 214, .6);
+}
+
+.home-taste-tool-buttons .home-taste-tool-visual {
+  display: flex;
+  align-items: end;
+  justify-content: end;
+  gap: 12px;
+  height: auto;
+}
+
+.home-taste-tool-buttons .home-taste-tool-visual svg {
+  box-sizing: content-box;
+  padding: 13px;
+  border-radius: 12px;
+  color: #83ffd6;
+  background: rgba(131, 255, 214, .16);
+  border: 1px solid rgba(131, 255, 214, .32);
+}
+
+.home-taste-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-taste-step,
+.home-taste-benefit,
+.home-taste-disclosure-grid article {
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 20px;
+  background: rgba(10, 12, 16, .68);
+  padding: 24px;
+  box-shadow: inset 0 0 44px rgba(255, 42, 85, .035);
+}
+
+.home-taste-step svg,
+.home-taste-benefit svg,
+.home-taste-disclosure-grid svg {
+  color: #83ffd6;
+}
+
+.home-taste-step h3,
+.home-taste-benefit h3,
+.home-taste-disclosure-grid h3 {
+  margin: 18px 0 8px;
+  color: #fff8f0;
+  font-size: 1.12rem;
+  letter-spacing: -.035em;
+}
+
+.home-taste-step p,
+.home-taste-benefit p,
+.home-taste-disclosure-grid p {
+  margin: 0;
+  color: #b8c6d3;
+  line-height: 1.65;
+}
+
+.home-taste-worth {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  gap: 16px;
+}
+
+.home-taste-worth-main,
+.home-taste-benefits {
+  min-width: 0;
+}
+
+.home-taste-worth-main {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: clamp(28px, 5vw, 52px);
+  border: 1px solid rgba(255, 42, 85, .22);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(255, 42, 85, .16), rgba(10, 12, 16, .72) 58%);
+}
+
+.home-taste-worth-main button {
+  justify-self: start;
+  background: transparent;
+  border-color: rgba(131, 255, 214, .28);
+  color: #83ffd6;
+}
+
+.home-taste-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-taste-benefit-wide {
+  grid-row: span 2;
+}
+
+.home-taste-bars {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  height: 92px;
+  margin-top: 28px;
+}
+
+.home-taste-bars i,
+.home-taste-bars b {
+  width: 16px;
+  border-radius: 999px 999px 2px 2px;
+  background: #83ffd6;
+  box-shadow: 0 0 20px rgba(131, 255, 214, .34);
+  animation: homeTasteBars 1.8s ease-in-out infinite alternate;
+}
+
+.home-taste-bars i:nth-child(1) { height: 34px; }
+.home-taste-bars i:nth-child(2) { height: 58px; animation-delay: .18s; }
+.home-taste-bars i:nth-child(3) { height: 44px; animation-delay: .36s; }
+.home-taste-bars b { height: 76px; animation-delay: .54s; }
+
+.home-taste-disclosure {
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 24px;
+  background: rgba(10, 12, 16, .68);
+}
+
+.home-taste-disclosure-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@keyframes homeTasteReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes homeTasteSweep {
+  from {
+    transform: translate3d(-4%, 0, 0);
+    opacity: .52;
+  }
+  to {
+    transform: translate3d(4%, 0, 0);
+    opacity: .78;
+  }
+}
+
+@keyframes homeTastePop {
+  0%, 70%, 100% {
+    opacity: .38;
+    transform: scale(.8);
+  }
+  18%, 34% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes homeTasteBars {
+  from {
+    transform: scaleY(.78);
+    opacity: .72;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 980px) {
+  .home-taste {
+    overflow-x: hidden;
+  }
+
+  .home-taste-title {
+    font-size: clamp(3.1rem, 13vw, 6rem);
+    letter-spacing: -.075em;
+  }
+
+  .home-taste-hero,
+  .home-taste-worth,
+  .home-taste-bento {
+    grid-template-columns: 1fr;
+  }
+
+  .home-taste-hero {
+    min-height: auto;
+  }
+
+  .home-taste-tool-calibration {
+    grid-row: auto;
+  }
+
+  .home-taste-steps,
+  .home-taste-disclosure-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-taste-benefits {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .home-taste-shell {
+    width: min(100% - 22px, 1180px);
+    max-width: calc(100vw - 22px);
+    padding-top: 30px;
+  }
+
+  .home-taste-title {
+    font-size: clamp(2.65rem, 14vw, 4.4rem);
+    line-height: .9;
+  }
+
+  .home-taste-actions,
+  .home-taste-primary,
+  .home-taste-secondary {
+    width: 100%;
+  }
+
+  .home-taste-tool {
+    grid-template-columns: 1fr;
+    padding: 22px;
+  }
+
+  .home-taste-tool-action {
+    grid-column: auto;
+  }
+
+  .home-taste-tool-visual {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    margin-top: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce), (update: slow) {
+  .home-taste::before,
+  .home-taste-copy,
+  .home-taste-preview,
+  .home-taste-tool-warmup .home-taste-tool-visual i,
+  .home-taste-bars i,
+  .home-taste-bars b {
+    animation: none;
+  }
+
+  .home-taste-primary:hover,
+  .home-taste-secondary:hover,
+  .home-taste-worth-main button:hover,
+  .home-taste-tool:hover {
+    transform: none;
+  }
+}

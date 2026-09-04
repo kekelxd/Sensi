@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Activity, ArrowRight, CheckCircle2, CircleAlert, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, ShieldCheck, Target, TimerReset, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowRight, CheckCircle2, Crosshair, Flame, Gamepad2, Gauge, Keyboard, Lightbulb, LineChart, LockKeyhole, Mouse, MousePointer2, Target, TimerReset, type LucideIcon } from 'lucide-react'
 import { useI18n } from './i18n'
 
 export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
@@ -19,6 +19,7 @@ function GridshotPreview() {
     let height = 0
     let dpr = 1
     let needsResize = true
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const targets = [
       { x: 0.24, y: 0.30 },
       { x: 0.74, y: 0.27 },
@@ -148,7 +149,9 @@ function GridshotPreview() {
       drawTarget(targetX, targetY, radius, targetAlpha)
       if (hitProgress >= 0) drawImpact(targetX, targetY, hitProgress)
       drawCrosshair(crossX, crossY)
-      animationFrame = window.requestAnimationFrame(render)
+      if (!reduceMotion) {
+        animationFrame = window.requestAnimationFrame(render)
+      }
     }
 
     const handleResize = () => {
@@ -160,7 +163,7 @@ function GridshotPreview() {
 
     return () => {
       window.removeEventListener('resize', handleResize)
-      window.cancelAnimationFrame(animationFrame)
+      if (animationFrame) window.cancelAnimationFrame(animationFrame)
     }
   }, [])
 
@@ -169,7 +172,7 @@ function GridshotPreview() {
     <span className="home-gridshot-noise" />
     <div className="home-gridshot-hud">
       <small>GRIDSHOT</small>
-      <strong>+128</strong>
+      <strong>LIVE</strong>
       <span>target chain</span>
     </div>
     <div className="home-gridshot-feed">
@@ -199,75 +202,140 @@ export function Home({ onNavigate }: Props) {
     { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
 
-  return <section className="home-v2-workspace home-awwwards">
-    <section className="home-v2-hero">
-      <div className="home-v2-hero-copy">
-        <h1><span>{t('home.aimLineOne')}</span><strong>{t('home.aimLineTwo')}</strong><span>{t('home.aimLineThree')}</span></h1>
-        <p>{t('home.simpleHeroDescription')}</p>
-        <div className="home-aim-actions">
-          <button className="home-aim-primary" onClick={() => onNavigate('calibration')}><Target size={17} /> {t('home.primaryAction')}</button>
-          <button className="home-aim-secondary" onClick={() => onNavigate('warmup')}><span /> {t('home.aimWarmupBadge')}</button>
+  return <section className="home-taste">
+    <div className="home-taste-shell">
+      <section className="home-taste-hero" aria-labelledby="home-title">
+        <div className="home-taste-copy">
+          <h1 id="home-title" className="home-taste-title">
+            <span>{t('home.aimLineOne')}</span>
+            <span>{t('home.aimLineTwo')}</span>
+            <span>{t('home.aimLineThree')}</span>
+          </h1>
+          <p className="home-taste-description">{t('home.simpleHeroDescription')}</p>
+
+          <div className="home-taste-actions" aria-label="Ações principais">
+            <button className="home-taste-primary" type="button" onClick={() => onNavigate('calibration')}>
+              <Target size={18} />
+              {t('home.primaryAction')}
+            </button>
+            <button className="home-taste-secondary" type="button" onClick={() => onNavigate('warmup')}>
+              <Flame size={18} />
+              {t('home.aimWarmupBadge')}
+              <ArrowRight size={17} />
+            </button>
+          </div>
         </div>
-        <div className="home-aim-proof"><span><ShieldCheck size={15} /> {t('home.simpleLocal')}</span><span><Activity size={15} /> {t('home.simpleGuided')}</span></div>
-      </div>
-      <div className="home-hero-stage">
-        <GridshotPreview />
-        <div className="home-live-panel home-live-panel-score"><small>ACCURACY</small><strong>92</strong><span>clean hits</span></div>
-        <div className="home-live-panel home-live-panel-error"><small>PACE</small><strong>0.41s</strong><span>reaction window</span></div>
-      </div>
-    </section>
 
-    <section className="home-v2-method">
-      <div className="home-v2-section-intro"><span>{t('home.simpleMethodKicker')}</span><h2>{t('home.simpleMethodTitle')}</h2><p>{t('home.simpleMethodDescription')}</p></div>
-      <div className="home-v2-method-steps">
-        {method.map((item, index) => {
-          const Icon = item.icon
-          return <article key={item.title}><span className="home-v2-step-index">0{index + 1}</span><Icon size={20} /><div><strong>{item.title}</strong><p>{item.description}</p></div></article>
-        })}
-      </div>
-    </section>
-
-    <section className="home-v2-tools">
-      <div className="home-v2-section-intro"><span>{t('home.simpleToolsKicker')}</span><h2>{t('home.simpleToolsTitle')}</h2></div>
-      <div className="home-v2-tool-list">{tools.map((tool, index) => {
-        const Icon = tool.icon
-        return <button key={tool.id} className={`home-tool-${tool.id}`} onClick={() => onNavigate(tool.id)}>
-          <span className="home-v2-tool-index">0{index + 1}</span>
-          <span className="home-v2-tool-icon"><Icon size={19} /></span>
-          <span className="home-v2-tool-copy"><strong>{tool.title}</strong><small>{tool.description}</small></span>
-          <span className="home-v2-tool-visual" aria-hidden="true">
-            {tool.id === 'calibration' && <><i /><b /><em /></>}
-            {tool.id === 'warmup' && <><i /><i /><i /><b /></>}
-            {tool.id === 'buttons' && <><Mouse size={17} /><Keyboard size={17} /><Gamepad2 size={17} /></>}
-          </span>
-          <span className="home-v2-tool-action">{tool.action} <ArrowRight size={15} /></span>
-        </button>
-      })}</div>
-    </section>
-
-    <section className="home-v2-worth">
-      <div className="home-v2-worth-copy"><span>{t('home.benefitKicker')}</span><h2>{t('home.benefitTitle')}</h2><p>{t('home.benefitDescription')}</p><button className="home-v2-text-action" onClick={() => onNavigate('calibration')}>{t('home.benefitAction')} <ArrowRight size={16} /></button></div>
-      <div className="home-v2-worth-points">{benefits.map((benefit) => {
-        const Icon = benefit.icon
-        return <div key={benefit.title} className={benefit.visual ? 'home-worth-featured' : undefined}>
-          <Icon size={19} />
-          <strong>{benefit.title}</strong>
-          <p>{benefit.description}</p>
-          {benefit.visual === 'comparison' && <span className="home-worth-visual" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <b />
-            <em />
-          </span>}
+        <div className="home-taste-preview" aria-label="Preview animado de Gridshot">
+          <GridshotPreview />
         </div>
-      })}</div>
-    </section>
+      </section>
 
-    <section className="home-v2-disclosure">
-      <div className="home-v2-disclosure-heading"><span className="home-v2-disclosure-icon"><CircleAlert size={19} /></span><div><span>{t('home.simpleDisclosureKicker')}</span><h2>{t('home.simpleDisclosureTitle')}</h2></div></div>
-      <p>{t('home.simpleDisclosureDescription')}</p>
-      <div className="home-v2-disclosure-points"><div><LockKeyhole size={17} /><strong>{t('home.simpleRawTitle')}</strong><span>{t('home.simpleRawDescription')}</span></div><div><Gauge size={17} /><strong>{t('home.simpleAccelerationTitle')}</strong><span>{t('home.simpleAccelerationDescription')}</span></div><div><LineChart size={17} /><strong>{t('home.simpleComparisonTitle')}</strong><span>{t('home.simpleComparisonDescription')}</span></div></div>
-    </section>
+      <section className="home-taste-tools" aria-labelledby="tools-title">
+        <div className="home-taste-section-heading">
+          <span>{t('home.simpleToolsKicker')}</span>
+          <h2 id="tools-title">{t('home.simpleToolsTitle')}</h2>
+        </div>
+
+        <div className="home-taste-bento">
+          {tools.map((tool) => {
+            const Icon = tool.icon
+
+            return <button key={tool.id} className={`home-taste-tool home-taste-tool-${tool.id}`} type="button" onClick={() => onNavigate(tool.id)}>
+              <span className="home-taste-tool-icon"><Icon size={24} /></span>
+              <span className="home-taste-tool-text">
+                <strong>{tool.title}</strong>
+                <small>{tool.description}</small>
+              </span>
+              <span className="home-taste-tool-visual" aria-hidden="true">
+                {tool.id === 'calibration' && <><i /><b /><em /></>}
+                {tool.id === 'warmup' && <><i /><i /><i /><b /></>}
+                {tool.id === 'buttons' && <><Mouse size={17} /><Keyboard size={17} /><Gamepad2 size={17} /></>}
+              </span>
+              <span className="home-taste-tool-action">
+                {tool.action}
+                <ArrowRight size={16} />
+              </span>
+            </button>
+          })}
+        </div>
+      </section>
+
+      <section className="home-taste-method" aria-labelledby="method-title">
+        <div className="home-taste-section-heading">
+          <span>{t('home.simpleMethodKicker')}</span>
+          <h2 id="method-title">{t('home.simpleMethodTitle')}</h2>
+          <p>{t('home.simpleMethodDescription')}</p>
+        </div>
+
+        <div className="home-taste-steps">
+          {method.map((item) => {
+            const Icon = item.icon
+
+            return <article className="home-taste-step" key={item.title}>
+              <Icon size={22} />
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+            </article>
+          })}
+        </div>
+      </section>
+
+      <section className="home-taste-worth" aria-labelledby="worth-title">
+        <article className="home-taste-worth-main">
+          <span>{t('home.benefitKicker')}</span>
+          <h2 id="worth-title">{t('home.benefitTitle')}</h2>
+          <p>{t('home.benefitDescription')}</p>
+          <button type="button" onClick={() => onNavigate('calibration')}>
+            {t('home.benefitAction')}
+            <ArrowRight size={17} />
+          </button>
+        </article>
+
+        <div className="home-taste-benefits">
+          {benefits.map((benefit) => {
+            const Icon = benefit.icon
+
+            return <article className={benefit.visual ? 'home-taste-benefit home-taste-benefit-wide' : 'home-taste-benefit'} key={benefit.title}>
+              <Icon size={22} />
+              <h3>{benefit.title}</h3>
+              <p>{benefit.description}</p>
+              {benefit.visual === 'comparison' && <span className="home-taste-bars" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+                <b />
+              </span>}
+            </article>
+          })}
+        </div>
+      </section>
+
+      <section className="home-taste-disclosure" aria-labelledby="disclosure-title">
+        <div className="home-taste-section-heading">
+          <span>{t('home.simpleDisclosureKicker')}</span>
+          <h2 id="disclosure-title">{t('home.simpleDisclosureTitle')}</h2>
+          <p>{t('home.simpleDisclosureDescription')}</p>
+        </div>
+
+        <div className="home-taste-disclosure-grid">
+          <article>
+            <LockKeyhole size={20} />
+            <h3>{t('home.simpleRawTitle')}</h3>
+            <p>{t('home.simpleRawDescription')}</p>
+          </article>
+          <article>
+            <Gauge size={20} />
+            <h3>{t('home.simpleAccelerationTitle')}</h3>
+            <p>{t('home.simpleAccelerationDescription')}</p>
+          </article>
+          <article>
+            <LineChart size={20} />
+            <h3>{t('home.simpleComparisonTitle')}</h3>
+            <p>{t('home.simpleComparisonDescription')}</p>
+          </article>
+        </div>
+      </section>
+    </div>
   </section>
 }
