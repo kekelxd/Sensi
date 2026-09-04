@@ -18,6 +18,7 @@ function GridshotPreview() {
     let width = 0
     let height = 0
     let dpr = 1
+    let needsResize = true
     const targets = [
       { x: 0.24, y: 0.30 },
       { x: 0.74, y: 0.27 },
@@ -27,11 +28,15 @@ function GridshotPreview() {
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
-      width = Math.max(1, Math.floor(rect.width))
-      height = Math.max(1, Math.floor(rect.height))
-      canvas.width = Math.floor(width * dpr)
-      canvas.height = Math.floor(height * dpr)
+      const nextDpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const nextWidth = Math.max(1, Math.floor(rect.width))
+      const nextHeight = Math.max(1, Math.floor(rect.height))
+      if (nextWidth === width && nextHeight === height && nextDpr === dpr) return
+      dpr = nextDpr
+      width = nextWidth
+      height = nextHeight
+      canvas.width = Math.floor(nextWidth * nextDpr)
+      canvas.height = Math.floor(nextHeight * nextDpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
@@ -119,6 +124,10 @@ function GridshotPreview() {
     }
 
     const render = (time: number) => {
+      if (needsResize) {
+        needsResize = false
+        resize()
+      }
       drawGrid(time)
       const cycle = 1180
       const raw = time / cycle
@@ -142,15 +151,15 @@ function GridshotPreview() {
       animationFrame = window.requestAnimationFrame(render)
     }
 
+    const handleResize = () => {
+      needsResize = true
+    }
     resize()
-    const observer = 'ResizeObserver' in window ? new ResizeObserver(resize) : null
-    observer?.observe(canvas)
-    if (!observer) window.addEventListener('resize', resize)
+    window.addEventListener('resize', handleResize, { passive: true })
     animationFrame = window.requestAnimationFrame(render)
 
     return () => {
-      observer?.disconnect()
-      if (!observer) window.removeEventListener('resize', resize)
+      window.removeEventListener('resize', handleResize)
       window.cancelAnimationFrame(animationFrame)
     }
   }, [])
