@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -56,6 +57,26 @@ function MetricStrip() {
 
 export function Home({ onNavigate }: Props) {
   const { t } = useI18n()
+  const rootRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        entry.target.setAttribute('data-visible', String(entry.isIntersecting))
+        if (entry.isIntersecting) entry.target.setAttribute('data-revealed', 'true')
+      }
+    }, { threshold: 0.08 })
+    root.querySelectorAll('.home-v3-tool, .home-v3-benefit, .home-v3-method-card, .home-v3-disclosure, .home-v3-stage').forEach((element) => observer.observe(element))
+    const updateVisibility = () => root.setAttribute('data-hidden', String(document.hidden))
+    updateVisibility()
+    document.addEventListener('visibilitychange', updateVisibility)
+    return () => {
+      observer.disconnect()
+      document.removeEventListener('visibilitychange', updateVisibility)
+    }
+  }, [])
   const tools: Array<{ id: HomeDestination, icon: LucideIcon, title: string, description: string, action: string }> = [
     { id: 'calibration', icon: Crosshair, title: t('home.calibrationTitle'), description: t('home.simpleCalibrationDescription'), action: t('home.calibrationAction') },
     { id: 'warmup', icon: Flame, title: t('home.warmupTitle'), description: t('home.simpleWarmupDescription'), action: t('home.warmupAction') },
@@ -72,7 +93,7 @@ export function Home({ onNavigate }: Props) {
     { icon: TimerReset, title: t('home.benefitReadyTitle'), description: t('home.benefitReadyDescription') },
   ]
 
-  return <main className="home-v3">
+  return <main className="home-v3" ref={rootRef}>
     <div className="home-v3-shell">
       <section className="home-v3-hero" aria-labelledby="home-title">
         <div className="home-v3-copy">

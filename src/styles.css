@@ -457,14 +457,18 @@ body:has(.home-v3) {
 
 .home-v3-tool-grid {
   display: grid;
-  grid-template-columns: 1.15fr .85fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
 .home-v3-tool {
   position: relative;
   display: grid;
-  min-height: 238px;
+  grid-template-columns: 43px minmax(0, 1fr);
+  grid-template-rows: auto auto 140px auto;
+  align-content: start;
+  gap: 18px;
+  min-height: 0;
   overflow: hidden;
   padding: 26px;
   text-align: left;
@@ -489,11 +493,15 @@ body:has(.home-v3) {
 }
 
 .home-v3-tool-calibration {
-  grid-row: span 2;
-  min-height: 492px;
+  grid-column: 1 / -1;
+  grid-template-columns: 43px minmax(0, 1fr) minmax(240px, .85fr);
+  grid-template-rows: auto 1fr auto;
 }
 
 .home-v3-tool-number {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
   position: relative;
   z-index: 1;
   color: var(--home-red);
@@ -502,10 +510,10 @@ body:has(.home-v3) {
 }
 
 .home-v3-tool-icon {
-  position: absolute;
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
   z-index: 1;
-  left: 70px;
-  top: 24px;
   display: grid;
   place-items: center;
   width: 43px;
@@ -523,10 +531,12 @@ body:has(.home-v3) {
 }
 
 .home-v3-tool-copy {
+  grid-column: 1 / -1;
+  grid-row: 2;
   align-self: start;
-  max-width: 360px;
-  margin-top: 25px;
-  padding-left: 54px;
+  max-width: 480px;
+  margin: 0;
+  padding: 0;
 }
 
 .home-v3-tool-copy strong {
@@ -544,24 +554,40 @@ body:has(.home-v3) {
 }
 
 .home-v3-tool-action {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  padding-top: 16px;
+  border-top: 1px solid var(--home-line);
   align-self: end;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  width: fit-content;
+  width: 100%;
   color: var(--home-mint);
   font: 900 .8rem/1 'Plus Jakarta Sans', sans-serif;
 }
 
 .home-v3-tool-visual {
-  position: absolute;
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 3;
   z-index: 0;
-  right: 30px;
-  bottom: 22px;
-  width: 190px;
+  width: 100%;
   height: 140px;
+  overflow: hidden;
+  border: 1px solid var(--home-line);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, .16);
   opacity: .9;
 }
+
+.home-v3-tool-calibration .home-v3-tool-copy { grid-column: 1 / 3; }
+.home-v3-tool-calibration .home-v3-tool-action { grid-column: 1 / 3; grid-row: 3; }
+.home-v3-tool-calibration .home-v3-tool-visual { grid-column: 3; grid-row: 1 / 4; height: 100%; min-height: 210px; }
+.home-v3-tool-action svg { margin-left: auto; transition: transform .2s ease; }
+.home-v3-tool:is(:hover, :focus-visible) .home-v3-tool-action svg { transform: translateX(4px); }
+.home-v3-tool:focus-visible { outline: 2px solid var(--home-mint); outline-offset: 4px; }
+.home-v3-tool:active { transform: scale(.99); }
 
 .home-v3-tool-calibration .home-v3-tool-visual i,
 .home-v3-tool-calibration .home-v3-tool-visual b,
@@ -624,8 +650,8 @@ body:has(.home-v3) {
 
 .home-v3-tool-buttons .home-v3-tool-visual {
   display: flex;
-  align-items: end;
-  justify-content: end;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -703,23 +729,32 @@ body:has(.home-v3) {
 }
 
 .home-v3-benefit-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
-.home-v3-benefit:first-child {
-  grid-row: span 2;
+.home-v3-benefit {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px 16px;
+  min-height: 0;
+  align-content: center;
 }
+.home-v3-benefit h3 { margin: 0; align-self: center; }
+.home-v3-benefit p { grid-column: 2; }
+.home-v3-worth { align-items: start; }
+.home-v3-method-card, .home-v3-benefit, .home-v3-disclosure { transition: border-color .2s ease, transform .2s ease; }
+.home-v3-method-card:hover, .home-v3-benefit:hover, .home-v3-disclosure:hover { border-color: rgba(117, 255, 213, .35); transform: translateY(-3px); }
 
 .home-v3-disclosure {
   display: grid;
-  grid-template-columns: .75fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
   padding: 28px;
 }
 
 .home-v3-disclosure div {
-  display: grid;
-  align-content: start;
+  display: flex;
+  align-items: center;
   gap: 13px;
 }
 
@@ -741,11 +776,14 @@ body:has(.home-v3) {
 }
 
 .home-v3-disclosure ul {
-  grid-column: 2;
+  grid-column: 1;
   display: grid;
-  gap: 8px;
-  margin: -4px 0 0;
-  padding-left: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--home-line);
+  list-style: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -757,11 +795,7 @@ body:has(.home-v3) {
   .home-v3-eyebrow,
   .home-v3-description,
   .home-v3-actions,
-  .home-v3-stage,
-  .home-v3-tool,
-  .home-v3-method-card,
-  .home-v3-worth,
-  .home-v3-disclosure {
+  .home-v3-stage {
     animation: homeV3Reveal .72s cubic-bezier(.16, 1, .3, 1) both;
   }
 
@@ -774,7 +808,33 @@ body:has(.home-v3) {
   .home-v3-tool-warmup .home-v3-tool-visual i { animation: homeV3Pulse 2.3s ease-in-out infinite; }
   .home-v3-tool-warmup .home-v3-tool-visual i:nth-child(2) { animation-delay: .55s; }
   .home-v3-tool-warmup .home-v3-tool-visual i:nth-child(3) { animation-delay: 1.05s; }
+  .home-v3-tool[data-revealed], .home-v3-benefit[data-revealed], .home-v3-method-card[data-revealed], .home-v3-disclosure[data-revealed] { animation: homeV3Reveal .55s ease-out backwards; }
+  .home-v3-tool-calibration .home-v3-tool-visual i,
+  .home-v3-tool-calibration .home-v3-tool-visual b { animation: homeToolTrack 4s ease-in-out infinite; }
+  .home-v3-tool-calibration .home-v3-tool-visual em { animation: homeToolTrail 4s ease-in-out infinite; }
+  .home-v3-tool-warmup .home-v3-tool-visual b { animation: homeToolAim 3s ease-in-out infinite; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg { animation: homeToolInput 2.7s ease-in-out infinite; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg:nth-child(2) { animation-delay: .9s; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg:nth-child(3) { animation-delay: 1.8s; }
 }
+
+.home-v3 [data-visible="false"] *, .home-v3[data-hidden="true"] * { animation-play-state: paused !important; }
+/* Keep the requested exercise demonstrations readable with reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .home-v3-tool-calibration .home-v3-tool-visual i,
+  .home-v3-tool-calibration .home-v3-tool-visual b { animation: homeToolTrack 10s ease-in-out infinite; }
+  .home-v3-tool-warmup .home-v3-tool-visual i { animation: homeV3Pulse 5s ease-in-out infinite; }
+  .home-v3-tool-warmup .home-v3-tool-visual i:nth-child(2) { animation-delay: 1.6s; }
+  .home-v3-tool-warmup .home-v3-tool-visual i:nth-child(3) { animation-delay: 3.2s; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg { animation: homeToolInput 6s ease-in-out infinite; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg:nth-child(2) { animation-delay: 2s; }
+  .home-v3-tool-buttons .home-v3-tool-visual svg:nth-child(3) { animation-delay: 4s; }
+  .home-v3-tool:hover, .home-v3-benefit:hover, .home-v3-method-card:hover, .home-v3-disclosure:hover { transform: none; }
+}
+@keyframes homeToolTrack { 0%, 100% { transform: translate(-12px, -10px); } 35% { transform: translate(-130px, -85px); } 70% { transform: translate(-60px, -45px); } }
+@keyframes homeToolTrail { 0%, 100% { transform: translate(-12px, -10px) rotate(-12deg); opacity: .3; } 35% { transform: translate(-130px, -85px) rotate(20deg); opacity: .8; } 70% { transform: translate(-60px, -45px) rotate(-25deg); opacity: .5; } }
+@keyframes homeToolAim { 0%, 100% { transform: translate(-100px, 0); } 33% { transform: translate(90px, 20px); } 66% { transform: translate(-30px, 45px); } }
+@keyframes homeToolInput { 0%, 65%, 100% { transform: translateY(0) scale(1); opacity: .45; } 15%, 35% { transform: translateY(-7px) scale(1.08); opacity: 1; } }
 
 @keyframes homeV3Reveal {
   from { opacity: 0; transform: translate3d(0, 24px, 0); }
@@ -865,8 +925,7 @@ body:has(.home-v3) {
   }
 
   .home-v3-tool-calibration {
-    grid-row: auto;
-    min-height: 268px;
+    grid-column: auto;
   }
 }
 
@@ -912,26 +971,27 @@ body:has(.home-v3) {
   }
 
   .home-v3-tool {
-    min-height: 245px;
+    min-height: 0;
     padding: 22px;
+    grid-template-columns: 43px minmax(0, 1fr);
+    grid-template-rows: auto auto 140px auto;
   }
 
   .home-v3-tool-copy {
     padding-left: 0;
-    margin-top: 58px;
+    margin-top: 0;
   }
 
   .home-v3-tool-icon {
-    left: 22px;
-    top: 45px;
+    left: auto;
+    top: auto;
   }
 
   .home-v3-tool-visual {
-    right: 12px;
-    bottom: 18px;
-    transform: scale(.82);
-    transform-origin: right bottom;
+    transform: none;
   }
+  .home-v3-tool-calibration .home-v3-tool-visual { grid-column: 1 / -1; grid-row: 3; min-height: 140px; }
+  .home-v3-tool-calibration .home-v3-tool-action { grid-column: 1 / -1; grid-row: 4; }
 
   .home-v3-method-grid,
   .home-v3-benefit-grid,
@@ -941,6 +1001,7 @@ body:has(.home-v3) {
 
   .home-v3-disclosure ul {
     grid-column: auto;
+    grid-template-columns: 1fr;
   }
 }
 
