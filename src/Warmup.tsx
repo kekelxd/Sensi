@@ -563,13 +563,13 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
   )
 })
 
-export function Warmup() {
+export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExercise | null }) {
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
-  const [phase, setPhase] = useState<WarmupPhase>('hub')
+  const [phase, setPhase] = useState<WarmupPhase>(initialExercise ? 'setup' : 'hub')
   const [setupStep, setSetupStep] = useState<SetupStep>(1)
   const [inputReady, setInputReady] = useState(false)
-  const [exercise, setExercise] = useState<WarmupExercise>('switch')
+  const [exercise, setExercise] = useState<WarmupExercise>(initialExercise ?? 'switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
   const [adaptiveLevel, setAdaptiveLevel] = useState<FixedWarmupDifficulty>('medium')
   const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
