@@ -70,8 +70,6 @@ function ArenaPreview({ activeTarget, chain, onHit }: { activeTarget: number; ch
   return <section className="xensi-reference-arena xensi-arena-training" aria-label={t('home.demoGridshot')} data-testid="home-training-demo">
     <div className="xensi-reference-arena-bar"><span><b>ARENA_01</b> · <em>{copy.live}</em></span><span>00:27 &nbsp; ⛶</span></div>
     <div className="xensi-reference-room" aria-hidden="true"><i /><i /><i /></div>
-    <span className="xensi-reference-trace" aria-hidden="true" />
-    <span className="xensi-reference-crosshair" aria-hidden="true" />
     {targets.map((target) => <button key={target.id} type="button" className={`xensi-reference-target xensi-reference-target-${target.point} ${target.id === activeTarget ? 'is-active' : ''}`} onClick={() => onHit(target.id)} aria-label={target.label}><i /></button>)}
     <div className="xensi-arena-demo-status" aria-hidden="true"><span>{copy.chain}</span><b>+{chain}</b></div>
   </section>

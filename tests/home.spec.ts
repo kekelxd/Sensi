@@ -36,6 +36,30 @@ test.describe('Compact XENSI home', () => {
     await expect(page.getByText('0ms', { exact: true })).toHaveCount(0)
   })
 
+  test('keeps the demo arena focused on animated targets without aim overlays', async ({ page }) => {
+    const demo = page.getByTestId('home-training-demo')
+    await expect(demo).toBeVisible()
+    await expect(demo.getByText('ARENA_01')).toBeVisible()
+    await expect(demo.getByText('DEMONSTRAÇÃO ATIVA')).toBeVisible()
+    await expect(demo.getByText('00:27', { exact: false })).toBeVisible()
+    await expect(demo.getByText('SEQUÊNCIA DEMO')).toBeVisible()
+    await expect(demo.locator('.xensi-reference-target')).toHaveCount(3)
+    await expect(demo.locator('.xensi-reference-target.is-active')).toHaveCount(1)
+    await expect(demo.locator('.xensi-reference-crosshair')).toHaveCount(0)
+    await expect(demo.locator('.xensi-reference-trace')).toHaveCount(0)
+    await expect(demo.locator('.xensi-reference-target.is-active')).toHaveCSS('animation-name', 'xensiReferenceTarget')
+  })
+
+  test('still opens the real warm-up arena', async ({ page }) => {
+    await page.getByRole('button', { name: 'Começar treino' }).first().click()
+    await page.getByRole('button', { name: /Target Shooting/ }).click()
+    await page.getByRole('button', { name: /Continuar|Próximo/ }).click()
+    await page.getByRole('button', { name: /Continuar|Próximo/ }).click()
+    await page.getByRole('button', { name: /Iniciar aquecimento/ }).click()
+    await expect(page.locator('canvas.warmup-arena')).toBeVisible()
+    await expect(page.locator('.warmup-game-workspace')).toBeVisible()
+  })
+
   test('keeps each primary metric in one visual source', async ({ page }) => {
     await page.evaluate(() => {
       const now = new Date().toISOString()

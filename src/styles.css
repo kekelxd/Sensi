@@ -116,10 +116,6 @@
 .xensi-reference-room i:nth-child(1) { left: 0; bottom: -34%; transform: rotate(63deg); }
 .xensi-reference-room i:nth-child(2) { right: 0; bottom: -34%; transform: rotate(-63deg); }
 .xensi-reference-room i:nth-child(3) { top: 0; left: 50%; height: 100%; }
-.xensi-reference-trace { position: absolute; z-index: 3; top: 48%; left: 38%; width: 27%; height: 1px; transform: rotate(58deg); transform-origin: left; background: #ff4758; }
-.xensi-reference-trace::after { position: absolute; top: -2px; left: 42%; width: 5px; height: 5px; border-radius: 50%; background: #ff4758; box-shadow: 0 0 0 1px rgba(255,255,255,.2); content: ''; }
-.xensi-reference-crosshair { position: absolute; z-index: 5; top: 55%; left: 44%; width: 25px; height: 25px; transform: translate(-50%,-50%); }
-.xensi-reference-crosshair::before,.xensi-reference-crosshair::after { position: absolute; top: 50%; left: 50%; width: 27px; height: 1px; transform: translate(-50%,-50%); background: #f5f1e9; content: ''; }.xensi-reference-crosshair::after { width: 1px; height: 27px; }
 .xensi-reference-target { position: absolute; z-index: 6; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #ff4655; border-radius: 50%; background: rgba(255, 70, 85, .08); color: inherit; opacity: .52; transform: translate(-50%,-50%) scale(.78); cursor: pointer; transition: transform .2s ease, opacity .2s ease; }
 .xensi-reference-target i { width: 12px; height: 12px; border: 4px solid rgba(255,255,255,.34); border-radius: 50%; background: #ff4655; box-shadow: 0 0 24px rgba(255,70,85,.8); }
 .xensi-reference-target.is-active { opacity: 1; transform: translate(-50%,-50%) scale(1); animation: xensiReferenceTarget 1.4s ease-in-out infinite; }.xensi-reference-target:not(.is-active) { pointer-events: none; }
@@ -7012,7 +7008,7 @@ body:has(.home-reboot) {
 .xensi-reference-arena { min-height: 435px; border-color: rgba(223,232,234,.18); border-radius: 0; background: #0a0e13; box-shadow: none; }
 .xensi-reference-arena-bar { padding: 17px 19px; }.xensi-reference-arena-bar em { color: #9ce7c2; font-style: normal; }
 .xensi-reference-room { inset: 45px 14% 22px 4px; border-color: rgba(191,209,211,.17); }.xensi-reference-room::before { inset: 13% 11% 15%; }.xensi-reference-room::after { right: 8%; bottom: -14%; left: 8%; height: 47%; }
-.xensi-reference-trace { top: 67%; left: 45%; width: 31%; transform: rotate(-57deg); background: #8be4c1; }.xensi-reference-crosshair { top: 53%; left: 48%; }.xensi-reference-target-top { top: 29%; left: 44%; }.xensi-reference-target-right { top: 55%; left: 70%; }.xensi-reference-target-left { top: 53%; left: 22%; }.xensi-reference-target { border-color: #ff6f62; }.xensi-reference-target i { background: #ff7869; }
+.xensi-reference-target-top { top: 29%; left: 44%; }.xensi-reference-target-right { top: 55%; left: 70%; }.xensi-reference-target-left { top: 53%; left: 22%; }.xensi-reference-target { border-color: #ff6f62; }.xensi-reference-target i { background: #ff7869; }
 .xensi-reference-metrics { top: 23%; right: 4.2%; }.xensi-reference-metrics b { color: #92e2b3; }.xensi-reference-metrics i { border-top-color: #92e2b3; }
 
 .xensi-reference-dashboard { display: grid; grid-template-columns: minmax(0, 2fr) minmax(420px, 1fr); gap: 16px; margin-top: 22px; }
@@ -7041,8 +7037,6 @@ body:has(.home-reboot) {
 .xensi-core-function.is-converter::after { border-radius: 2px; transform: rotate(45deg); }
 .xensi-core-function.is-training::after { width: 106px; height: 106px; border-color: rgba(133,229,186,.32); }
 
-.xensi-arena-calibration .xensi-reference-trace { background: #ff7065; transform: rotate(-28deg); }
-.xensi-arena-converter .xensi-reference-trace { width: 36%; background: #8be4c1; transform: rotate(-9deg); }
 .xensi-calibration-readout, .xensi-converter-readout { position: absolute; z-index: 2; display: flex; align-items: center; gap: 18px; color: #aab2b3; font: 500 10px 'DM Mono', monospace; }
 .xensi-calibration-readout { bottom: 41px; left: 38px; padding: 14px 18px; border: 1px solid rgba(255,255,255,.14); background: rgba(9,13,17,.82); }
 .xensi-calibration-readout > span { color: #ff7065; }.xensi-calibration-readout b { display: grid; gap: 5px; font-weight: 500; }.xensi-calibration-readout strong { color: #f2eee5; font: 500 17px 'Space Grotesk', sans-serif; }
