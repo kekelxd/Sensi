@@ -7103,3 +7103,7 @@ body:has(.home-reboot) {
 .profile-avatar-picker { display: grid; grid-template-columns: repeat(8, minmax(64px, 1fr)); gap: 8px; max-height: 246px; overflow-y: auto; padding: 12px; border: 1px solid rgba(255,255,255,.09); background: rgba(8,10,14,.72); scrollbar-width: thin; scrollbar-color: rgba(255,70,87,.55) transparent; }
 .profile-avatar-picker button { position: relative; aspect-ratio: 1; min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.11); border-radius: 9px; padding: 0; background: #08090b; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }.profile-avatar-picker button:hover { border-color: rgba(255,70,87,.65); transform: translateY(-2px); }.profile-avatar-picker button.selected { border-color: #ff4657; box-shadow: 0 0 0 2px #101218, 0 0 0 3px #ff4657, 0 0 22px rgba(255,70,87,.24); }.profile-avatar-picker button.selected::after { position: absolute; right: 5px; bottom: 5px; width: 7px; height: 7px; border-radius: 50%; background: #ff4657; box-shadow: 0 0 8px #ff4657; content: ''; }
 @media (max-width: 760px) { .profile-avatar-picker { grid-template-columns: repeat(4, minmax(54px, 1fr)); max-height: 300px; }.xensi-user-trigger > .xensi-avatar-art { width: 31px; height: 31px; } }
+
+/* Intermediate audit states remain visually distinct from full verification. */
+.profile-status.status-cross_verified { border-color: rgba(128,236,193,.25); color: #a8d8c8; }
+.profile-status.status-measured { border-color: rgba(239,190,92,.32); color: #efbe5c; }

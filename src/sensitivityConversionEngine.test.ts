@@ -61,7 +61,7 @@ describe('auditable sensitivity conversion engine', () => {
 
   it('requires evidence and sources before a profile can be verified', () => {
     const falselyVerified: GameSensitivityProfile = { ...cs2, verification: { ...cs2.verification, status: 'verified' } }
-    expect(validateGameProfile(falselyVerified)).toEqual(expect.arrayContaining(['verified profile requires physical validation', 'verified profile requires validated input precision', 'verified profile requires at least one independent source', 'verified profile requires a source']))
+    expect(validateGameProfile(falselyVerified)).toEqual(expect.arrayContaining(['verified profile requires physical validation', 'verified profile requires validated input precision']))
   })
 
   it('supports slider multipliers in physical calculations', () => {

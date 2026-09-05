@@ -88,13 +88,23 @@ export function validateGameProfile(profile: GameSensitivityProfile) {
     if (model.type === 'slider_with_multiplier' && (!Number.isFinite(model.defaultMultiplier) || model.defaultMultiplier <= 0)) errors.push('default multiplier must be greater than zero')
   }
   if (profile.supportedMethods.hipfire360 && (profile.angularModel.type !== 'linear' || model.type === 'unavailable')) errors.push('hipfire360 requires linear angular and available input models')
-  if (profile.verification.status === 'verified') {
-    const evidence = profile.verification.evidence
+  const { evidence, sources, status } = profile.verification
+  if (status === 'verified') {
     if (!evidence.formulaKnown) errors.push('verified profile requires a known formula')
     if (!evidence.physicalValidation) errors.push('verified profile requires physical validation')
     if (!evidence.inputPrecisionValidated) errors.push('verified profile requires validated input precision')
-    if (evidence.independentSources < 1) errors.push('verified profile requires at least one independent source')
-    if (profile.verification.sources.length === 0) errors.push('verified profile requires a source')
+    if (evidence.independentSources < 2) errors.push('verified profile requires at least two independent sources')
+    if (sources.length < 2) errors.push('verified profile requires at least two sources')
+  }
+  if (status === 'cross_verified') {
+    if (!evidence.formulaKnown) errors.push('cross-verified profile requires a known formula')
+    if (evidence.independentSources < 2) errors.push('cross-verified profile requires at least two independent sources')
+    if (sources.length < 2) errors.push('cross-verified profile requires at least two sources')
+  }
+  if (status === 'measured') {
+    if (!evidence.formulaKnown) errors.push('measured profile requires a known formula')
+    if (!evidence.physicalValidation) errors.push('measured profile requires physical validation')
+    if (!sources.some((source) => source.type === 'measurement')) errors.push('measured profile requires a measurement source')
   }
   return errors
 }

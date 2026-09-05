@@ -105,7 +105,7 @@ export function SensitivityConverter() {
         </dl></article>
         <article className="converter-profile-meta"><header><span>{t('converter.profileDetails')}</span></header><dl>
           <div><dt>{t('converter.method')}</dt><dd>{t('converter.hipfireMethod')}</dd></div><div><dt>{t('converter.profileVersion')}</dt><dd>{source.verification.profileVersion} / {target.verification.profileVersion}</dd></div>
-          {(source.verification.verifiedAt || target.verification.verifiedAt) && <div><dt>{t('converter.lastValidation')}</dt><dd>{source.verification.verifiedAt ?? '—'} / {target.verification.verifiedAt ?? '—'}</dd></div>}
+          {(source.verification.auditedAt || target.verification.auditedAt || source.verification.verifiedAt || target.verification.verifiedAt) && <div><dt>{t('converter.lastValidation')}</dt><dd>{source.verification.auditedAt ?? source.verification.verifiedAt ?? '—'} / {target.verification.auditedAt ?? target.verification.verifiedAt ?? '—'}</dd></div>}
         </dl>{(source.verification.notes || target.verification.notes) && <p>{t('converter.unverifiedNotice')}</p>}
           {(source.verification.sources.length > 0 || target.verification.sources.length > 0) && <div className="converter-sources"><strong>{t('converter.sources')}</strong>{[...source.verification.sources, ...target.verification.sources].map((item, index) => item.url ? <a key={`${item.label}-${index}`} href={item.url} target="_blank" rel="noreferrer">{item.label}</a> : <span key={`${item.label}-${index}`}>{item.label}</span>)}</div>}
         </article>
