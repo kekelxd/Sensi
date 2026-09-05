@@ -7113,3 +7113,87 @@ body:has(.home-reboot) {
 /* Intermediate audit states remain visually distinct from full verification. */
 .profile-status.status-cross_verified { border-color: rgba(128,236,193,.25); color: #a8d8c8; }
 .profile-status.status-measured { border-color: rgba(239,190,92,.32); color: #efbe5c; }
+
+/* Shared navigation surface and compact authenticated home. */
+.app-header,
+.app-shell:has(.xensi-reference) .app-header {
+  border-bottom-color: rgba(255,255,255,.16);
+  background: linear-gradient(90deg, #07090d, #0c1015 62%, #16090d);
+  background-size: auto;
+}
+
+.xensi-home-compact .xensi-reference-shell { padding-bottom: 54px; }
+.xensi-home-compact .xensi-reference-hero { grid-template-columns: minmax(350px, .78fr) minmax(600px, 1.22fr); gap: 34px; min-height: 374px; padding: 22px 30px 14px; }
+.xensi-home-compact .xensi-reference-hero::before { inset: 18px 51% 14px 30px; }
+.xensi-home-compact .xensi-reference-copy { padding-left: 10px; }
+.xensi-home-compact .xensi-reference-kicker { margin-bottom: 17px; padding: 10px 14px; font-size: 9px; }
+.xensi-home-compact .xensi-reference-copy h1 { font-size: clamp(2.45rem, 3.4vw, 3.45rem); }
+.xensi-home-compact .xensi-reference-copy p { margin: 17px 0 20px; font-size: 14px; line-height: 1.65; }
+.xensi-home-compact .xensi-reference-cta { min-width: 210px; min-height: 48px; margin-top: 0; padding: 0 22px; }
+.xensi-home-compact .xensi-reference-arena { min-height: 338px; }
+.xensi-home-compact .xensi-reference-room { inset: 45px 6px 10px; }
+.xensi-arena-demo-status { position: absolute; z-index: 7; right: 20px; bottom: 18px; display: grid; gap: 3px; min-width: 108px; padding: 11px 13px; border-left: 1px solid rgba(117,244,208,.45); background: rgba(7,10,14,.72); }
+.xensi-arena-demo-status span { color: #929b9d; font: 500 8px 'DM Mono', monospace; letter-spacing: .08em; }
+.xensi-arena-demo-status b { color: #83e5be; font: 500 20px 'Space Grotesk', sans-serif; }
+
+.xensi-home-control { display: grid; grid-template-columns: 145px minmax(0, 1fr); min-height: 132px; margin-top: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.14); background: rgba(10,13,17,.78); }
+.xensi-home-control > header { grid-row: 1 / 3; align-content: center; display: grid; gap: 11px; min-height: 0; padding: 20px 22px; border: 0; border-right: 1px solid rgba(255,255,255,.11); background: rgba(255,255,255,.018); box-shadow: none; backdrop-filter: none; }
+.xensi-home-control > header svg { color: #ff6268; }
+.xensi-home-control h2 { margin: 0; color: #e8e5de; font: 500 10px 'DM Mono', monospace; letter-spacing: .11em; }
+.xensi-home-control-metrics { display: grid; grid-template-columns: repeat(4, 1fr); }
+.xensi-home-control-metrics article { display: grid; gap: 8px; min-height: 82px; padding: 18px 22px 13px; border-right: 1px solid rgba(255,255,255,.09); }
+.xensi-home-control-metrics article:last-child { border-right: 0; }
+.xensi-home-control-metrics span { color: #8e989b; font: 500 8px 'DM Mono', monospace; letter-spacing: .06em; text-transform: uppercase; }
+.xensi-home-control-metrics strong { color: #f1ede5; font: 500 24px 'Space Grotesk', sans-serif; letter-spacing: -.035em; }
+.xensi-home-control > footer { grid-column: 2; display: flex; justify-content: space-between; min-height: 42px; padding: 0 18px 0 22px; border: 0; border-top: 1px solid rgba(255,255,255,.09); background: transparent; backdrop-filter: none; }
+.xensi-home-control > footer p { margin: 0; color: #7f898c; font: 500 9px 'DM Mono', monospace; }
+.xensi-home-control button, .xensi-home-empty button { display: inline-flex; align-items: center; gap: 9px; border: 0; color: #85dfbb; background: transparent; font: 600 10px Manrope, sans-serif; }
+.xensi-home-control button:hover, .xensi-home-control button:focus-visible { color: #b6f8dc; outline: 0; }
+.xensi-home-empty { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 96px; padding: 20px 24px; }
+.xensi-home-empty > span { display: grid; gap: 6px; color: #899396; font: 500 11px/1.5 Manrope, sans-serif; }
+.xensi-home-empty strong { color: #ece8e0; font-size: 15px; }
+
+.xensi-home-section { margin-top: 28px; }
+.xensi-home-section-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 11px; }
+.xensi-home-section-heading h2 { margin: 0; color: #d8d6d0; font: 500 10px 'DM Mono', monospace; letter-spacing: .12em; }
+.xensi-home-section-heading p { margin: 5px 0 0; color: #707a7d; font: 500 11px Manrope, sans-serif; }
+.xensi-home-quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid rgba(255,255,255,.11); background: rgba(10,13,17,.5); }
+.xensi-home-quick-grid > button { display: grid; grid-template-columns: 32px 1fr 18px; gap: 12px; align-items: center; min-height: 88px; border: 0; border-right: 1px solid rgba(255,255,255,.09); padding: 17px 20px; color: #ff6268; background: transparent; text-align: left; transition: background .2s ease, color .2s ease; }
+.xensi-home-quick-grid > button:last-child { border-right: 0; }
+.xensi-home-quick-grid > button:hover, .xensi-home-quick-grid > button:focus-visible { color: #86e2bd; background: rgba(255,255,255,.035); outline: 0; }
+.xensi-home-quick-grid span { display: grid; gap: 5px; }
+.xensi-home-quick-grid strong { color: #e8e5de; font: 600 14px 'Space Grotesk', sans-serif; }
+.xensi-home-quick-grid small { color: #7f898c; font: 500 10px/1.45 Manrope, sans-serif; }
+
+.xensi-home-setup-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.xensi-home-setup-grid article { display: grid; grid-template-columns: 38px 1fr auto; gap: 15px; align-items: center; min-height: 126px; padding: 22px 24px; border: 1px solid rgba(117,244,208,.17); background: linear-gradient(110deg, rgba(117,244,208,.035), rgba(10,13,17,.74)); }
+.xensi-home-setup-grid article > svg { color: #7de1bd; }
+.xensi-home-setup-grid h3 { margin: 0 0 7px; color: #ece9e2; font: 600 16px 'Space Grotesk', sans-serif; }
+.xensi-home-setup-grid p { max-width: 390px; margin: 0; color: #899396; font: 500 11px/1.55 Manrope, sans-serif; }
+.xensi-home-setup-grid button { display: inline-flex; align-items: center; gap: 10px; border: 0; color: #83dfba; background: transparent; font: 600 10px Manrope, sans-serif; white-space: nowrap; }
+.xensi-home-setup-grid button:hover, .xensi-home-setup-grid button:focus-visible { color: #b7f8dc; outline: 0; }
+
+@media (max-width: 1050px) {
+  .xensi-home-compact .xensi-reference-hero { grid-template-columns: 1fr; padding: 30px; }
+  .xensi-home-compact .xensi-reference-arena { min-height: 350px; }
+  .xensi-home-control { grid-template-columns: 118px minmax(0, 1fr); }
+  .xensi-home-setup-grid article { grid-template-columns: 34px 1fr; }
+  .xensi-home-setup-grid button { grid-column: 2; justify-self: start; }
+}
+
+@media (max-width: 690px) {
+  .xensi-home-compact .xensi-reference-hero { padding: 24px 17px 16px; }
+  .xensi-home-compact .xensi-reference-copy h1 { font-size: clamp(2.2rem, 11vw, 3rem); }
+  .xensi-home-compact .xensi-reference-arena { min-height: 300px; }
+  .xensi-home-control { grid-template-columns: 1fr; }
+  .xensi-home-control > header { grid-row: auto; grid-template-columns: 18px 1fr; align-items: center; padding: 15px 17px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.09); }
+  .xensi-home-control-metrics { grid-template-columns: 1fr 1fr; }
+  .xensi-home-control-metrics article:nth-child(2) { border-right: 0; }
+  .xensi-home-control-metrics article:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,.09); }
+  .xensi-home-control > footer { grid-column: 1; align-items: flex-start; flex-direction: column; gap: 10px; padding: 13px 17px; }
+  .xensi-home-empty { grid-column: 1; align-items: flex-start; flex-direction: column; }
+  .xensi-home-quick-grid, .xensi-home-setup-grid { grid-template-columns: 1fr; }
+  .xensi-home-quick-grid > button { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.09); }
+  .xensi-home-quick-grid > button:last-child { border-bottom: 0; }
+  .xensi-home-setup-grid article { grid-template-columns: 32px 1fr; padding: 20px; }
+}
