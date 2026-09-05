@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { BarChart3, ChevronDown, Crosshair, Gauge, Languages, Mouse, Settings2, SlidersHorizontal, UserRound, Wrench } from 'lucide-react'
 import type { Locale } from './i18n'
 import type { WarmupExercise } from './warmupConfig'
+import { AvatarArtwork } from './AvatarArtwork'
+import { DEFAULT_AVATAR, isAvatarId } from './avatars'
 
 export type NavigationView = 'home' | 'analysis' | 'profile' | 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons'
 export type AnalysisSection = 'overview' | 'calibration-history' | 'methodology'
@@ -24,12 +26,12 @@ const labels = {
 
 type OpenMenu = 'train' | 'calibrate' | 'tools' | 'profile' | null
 
-function readNickname() {
+function readNavProfile() {
   try {
-    const profile = JSON.parse(window.localStorage.getItem('xensi-player-profile') ?? '{}') as { nickname?: string }
-    return profile.nickname?.trim() || 'xensi_dev'
+    const profile = JSON.parse(window.localStorage.getItem('xensi-player-profile') ?? '{}') as { nickname?: string; avatarId?: string }
+    return { nickname: profile.nickname?.trim() || 'xensi_dev', avatarId: isAvatarId(profile.avatarId) ? profile.avatarId : DEFAULT_AVATAR }
   } catch {
-    return 'xensi_dev'
+    return { nickname: 'xensi_dev', avatarId: DEFAULT_AVATAR }
   }
 }
 
@@ -37,7 +39,7 @@ export function AppNavigation({ view, locale, disabled, onLocaleChange, onNaviga
   const text = labels[locale]
   const shellRef = useRef<HTMLDivElement>(null)
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
-  const [nickname] = useState(readNickname)
+  const [navProfile, setNavProfile] = useState(readNavProfile)
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -45,6 +47,16 @@ export function AppNavigation({ view, locale, disabled, onLocaleChange, onNaviga
     }
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
+  }, [])
+
+  useEffect(() => {
+    const update = () => setNavProfile(readNavProfile())
+    window.addEventListener('xensi-profile-updated', update)
+    window.addEventListener('storage', update)
+    return () => {
+      window.removeEventListener('xensi-profile-updated', update)
+      window.removeEventListener('storage', update)
+    }
   }, [])
 
   const navigate = (next: NavigationView) => {
@@ -102,7 +114,7 @@ export function AppNavigation({ view, locale, disabled, onLocaleChange, onNaviga
         </div>}
       </div>
       <div className="xensi-nav-menu-group">
-        <button type="button" className={`xensi-user-trigger ${view === 'profile' ? 'active' : ''}`} onClick={() => toggle('profile')} disabled={disabled} aria-expanded={openMenu === 'profile'}><span>{nickname.slice(0, 2).toUpperCase()}</span><b>{nickname}</b><ChevronDown size={13} /></button>
+        <button type="button" className={`xensi-user-trigger ${view === 'profile' ? 'active' : ''}`} onClick={() => toggle('profile')} disabled={disabled} aria-expanded={openMenu === 'profile'}><AvatarArtwork avatarId={navProfile.avatarId} /><b>{navProfile.nickname}</b><ChevronDown size={13} /></button>
         {openMenu === 'profile' && <div className="xensi-nav-dropdown xensi-nav-dropdown-right xensi-profile-dropdown">
           <button type="button" onClick={() => navigate('profile')}><UserRound size={15} /><span><b>{text.profile}</b></span></button>
           <button type="button" onClick={() => navigate('profile')}><SlidersHorizontal size={15} /><span><b>{text.preferences}</b></span></button>

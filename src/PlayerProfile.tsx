@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { CheckCircle2, Clipboard, Crosshair, Edit3, Gamepad2, Gauge, HardDrive, Mouse, Plus, Save, Sparkles, Target, Trash2, X } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { useI18n, type Locale } from './i18n'
+import { AvatarArtwork } from './AvatarArtwork'
+import { DEFAULT_AVATAR, XENSI_AVATARS, isAvatarId, type AvatarId } from './avatars'
 
 type GamePreset = {
   id: GameId
@@ -16,7 +18,7 @@ type PlayerProfileData = {
   tag: string
   rank: string
   accuracyLevel: number
-  avatarUrl: string
+  avatarId: AvatarId
   mouseModel: string
   mouseWeight: string
   mousepad: string
@@ -66,7 +68,7 @@ const copy = {
     nickname: 'Nickname',
     tag: 'Tag',
     rank: 'Rank',
-    avatar: 'URL do avatar',
+    avatar: 'Avatar XENSI',
     game: 'Jogo',
     addNewGame: 'Adicionar novo jogo',
     removeGame: 'Remover jogo',
@@ -104,7 +106,7 @@ const copy = {
     nickname: 'Nickname',
     tag: 'Tag',
     rank: 'Rank',
-    avatar: 'Avatar URL',
+    avatar: 'XENSI avatar',
     game: 'Game',
     addNewGame: 'Add new game',
     removeGame: 'Remove game',
@@ -142,7 +144,7 @@ const copy = {
     nickname: 'Nickname',
     tag: 'Tag',
     rank: 'Rango',
-    avatar: 'URL del avatar',
+    avatar: 'Avatar XENSI',
     game: 'Juego',
     addNewGame: 'Añadir nuevo juego',
     removeGame: 'Eliminar juego',
@@ -156,7 +158,7 @@ const defaultProfile: PlayerProfileData = {
   tag: '#XENSI-01',
   rank: 'Diamond Control',
   accuracyLevel: 82,
-  avatarUrl: '',
+  avatarId: DEFAULT_AVATAR,
   mouseModel: 'Logitech G Pro X Superlight',
   mouseWeight: '63g',
   mousepad: 'Pano control / e-sports',
@@ -175,8 +177,8 @@ function readProfile(): PlayerProfileData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return defaultProfile
-    const parsed = JSON.parse(raw) as Partial<PlayerProfileData>
-    return { ...defaultProfile, ...parsed, games: parsed.games?.length ? parsed.games : defaultProfile.games }
+    const parsed = JSON.parse(raw) as Partial<PlayerProfileData> & { avatarUrl?: string }
+    return { ...defaultProfile, ...parsed, avatarId: isAvatarId(parsed.avatarId) ? parsed.avatarId : DEFAULT_AVATAR, games: parsed.games?.length ? parsed.games : defaultProfile.games }
   } catch {
     return defaultProfile
   }
@@ -233,6 +235,7 @@ export function PlayerProfile() {
     }))
     const nextProfile = { ...draft, games: cleanGames }
     setProfile(nextProfile)
+    window.dispatchEvent(new Event('xensi-profile-updated'))
     setSelectedPresetIndex(Math.max(0, cleanGames.length - 1))
     setEditing(false)
     setStatus(text.saved)
@@ -296,7 +299,7 @@ export function PlayerProfile() {
           <span>{text.identity}</span>
           <div className="profile-agent">
             <div className="profile-avatar">
-              {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <strong>{profile.nickname.slice(0, 2).toUpperCase()}</strong>}
+              <AvatarArtwork avatarId={profile.avatarId} />
             </div>
             <div>
               <h2>{profile.nickname}</h2>
@@ -366,7 +369,7 @@ export function PlayerProfile() {
             <label className="profile-field">{text.tag}<span className="profile-prefixed-field"><b>#</b><input value={draft.tag.replace(/^#/, '')} onChange={(event) => setDraft({ ...draft, tag: `#${event.target.value.replace(/^#/, '')}` })} /></span></label>
             <label className="profile-field">{text.rank}<select value={draft.rank} onChange={(event) => setDraft({ ...draft, rank: event.target.value })}>{RANK_OPTIONS.map((rank) => <option key={rank} value={rank}>{rank}</option>)}</select></label>
             <label className="profile-field profile-slider-field">{text.precisionLevel}<span>{draft.accuracyLevel}%</span><input type="range" min="0" max="100" value={draft.accuracyLevel} style={{ '--profile-range': `${draft.accuracyLevel}%` } as CSSProperties} onChange={(event) => setDraft({ ...draft, accuracyLevel: Number(event.target.value) })} /></label>
-            <label className="profile-field profile-wide-field">{text.avatar}<input value={draft.avatarUrl} onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })} /></label>
+            <div className="profile-avatar-field profile-wide-field"><span>{text.avatar}</span><div className="profile-avatar-picker">{XENSI_AVATARS.map((avatar) => <button key={avatar.id} type="button" className={draft.avatarId === avatar.id ? 'selected' : ''} onClick={() => setDraft({ ...draft, avatarId: avatar.id })} aria-label={avatar.label} aria-pressed={draft.avatarId === avatar.id}><AvatarArtwork avatarId={avatar.id} /></button>)}</div></div>
           </div>
         </div>
         <div className="profile-editor-section">
