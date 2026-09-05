@@ -14,6 +14,87 @@
   --mint: #8dfbd3;
 }
 
+/* Concept header, scoped to the reference home. */
+.app-shell:has(.xensi-reference) {
+  grid-template-rows: 106px minmax(0, 1fr) 70px;
+}
+
+.app-shell:has(.xensi-reference) .app-header {
+  border-bottom-color: rgba(255, 255, 255, .1);
+  background: linear-gradient(90deg, rgba(6, 8, 12, .98), rgba(11, 13, 18, .93), rgba(31, 9, 12, .72));
+  box-shadow: none;
+}
+
+.app-shell:has(.xensi-reference) .app-topbar {
+  height: 54px;
+  border-bottom: 0;
+}
+
+.app-shell:has(.xensi-reference) .brand {
+  font-size: 28px;
+  letter-spacing: .25em;
+  text-shadow: none;
+}
+
+.app-shell:has(.xensi-reference) .language-switcher {
+  right: 35px;
+  gap: 5px;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #a8adb4;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-shell:has(.xensi-reference) .language-switcher svg {
+  width: 15px;
+  color: #d4d6d6;
+  filter: none;
+}
+
+.app-shell:has(.xensi-reference) .language-switcher select {
+  width: 84px;
+  padding: 4px 16px 4px 0;
+  color: #b9bdc0;
+  font: 500 10px 'DM Mono', monospace;
+  letter-spacing: .04em;
+}
+
+.app-tabs-concept {
+  height: 52px;
+  gap: 38px;
+  padding: 0;
+}
+
+.app-tabs-concept button {
+  padding: 0 2px;
+  color: rgba(235, 235, 232, .56);
+  font: 500 10px 'DM Mono', monospace;
+  letter-spacing: .12em;
+}
+
+.app-tabs-concept button::after {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+}
+
+.app-tabs-concept button:hover { color: #f4f0e8; background: transparent; }
+.app-tabs-concept button.active { color: #ff5059; text-shadow: none; }
+.app-tabs-concept button.active::after { box-shadow: 0 0 10px rgba(255, 70, 85, .68); }
+
+@media (max-width: 690px) {
+  .app-shell:has(.xensi-reference) { grid-template-rows: 100px minmax(0, 1fr) 70px; }
+  .app-shell:has(.xensi-reference) .app-topbar { height: 50px; }
+  .app-shell:has(.xensi-reference) .brand { font-size: 22px; }
+  .app-shell:has(.xensi-reference) .language-switcher { right: 14px; }
+  .app-tabs-concept { justify-content: flex-start; gap: 25px; padding: 0 16px; }
+  .app-tabs-concept button { font-size: 9px; }
+}
+
 /* Reference arena home */
 .xensi-reference .xensi-reference-shell { width: min(1500px, calc(100% - 72px)); margin: 0 auto; padding: 20px 0 64px; }
 .xensi-reference .xensi-reference-hero { display: grid; grid-template-columns: minmax(440px, .95fr) minmax(570px, 1.05fr); gap: 42px; align-items: center; min-height: 458px; }

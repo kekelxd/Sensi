@@ -405,16 +405,26 @@ function App() {
             </select>
           </label>
         </div>
-        <nav className="app-tabs" aria-label="XENSI">
-          <button className={view === 'home' ? 'active' : ''} onClick={() => setView('home')} disabled={active}><House size={15} /> {t('nav.home')}</button>
-          <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')} disabled={active}><UserRound size={15} /> {t('nav.profile')}</button>
-          <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
-          <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
-          <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
-          <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
-          <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> {t('nav.polling')}</button>
-          <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /><Gamepad2 size={15} /> {t('nav.input')}</button>
-        </nav>
+        {view === 'home' ? (
+          <nav className="app-tabs app-tabs-concept" aria-label="XENSI">
+            <button className="active" onClick={() => setView('home')} disabled={active}>TREINO</button>
+            <button onClick={() => setView('profile')} disabled={active}>ANÁLISES</button>
+            <button onClick={() => setView('routine')} disabled={active}>RANKING</button>
+            <button onClick={() => setView('converter')} disabled={active}>CONFIGURAÇÕES</button>
+            <button onClick={() => setView('buttons')} disabled={active}>AJUDA</button>
+          </nav>
+        ) : (
+          <nav className="app-tabs" aria-label="XENSI">
+            <button onClick={() => setView('home')} disabled={active}><House size={15} /> {t('nav.home')}</button>
+            <button className={view === 'profile' ? 'active' : ''} onClick={() => setView('profile')} disabled={active}><UserRound size={15} /> {t('nav.profile')}</button>
+            <button className={view === 'routine' ? 'active' : ''} onClick={() => setView('routine')} disabled={active}><ListChecks size={15} /> {t('nav.routine')}</button>
+            <button className={view === 'warmup' ? 'active' : ''} onClick={() => setView('warmup')} disabled={active}><Flame size={15} /> {t('nav.warmup')}</button>
+            <button className={view === 'calibration' ? 'active' : ''} onClick={() => setView('calibration')} disabled={active}><Crosshair size={15} /> {t('nav.calibration')}</button>
+            <button className={view === 'converter' ? 'active' : ''} onClick={() => setView('converter')} disabled={active}><ArrowLeftRight size={15} /> {t('nav.converter')}</button>
+            <button className={view === 'polling' ? 'active' : ''} onClick={() => setView('polling')} disabled={active}><Gauge size={15} /> {t('nav.polling')}</button>
+            <button className={view === 'buttons' ? 'active' : ''} onClick={() => setView('buttons')} disabled={active}><Mouse size={15} /><Gamepad2 size={15} /> {t('nav.input')}</button>
+          </nav>
+        )}
         {view === 'calibration' && calibrationStarted && (
           <div className="header-context">
             <>
