@@ -159,7 +159,7 @@ export function AppNavigation({ view, locale, disabled, onLocaleChange, onNaviga
 
     <div className="xensi-nav-actions">
       <div className="xensi-nav-menu-group">
-        <button ref={(node) => { menuTriggerRefs.current.profile = node }} type="button" className={`xensi-user-trigger ${view === 'profile' ? 'active' : ''}`} onClick={() => toggle('profile')} disabled={disabled} aria-haspopup="menu" aria-expanded={openMenu === 'profile'}><AvatarArtwork avatarId={navProfile.avatarId} /><b>{navProfile.nickname}</b><ChevronDown size={13} /></button>
+        <button ref={(node) => { menuTriggerRefs.current.profile = node }} type="button" className={`xensi-user-trigger ${view === 'profile' ? 'active' : ''}`} onClick={() => toggle('profile')} disabled={disabled} aria-haspopup="menu" aria-expanded={openMenu === 'profile'}><AvatarArtwork avatarId={navProfile.avatarId} size="sm" /><b>{navProfile.nickname}</b><ChevronDown size={13} /></button>
         {openMenu === 'profile' && <div className="xensi-nav-dropdown xensi-nav-dropdown-right xensi-profile-dropdown">
           <button type="button" onClick={() => navigate('profile')}><UserRound size={15} /><span><b>{text.profile}</b></span></button>
           <button type="button" onClick={() => navigate('profile')}><SlidersHorizontal size={15} /><span><b>{text.preferences}</b></span></button>

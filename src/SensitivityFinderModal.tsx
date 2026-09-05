@@ -11,12 +11,16 @@ import { useI18n } from './i18n'
 const FINDER_GAMES: GameId[] = ['cs2', 'valorant', 'overwatch2', 'warzone']
 const DPI_PRESETS = [400, 800, 1600, 3200]
 
-export function SensitivityFinderModal() {
+type SensitivityFinderModalProps = {
+  initialPreset?: { gameId: GameId; sensitivity: number; dpi: number } | null
+}
+
+export function SensitivityFinderModal({ initialPreset = null }: SensitivityFinderModalProps) {
   const { t } = useI18n()
-  const [setupOpen, setSetupOpen] = useState(false)
-  const [gameId, setGameId] = useState<GameId>('cs2')
-  const [dpi, setDpi] = useState('800')
-  const [baseSensitivity, setBaseSensitivity] = useState('1')
+  const [setupOpen, setSetupOpen] = useState(Boolean(initialPreset))
+  const [gameId, setGameId] = useState<GameId>(initialPreset?.gameId ?? 'cs2')
+  const [dpi, setDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
+  const [baseSensitivity, setBaseSensitivity] = useState(initialPreset ? String(initialPreset.sensitivity) : '1')
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
   const search = useBinarySensSearch()

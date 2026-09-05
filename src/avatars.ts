@@ -28,3 +28,7 @@ export const DEFAULT_AVATAR: AvatarId = 'cat-headset'
 export function isAvatarId(value: unknown): value is AvatarId {
   return typeof value === 'string' && XENSI_AVATARS.some((avatar) => avatar.id === value)
 }
+
+export function avatarSource(avatarId: AvatarId) {
+  return `./avatars/individual/${avatarId}.png`
+}

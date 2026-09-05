@@ -16,7 +16,7 @@ import { Routine } from './Routine'
 import { CalibrationLanding } from './CalibrationLanding'
 import { CalibrationReportView } from './CalibrationReport'
 import { Home } from './Home'
-import { PlayerProfile } from './PlayerProfile'
+import { PlayerProfile, type ProfilePresetLaunch } from './PlayerProfile'
 import { useI18n, type TranslationKey } from './i18n'
 import { Analysis } from './Analysis'
 import { AppNavigation, type AnalysisSection, type NavigationView } from './AppNavigation'
@@ -92,6 +92,8 @@ function App() {
   const [metrics, setMetrics] = useState({ accuracy: 0, meanError: 0, smoothness: 0 })
   const [previousCalibration, setPreviousCalibration] = useState<CalibrationSessionSummary | null>(null)
   const [calibrationHistory, setCalibrationHistory] = useState<CalibrationSessionSummary[]>([])
+  const [converterPreset, setConverterPreset] = useState<ProfilePresetLaunch | null>(null)
+  const [finderPreset, setFinderPreset] = useState<ProfilePresetLaunch | null>(null)
 
   const active = phase !== 'idle'
   const showLegacyCalibration = false
@@ -406,7 +408,7 @@ function App() {
           locale={locale}
           disabled={active}
           onLocaleChange={setLocale}
-          onNavigate={(next) => { if (next === 'warmup') setWarmupEntry(null); setView(next) }}
+          onNavigate={(next) => { if (next === 'warmup') setWarmupEntry(null); if (next === 'converter') setConverterPreset(null); if (next === 'calibration') setFinderPreset(null); setView(next) }}
           onExercise={(exercise) => { setWarmupEntry(exercise); setView('warmup') }}
           onAnalysisSection={(section) => { setAnalysisSection(section); setView('analysis') }}
         />
@@ -420,7 +422,7 @@ function App() {
         )}
       </header>
 
-      {view === 'home' ? <Home onNavigate={(next) => setView(next)} /> : view === 'analysis' ? <Analysis section={analysisSection} /> : view === 'profile' ? <PlayerProfile /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
+      {view === 'home' ? <Home onNavigate={(next) => setView(next)} /> : view === 'analysis' ? <Analysis section={analysisSection} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); setView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); setView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
@@ -504,7 +506,7 @@ function App() {
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls" />
         <div className="dpi-status">{t('calibration.physicalProfile', { dpi: confirmedDpi, fov: confirmedHorizontalFov })}</div>
-      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter initialPreset={converterPreset} /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">

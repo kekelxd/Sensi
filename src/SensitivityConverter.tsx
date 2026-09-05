@@ -18,13 +18,17 @@ function coefficientOf(profile: GameSensitivityProfile) {
   return profile.angularModel.type === 'linear' ? profile.angularModel.coefficient : null
 }
 
-export function SensitivityConverter() {
+type SensitivityConverterProps = {
+  initialPreset?: { gameId: GameSensitivityProfileId; sensitivity: number; dpi: number } | null
+}
+
+export function SensitivityConverter({ initialPreset = null }: SensitivityConverterProps) {
   const { t } = useI18n()
-  const [sourceId, setSourceId] = useState<GameSensitivityProfileId>('cs2')
-  const [targetId, setTargetId] = useState<GameSensitivityProfileId>('fortnite')
-  const [sourceValue, setSourceValue] = useState('1')
-  const [sourceDpi, setSourceDpi] = useState('800')
-  const [targetDpi, setTargetDpi] = useState('800')
+  const [sourceId, setSourceId] = useState<GameSensitivityProfileId>(initialPreset?.gameId ?? 'cs2')
+  const [targetId, setTargetId] = useState<GameSensitivityProfileId>(initialPreset?.gameId === 'fortnite' ? 'cs2' : 'fortnite')
+  const [sourceValue, setSourceValue] = useState(initialPreset ? String(initialPreset.sensitivity) : '1')
+  const [sourceDpi, setSourceDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
+  const [targetDpi, setTargetDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
   const [copied, setCopied] = useState(false)
   const source = GAME_SENSITIVITY_PROFILE_BY_ID[sourceId]
   const target = GAME_SENSITIVITY_PROFILE_BY_ID[targetId]
