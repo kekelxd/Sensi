@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -21,22 +21,39 @@ export type HomeDestination = 'calibration' | 'warmup' | 'buttons'
 
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
-function GridshotPreview() {
-  return <div className="home-v3-preview" aria-hidden="true">
+type PreviewProps = {
+  score: number
+  activeTarget: number
+  onTargetHit: (target: number) => void
+}
+
+function GridshotPreview({ score, activeTarget, hitTarget, onTargetHit }: PreviewProps & { hitTarget: number | null }) {
+  const { t } = useI18n()
+  const targets = [
+    { id: 0, className: 'one', label: t('home.demoTargetOne') },
+    { id: 1, className: 'two', label: t('home.demoTargetTwo') },
+    { id: 2, className: 'three', label: t('home.demoTargetThree') },
+  ]
+
+  return <div className="home-v3-preview">
     <span className="home-v3-preview-grid" />
     <span className="home-v3-preview-scan" />
     <span className="home-v3-preview-trace" />
     <span className="home-v3-preview-crosshair" />
-    <span className="home-v3-preview-target home-v3-preview-target-one"><i /></span>
-    <span className="home-v3-preview-target home-v3-preview-target-two"><i /></span>
-    <span className="home-v3-preview-target home-v3-preview-target-three"><i /></span>
-    <span className="home-v3-preview-hit home-v3-preview-hit-one" />
-    <span className="home-v3-preview-hit home-v3-preview-hit-two" />
-    <span className="home-v3-preview-hit home-v3-preview-hit-three" />
+    {targets.map((target) => (
+      <button
+        className={`home-v3-preview-target home-v3-preview-target-${target.className} ${activeTarget === target.id ? 'is-active' : ''}`}
+        key={target.id}
+        type="button"
+        onClick={() => onTargetHit(target.id)}
+        aria-label={target.label}
+      ><i /></button>
+    ))}
+    {targets.map((target) => <span className={`home-v3-preview-hit home-v3-preview-hit-${target.className} ${hitTarget === target.id ? 'is-hit' : ''}`} key={`hit-${target.id}`} />)}
     <span className="home-v3-preview-panel">
-      <small>Gridshot</small>
-      <strong>+128</strong>
-      <em>target chain</em>
+      <small>{t('home.demoGridshot')}</small>
+      <strong>+{score}</strong>
+      <em>{t('home.demoInteractive')}</em>
     </span>
     <span className="home-v3-preview-bars">
       <i />
@@ -47,17 +64,21 @@ function GridshotPreview() {
   </div>
 }
 
-function MetricStrip() {
+function MetricStrip({ score }: { score: number }) {
+  const { t } = useI18n()
   return <div className="home-v3-metrics" aria-hidden="true">
-    <span><small>precision</small><strong>91%</strong></span>
-    <span><small>stability</small><strong>high</strong></span>
-    <span><small>round</small><strong>04/08</strong></span>
+    <span><small>{t('home.demoPrecision')}</small><strong>{Math.min(99, 88 + Math.floor(score / 16))}%</strong></span>
+    <span><small>{t('home.demoStability')}</small><strong>{t('home.demoHigh')}</strong></span>
+    <span><small>{t('home.demoCombo')}</small><strong>{String(Math.max(1, Math.floor(score / 8))).padStart(2, '0')}</strong></span>
   </div>
 }
 
 export function Home({ onNavigate }: Props) {
   const { t } = useI18n()
   const rootRef = useRef<HTMLElement>(null)
+  const [demoScore, setDemoScore] = useState(128)
+  const [activeTarget, setActiveTarget] = useState(1)
+  const [hitTarget, setHitTarget] = useState<number | null>(null)
 
   useEffect(() => {
     const root = rootRef.current
@@ -77,6 +98,13 @@ export function Home({ onNavigate }: Props) {
       document.removeEventListener('visibilitychange', updateVisibility)
     }
   }, [])
+
+  const hitDemoTarget = (target: number) => {
+    if (target !== activeTarget) return
+    setDemoScore((score) => score + 8)
+    setHitTarget(target)
+    setActiveTarget((target + 1) % 3)
+  }
   const tools: Array<{ id: HomeDestination, icon: LucideIcon, title: string, description: string, action: string }> = [
     { id: 'calibration', icon: Crosshair, title: t('home.calibrationTitle'), description: t('home.simpleCalibrationDescription'), action: t('home.calibrationAction') },
     { id: 'warmup', icon: Flame, title: t('home.warmupTitle'), description: t('home.simpleWarmupDescription'), action: t('home.warmupAction') },
@@ -97,7 +125,6 @@ export function Home({ onNavigate }: Props) {
     <div className="home-v3-shell">
       <section className="home-v3-hero" aria-labelledby="home-title">
         <div className="home-v3-copy">
-          <span className="home-v3-eyebrow">XENSI // FPS CONTROL</span>
           <h1 id="home-title" className="home-v3-title">
             <span>{t('home.aimLineOne')}</span>
             <span>{t('home.aimLineTwo')}</span>
@@ -117,9 +144,9 @@ export function Home({ onNavigate }: Props) {
           </div>
         </div>
 
-        <div className="home-v3-stage">
-          <GridshotPreview />
-          <MetricStrip />
+        <div className="home-v3-stage" data-testid="home-training-demo">
+          <GridshotPreview score={demoScore} activeTarget={activeTarget} hitTarget={hitTarget} onTargetHit={hitDemoTarget} />
+          <MetricStrip score={demoScore} />
         </div>
       </section>
 
