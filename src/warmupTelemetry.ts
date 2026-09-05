@@ -1,6 +1,8 @@
 import type { WarmupExercise } from './warmupConfig'
+import type { summarizeSniper } from './sniperReaction'
 
 export type WarmupMetrics = {
+  sniper?: ReturnType<typeof summarizeSniper>
   score: number
   accuracy: number
   hits: number
@@ -46,6 +48,7 @@ export function getAimBiasLabel(x = 0, y = 0) {
 
 export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSummary {
   return {
+    ...(metrics.sniper ? { sniper: metrics.sniper } : {}),
     score: metrics.score,
     accuracy: metrics.accuracy,
     hits: metrics.hits,

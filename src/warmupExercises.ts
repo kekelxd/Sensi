@@ -17,4 +17,5 @@ export const EXERCISES: WarmupExerciseDefinition[] = [
   { id: 'reflex', name: 'Reflex', description: 'warmup.reflex.description', instruction: 'warmup.reflex.instruction', icon: Zap },
   { id: 'gridshot', name: 'Gridshot', description: 'warmup.gridshot.description', instruction: 'warmup.gridshot.instruction', icon: Grid3X3 },
   { id: 'strafetrack', name: 'Strafetrack', description: 'warmup.strafetrack.description', instruction: 'warmup.strafetrack.instruction', icon: MoveHorizontal },
+  { id: 'sniper-reaction', name: 'Sniper Reaction', description: 'sniper.description', instruction: 'sniper.instruction', icon: Focus },
 ]

@@ -4,6 +4,11 @@ export type Locale = 'pt' | 'en' | 'es'
 type Params = Record<string, string | number>
 
 const pt = {
+  'sniper.reaction': 'Tempo de reação',
+  'sniper.description': 'Teste sua reação contra alvos que cruzam rapidamente uma abertura.',
+  'sniper.instruction': 'Segure o ângulo e dispare uma vez quando o alvo aparecer.',
+  'sniper.hit': 'Acerto', 'sniper.miss': 'Erro', 'sniper.early': 'Antecipado', 'sniper.noShot': 'Sem disparo',
+  'sniper.earlyShots': 'Antecipações', 'sniper.consistency': 'Consistência', 'sniper.best': 'Melhor reação',
   'meta.title': 'XENSI - Aquecimento, sensibilidade e diagnostico FPS',
   'calibration.targetSpeed': 'Velocidade da bolinha',
   'buttons.mouse': 'Mouse',
@@ -100,6 +105,11 @@ export type TranslationKey = keyof typeof pt
 
 const en: Record<TranslationKey, string> = {
   ...pt,
+  'sniper.reaction': 'Reaction time',
+  'sniper.description': 'Test your reaction against targets crossing a narrow opening.',
+  'sniper.instruction': 'Hold the angle and fire once when the target appears.',
+  'sniper.hit': 'Hit', 'sniper.miss': 'Miss', 'sniper.early': 'Early shot', 'sniper.noShot': 'No shot',
+  'sniper.earlyShots': 'Early shots', 'sniper.consistency': 'Consistency', 'sniper.best': 'Best reaction',
   'meta.title': 'XENSI - FPS warm-up, sensitivity and diagnostics',
   'calibration.targetSpeed': 'Target speed',
   'buttons.mouse': 'Mouse',
@@ -194,6 +204,11 @@ const en: Record<TranslationKey, string> = {
 
 const es: Record<TranslationKey, string> = {
   ...pt,
+  'sniper.reaction': 'Tiempo de reacción',
+  'sniper.description': 'Pon a prueba tu reacción ante objetivos que cruzan una abertura estrecha.',
+  'sniper.instruction': 'Mantén el ángulo y dispara una vez cuando aparezca el objetivo.',
+  'sniper.hit': 'Acierto', 'sniper.miss': 'Fallo', 'sniper.early': 'Anticipado', 'sniper.noShot': 'Sin disparo',
+  'sniper.earlyShots': 'Anticipaciones', 'sniper.consistency': 'Consistencia', 'sniper.best': 'Mejor reacción',
   'meta.title': 'XENSI - Calentamiento, sensibilidad y diagnostico FPS',
   'calibration.targetSpeed': 'Velocidad del objetivo',
   'buttons.mouse': 'Ratón',

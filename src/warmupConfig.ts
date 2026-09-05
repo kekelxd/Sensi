@@ -2,7 +2,7 @@ import { GameConfig } from './games'
 
 export type WarmupDifficulty = 'easy' | 'medium' | 'hard' | 'adaptive'
 export type FixedWarmupDifficulty = Exclude<WarmupDifficulty, 'adaptive'>
-export type WarmupExercise = 'switch' | 'tracking' | 'flick' | 'reflex' | 'gridshot' | 'strafetrack'
+export type WarmupExercise = 'switch' | 'tracking' | 'flick' | 'reflex' | 'gridshot' | 'strafetrack' | 'sniper-reaction'
 
 export type WarmupDifficultyConfig = {
   label: string

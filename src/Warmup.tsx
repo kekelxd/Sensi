@@ -8,6 +8,8 @@ import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WAR
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
 import { EXERCISES } from './warmupExercises'
+import { SniperReaction, summarizeSniper } from './sniperReaction'
+import './sniperReaction.css'
 import { createEmptyWarmupMetrics, getAimBiasLabel, getAimDiagnosis, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
 
 export type { WarmupMetrics } from './warmupTelemetry'
@@ -23,6 +25,7 @@ const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: Lucid
 ]
 
 function ExercisePreview({ exercise, name }: { exercise: WarmupExercise, name: string }) {
+  if (exercise === 'sniper-reaction') return <div className="warmup-preview sniper-preview" aria-hidden="true"><div className="sniper-preview-opening"><span /></div><div className="preview-meta"><b>{name}</b></div></div>
   return (
     <div className={`warmup-preview warmup-preview-${exercise}`} aria-hidden="true">
       <span className="preview-target preview-target-a" />
@@ -96,12 +99,21 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
   return (
     <div className="warmup-report">
       <div className="report-metrics-grid">
+        {metrics.sniper ? <>
+          <div><span>{t('sniper.reaction')}</span><strong>{metrics.sniper.hits ? `${format(metrics.reactionTimeMs)}ms` : '—'}</strong></div>
+          <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy, 1)}%</strong></div>
+          <div><span>{t('sniper.consistency')}</span><strong>{metrics.sniper.consistency === null ? '—' : `${format(metrics.sniper.consistency)}%`}</strong></div>
+          <div><span>{t('sniper.earlyShots')}</span><strong>{metrics.sniper.earlyShots}</strong></div>
+          <div><span>{t('sniper.best')}</span><strong>{metrics.sniper.bestReactionMs === null ? '—' : `${format(metrics.sniper.bestReactionMs)}ms`}</strong></div>
+        </> : <>
         <div><span>{t('common.accuracy')}</span><strong>{format(metrics.accuracy, 1)}%</strong></div>
         <div><span>{t('warmup.timeOnTarget')}</span><strong>{format(metrics.onTargetMs / 1000, 1)}s</strong></div>
         <div><span>{t('warmup.reactionSpeed')}</span><strong>{metrics.reactionTimeMs ? `${format(metrics.reactionTimeMs)}ms` : '—'}</strong></div>
         <div><span>{t('warmup.clickErrors')}</span><strong>{metrics.clickErrors}</strong></div>
         <div><span>{t('warmup.bestStreak')}</span><strong>{trackingExercise ? `${format(metrics.bestTrackingStreakMs / 1000, 1)}s` : metrics.bestStreak}</strong></div>
+        </>}
       </div>
+      {!metrics.sniper && <>
       <section className={`aim-doctor-card ${diagnosis.kind}`}>
         <div className="report-section-heading"><div><Activity size={15} /><span>{t('warmup.aimDoctor')}</span></div></div>
         <p>{diagnosisMessage}</p>
@@ -124,6 +136,7 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
           <p>{t('warmup.recommendationDescription')}</p>
         </button>
       </div>
+      </>}
     </div>
   )
 }
@@ -152,6 +165,9 @@ export type ArenaHandle = { requestPointerLock: () => void }
 export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, progressLabel, completionOverlay, exitFullscreenOnComplete = true, onMetrics, onComplete, onPointerLockChange }, ref) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const sniperRef = useRef<SniperReaction | null>(null)
+  const translateRef = useRef(t)
+  useEffect(() => { translateRef.current = t }, [t])
   const [pointerLocked, setPointerLocked] = useState(false)
   const pointerLockedAtRef = useRef(0)
   const pointerLockedRef = useRef(false)
@@ -256,6 +272,14 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       state.aimY = clampAimCoordinate(state.aimY + movement.y, canvas.clientHeight)
     }
     const handleShot = (event: MouseEvent) => {
+      if (exerciseRef.current === 'sniper-reaction') {
+        if (event.button !== 0 || phaseRef.current !== 'playing' || document.pointerLockElement !== canvas) return
+        const state = stateRef.current
+        if (!state.startedAt || state.complete || performance.now() - state.startedAt >= WARMUP_DURATION * 1000) return
+        const scale = Math.max(1, Math.min(state.width, state.height))
+        sniperRef.current?.shoot(performance.now() - state.startedAt, (state.aimX - state.width / 2) / scale, (state.aimY - state.height / 2) / scale)
+        return
+      }
       if (event.button !== 0 || phaseRef.current !== 'playing' || !isClickExercise(exerciseRef.current) || document.pointerLockElement !== canvas) return
       const state = stateRef.current
       const exercise = exerciseRef.current
@@ -345,6 +369,53 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
         const aimBlend = 1 - Math.exp(-70 * deltaSeconds)
         state.visualAimX += (state.aimX - state.visualAimX) * aimBlend
         state.visualAimY += (state.aimY - state.visualAimY) * aimBlend
+      }
+
+      if (exercise === 'sniper-reaction') {
+        const sniper = sniperRef.current
+        const scale = Math.min(width, height)
+        if (sniper) {
+          if (phaseRef.current === 'playing' && pointerLockedRef.current && !state.complete) {
+            if (!state.startedAt) state.startedAt = time
+            const elapsed = time - state.startedAt
+            const remaining = Math.max(0, WARMUP_DURATION - elapsed / 1000)
+            if (remaining > 0) sniper.update(elapsed)
+            if (time - state.lastMetricsAt >= 100 || remaining <= 0) {
+              const summary = summarizeSniper(sniper.attempts)
+              const next = { ...createEmptyWarmupMetrics(WARMUP_DURATION), hits: summary.hits, shots: summary.shots, accuracy: summary.accuracy, reactionTimeMs: summary.reactionTimeMs, remaining, score: summary.hits * 100, clickErrors: summary.misses, sniper: summary }
+              state.lastMetricsAt = time
+              onMetricsRef.current(next)
+              if (remaining <= 0) {
+                state.complete = true
+                sniper.stop()
+                document.exitPointerLock?.()
+                if (exitFullscreenOnCompleteRef.current && document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+                onCompleteRef.current(next)
+              }
+            }
+          }
+          const opening = sniper.config.opening * scale
+          const left = (width - opening) / 2
+          ctx.fillStyle = '#171d26'
+          ctx.fillRect(width * .12, height * .15, left - width * .12, height * .7)
+          ctx.fillRect(left + opening, height * .15, left - width * .12, height * .7)
+          ctx.strokeStyle = '#ff7251'; ctx.lineWidth = 2
+          ctx.strokeRect(left, height * .15, opening, height * .7)
+          ctx.save(); ctx.beginPath(); ctx.rect(left, height * .15, opening, height * .7); ctx.clip()
+          if (sniper.phase === 'peek') {
+            ctx.fillStyle = '#ff7251'; ctx.beginPath(); ctx.arc(width / 2 + sniper.x * scale, height / 2 + sniper.y * scale, sniper.config.radius * scale, 0, Math.PI * 2); ctx.fill()
+          }
+          ctx.restore()
+          if (sniper.phase === 'feedback') {
+            const last = sniper.attempts[sniper.attempts.length - 1]
+            ctx.fillStyle = last.outcome === 'hit' ? '#8dfbd3' : '#ff7251'
+            ctx.textAlign = 'center'; ctx.font = '16px sans-serif'
+            ctx.fillText(`${translateRef.current(`sniper.${last.outcome}`)}${last.reactionMs === null ? '' : ` · ${Math.round(last.reactionMs)} ms`}`, width / 2, height * .9)
+          }
+          drawCrosshair(ctx, state.aimX, state.aimY, crosshairRef.current, '#f4f2eb')
+        }
+        frame = requestAnimationFrame(render)
+        return
       }
 
       if (phaseRef.current === 'playing' && pointerLockedRef.current) {
@@ -515,7 +586,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       frame = requestAnimationFrame(render)
     }
     frame = requestAnimationFrame(render)
-    return () => { cancelAnimationFrame(frame); observer.disconnect() }
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); sniperRef.current?.stop() }
   }, [])
 
   useEffect(() => {
@@ -538,9 +609,10 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       hits: 0, shots: 0, score: 0, complete: false,
     })
     inputPausedAtRef.current = 0
+    sniperRef.current = exerciseRef.current === 'sniper-reaction' ? new SniperReaction(difficulty === 'adaptive' ? 'medium' : difficulty) : null
     placeTarget()
     if (exerciseRef.current === 'gridshot') { placeTarget(0, 1); placeTarget(0, 2) }
-  }, [sessionId])
+  }, [sessionId, difficulty])
 
   const active = phase === 'countdown' || phase === 'playing'
   return (
@@ -579,6 +651,8 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   const [countdown, setCountdown] = useState(3)
   const [sessionId, setSessionId] = useState(0)
   const [previewExercise, setPreviewExercise] = useState<WarmupExercise | null>(null)
+  const [sniperFocused, setSniperFocused] = useState(false)
+  const activePreview = sniperFocused ? 'sniper-reaction' : previewExercise
   const [metrics, setMetrics] = useState<WarmupMetrics>(() => createEmptyWarmupMetrics(WARMUP_DURATION))
   const [previousSession, setPreviousSession] = useState<WarmupSessionSummary | null>(null)
 
@@ -610,6 +684,9 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   }, [phase, sessionId, inputReady])
 
   const openSetup = (nextExercise: WarmupExercise) => {
+    if (nextExercise === 'sniper-reaction' && difficulty === 'adaptive') setDifficulty('medium')
+    setPreviewExercise(null)
+    setSniperFocused(false)
     setExercise(nextExercise)
     setSetupStep(1)
     setPhase('setup')
@@ -678,15 +755,18 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
               <button
                 key={item.id}
                 type="button"
-                className={previewExercise === item.id ? 'preview-active' : ''}
+                className={activePreview === item.id ? 'preview-active' : ''}
                 onPointerEnter={() => setPreviewExercise(item.id)}
-                onPointerLeave={() => setPreviewExercise((current) => current === item.id ? null : current)}
-                onFocus={() => setPreviewExercise(item.id)}
-                onBlur={() => setPreviewExercise((current) => current === item.id ? null : current)}
+                onPointerLeave={(event) => {
+                  if (item.id === 'sniper-reaction' && document.activeElement === event.currentTarget) return
+                  setPreviewExercise((current) => current === item.id ? null : current)
+                }}
+                onFocus={() => { if (item.id === 'sniper-reaction') setSniperFocused(true); setPreviewExercise(item.id) }}
+                onBlur={() => { if (item.id === 'sniper-reaction') setSniperFocused(false); setPreviewExercise((current) => current === item.id ? null : current) }}
                 onClick={() => openSetup(item.id)}
               >
                 <Icon size={26} />
-                {previewExercise === item.id && <ExercisePreview exercise={item.id} name={item.name} />}
+                {activePreview === item.id && <ExercisePreview exercise={item.id} name={item.name} />}
                 <strong>{item.name}</strong>
                 <small>{t(item.description)}</small>
                 <i>{t('warmup.configure')} <Play size={13} /></i>
@@ -730,7 +810,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
                   </div>
                   <div className="warmup-config-label">{t('warmup.difficulty')}</div>
                   <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
-                    {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).map((level) => (
+                    {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).filter(level => exercise !== 'sniper-reaction' || level !== 'adaptive').map((level) => (
                       <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => { setDifficulty(level); if (level === 'adaptive') setAdaptiveLevel('medium') }}>
                         <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
                       </button>
@@ -762,7 +842,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
               <Sparkles size={22} className="modal-icon" />
               <div className="panel-label">{t('warmup.reportTitle')}</div>
               <h2>{exerciseConfig.name}</h2>
-              <p>{difficultyLabel} · {game.label} · {WARMUP_DURATION}s</p>
+              <p>{difficultyLabel} · {exercise === 'sniper-reaction' ? '' : `${game.label} · `}{WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
               <WarmupReport metrics={metrics} previous={previousSession} exercise={exercise} onSelectRecommendation={openSetup} />
               <div className="warmup-next-hint">
@@ -791,7 +871,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
         crosshair={crosshair}
         pointerGain={pointerGain}
         sessionId={sessionId}
-        sensitivityLabel={`${game.shortLabel} ${format(normalizedSensitivity ?? 0, 3)}`}
+        sensitivityLabel={`${exercise === 'sniper-reaction' ? '' : `${game.shortLabel} `}${format(normalizedSensitivity ?? 0, 3)}`}
         instruction={t(exerciseConfig.instruction)}
         metrics={metrics}
         onMetrics={setMetrics}
