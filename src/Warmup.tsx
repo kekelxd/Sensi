@@ -2,12 +2,17 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type Reac
 import { flushSync } from 'react-dom'
 import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
+import { GamePicker } from './GamePicker'
+import { PresetSelection } from './PresetSelection'
+import { useSensitivityPreset } from './useSensitivityPreset'
+import { createSessionContext, type SessionContext } from './playerProfileStore'
+import { useDialogFocus } from './useDialogFocus'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
 import { calculateWarmupAccuracy, getWarmupPointerGain, WARMUP_DIFFICULTIES, WARMUP_DURATION, type FixedWarmupDifficulty, type WarmupDifficulty, type WarmupExercise } from './warmupConfig'
 import { useI18n, type TranslationKey } from './i18n'
 import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement } from './pointerInput'
-import { EXERCISES } from './warmupExercises'
+import { EXERCISES, EXERCISE_CATEGORIES, type ExerciseCategory } from './warmupExercises'
 import { SniperReaction, summarizeSniper } from './sniperReaction'
 import './sniperReaction.css'
 import { createEmptyWarmupMetrics, getAimBiasLabel, getAimDiagnosis, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
@@ -639,18 +644,24 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const [phase, setPhase] = useState<WarmupPhase>(initialExercise ? 'setup' : 'hub')
+  const setupRef = useRef<HTMLElement>(null)
+  useDialogFocus(setupRef, phase === 'setup')
   const [setupStep, setSetupStep] = useState<SetupStep>(1)
   const [inputReady, setInputReady] = useState(false)
   const [exercise, setExercise] = useState<WarmupExercise>(initialExercise ?? 'switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
   const [adaptiveLevel, setAdaptiveLevel] = useState<FixedWarmupDifficulty>('medium')
-  const [selectedGame, setSelectedGame] = useState<GameId>('cs2')
-  const [sensitivity, setSensitivity] = useState('1')
-  const [dpi, setDpi] = useState('800')
+  const config = useSensitivityPreset('cs2')
+  const selectedGame = config.draft.gameId as GameId
+  const { sensitivity, dpi } = config.draft
+  const { setSensitivity, setDpi } = config
+  const sessionContext = useRef<SessionContext | undefined>(undefined)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('classic')
   const [countdown, setCountdown] = useState(3)
   const [sessionId, setSessionId] = useState(0)
   const [previewExercise, setPreviewExercise] = useState<WarmupExercise | null>(null)
+  const [category, setCategory] = useState<ExerciseCategory | 'all'>('all')
+  const visibleExercises = EXERCISES.filter(item => category === 'all' || item.category === category)
   const [sniperFocused, setSniperFocused] = useState(false)
   const activePreview = sniperFocused ? 'sniper-reaction' : previewExercise
   const [metrics, setMetrics] = useState<WarmupMetrics>(() => createEmptyWarmupMetrics(WARMUP_DURATION))
@@ -694,6 +705,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
 
   const start = () => {
     if (!validSetup || normalizedSensitivity === null || parsedDpi === null) return
+    sessionContext.current = createSessionContext(selectedGame, normalizedSensitivity, Math.round(parsedDpi), config.draft.presetId)
     setSensitivity(String(normalizedSensitivity))
     setDpi(String(Math.round(parsedDpi)))
     setInputReady(false)
@@ -727,7 +739,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
 
   const completeWarmup = (result: WarmupMetrics) => {
     setPreviousSession(readWarmupSession(window.localStorage, exercise))
-    writeWarmupSession(window.localStorage, exercise, result)
+    writeWarmupSession(window.localStorage, exercise, { ...result, sessionContext: sessionContext.current })
     setMetrics(result)
     setPhase('result')
   }
@@ -744,12 +756,23 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
     return (
       <section className="warmup-workspace">
         <div className="warmup-heading">
-          <div className="panel-label"><Sparkles size={15} /> {t('warmup.kicker')}</div>
           <h1>{t('warmup.title')}</h1>
           <p>{t('warmup.subtitle')}</p>
         </div>
+        <div className="warmup-category-filters" role="group" aria-label={t('warmup.categories')}>
+          {(['all', ...Object.keys(EXERCISE_CATEGORIES)] as Array<ExerciseCategory | 'all'>).map(value => (
+            <button key={value} type="button" aria-pressed={category === value} onClick={() => {
+              setCategory(value)
+              setPreviewExercise(null)
+              setSniperFocused(false)
+            }}>
+              {t(value === 'all' ? 'warmup.category.all' : EXERCISE_CATEGORIES[value])}
+              <span>{value === 'all' ? EXERCISES.length : EXERCISES.filter(item => item.category === value).length}</span>
+            </button>
+          ))}
+        </div>
         <div className="warmup-exercises">
-          {EXERCISES.map((item) => {
+          {visibleExercises.map((item) => {
             const Icon = item.icon
             return (
               <button
@@ -777,7 +800,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
 
         {phase === 'setup' && (
           <div className="modal-backdrop">
-            <section className="modal setup-modal warmup-setup-modal">
+            <section ref={setupRef} className="modal setup-modal warmup-setup-modal" role="dialog" aria-modal="true" aria-label={t('warmup.configureExercise', { exercise: exerciseConfig.name })} onKeyDown={event => { if (event.key === 'Escape') exitToHub() }}>
               <button className="modal-close" onClick={exitToHub} aria-label={t('common.close')}><X size={18} /></button>
               <Settings2 size={20} className="modal-icon" />
               <h2>{t('warmup.configureExercise', { exercise: exerciseConfig.name })}</h2>
@@ -792,14 +815,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
               <div className="warmup-step-content">
                 {setupStep === 1 && <>
                   <h3>{t('warmup.chooseGame')}</h3>
-                  <div className="option-group game-grid warmup-game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
-                    {GAMES.map((item) => (
-                      <button key={item.id} className={selectedGame === item.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(item.id)} type="button">
-                        <div className={`game-logo game-logo-${item.id}`}><img src={`./game-icons/${item.iconFile ?? `${item.id}.png`}`} alt="" /></div>
-                        <span className="game-card-name">{item.shortLabel}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <GamePicker gameIds={GAMES.map(item => item.id)} value={selectedGame} onChange={config.selectGame} presets={config.presets} />
                 </>}
 
                 {setupStep === 2 && <>
@@ -825,6 +841,8 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
                   </div>
                 </>}
               </div>
+
+              {setupStep < 3 && <PresetSelection draft={config.draft} presets={config.presets} onSelect={config.selectPreset} />}
 
               <div className="warmup-wizard-actions">
                 {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as SetupStep)}><ArrowLeft size={15} /> {t('warmup.back')}</button>}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { ArrowLeft, ArrowRight, Check, Circle, Crosshair, Dot, Layers3, LogOut, Play, Plus, RotateCcw, Settings2, Sparkles, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
+import { GameBadge } from './GameBadge'
 import { useI18n, type TranslationKey } from './i18n'
 import { ROUTINE_PRESETS, type RoutinePreset } from './routineConfig'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
@@ -181,7 +182,7 @@ export function Routine() {
                   <div className="option-group game-grid warmup-game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
                     {GAMES.map((item) => (
                       <button key={item.id} className={selectedGame === item.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(item.id)} type="button">
-                        <div className={`game-logo game-logo-${item.id}`}><img src={`./game-icons/${item.iconFile ?? `${item.id}.png`}`} alt="" /></div>
+                        <GameBadge gameId={item.id} size="lg" selected={selectedGame === item.id} />
                         <span className="game-card-name">{item.shortLabel}</span>
                       </button>
                     ))}

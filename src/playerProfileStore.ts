@@ -67,9 +67,11 @@ function migrateLegacyGames(games: LegacyGamePreset[], now: string) {
 }
 
 export function ensureSinglePrimary(presets: SensitivityPreset[]) {
-  if (!presets.length) return presets
-  const primaryIndex = Math.max(0, presets.findIndex((preset) => preset.isPrimary))
-  return presets.map((preset, index) => ({ ...preset, isPrimary: index === primaryIndex }))
+  const primaryIds = new Map<GameSensitivityProfileId, string>()
+  for (const preset of presets) {
+    if (!primaryIds.has(preset.gameId) || preset.isPrimary && !presets.find(item => item.id === primaryIds.get(preset.gameId))?.isPrimary) primaryIds.set(preset.gameId, preset.id)
+  }
+  return presets.map(preset => ({ ...preset, isPrimary: preset.id === primaryIds.get(preset.gameId) }))
 }
 
 export function parsePlayerProfile(raw: string | null, now = new Date().toISOString()): PlayerProfileData {
@@ -90,11 +92,41 @@ export function parsePlayerProfile(raw: string | null, now = new Date().toISOStr
 }
 
 export function readPlayerProfile(storage: Pick<Storage, 'getItem'>) {
-  return parsePlayerProfile(storage.getItem(PLAYER_PROFILE_STORAGE_KEY))
+  try { return parsePlayerProfile(storage.getItem(PLAYER_PROFILE_STORAGE_KEY)) }
+  catch { return parsePlayerProfile(null) }
 }
 
 export function writePlayerProfile(storage: Pick<Storage, 'setItem'>, profile: PlayerProfileData) {
   storage.setItem(PLAYER_PROFILE_STORAGE_KEY, JSON.stringify(profile))
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('xensi-profile-updated'))
+}
+
+export function selectGamePreset(presets: SensitivityPreset[], gameId: GameSensitivityProfileId, explicitId?: string) {
+  const matches = presets.filter(preset => preset.gameId === gameId)
+  return matches.find(preset => preset.id === explicitId) ?? matches.find(preset => preset.isPrimary) ?? matches[0] ?? null
+}
+
+export type SessionContext = { presetId?: string; gameId: GameSensitivityProfileId; sensitivity: number; dpi: number }
+
+export function createSessionContext(gameId: GameSensitivityProfileId, sensitivity: number, dpi: number, presetId?: string): SessionContext {
+  return { gameId, sensitivity, dpi, ...(presetId ? { presetId } : {}) }
+}
+
+export function saveSensitivityPreset(storage: Pick<Storage, 'getItem' | 'setItem'>, values: Omit<SessionContext, 'presetId'>, updateId?: string) {
+  const profile = readPlayerProfile(storage)
+  const previous = profile.presets.find(preset => preset.id === updateId && preset.gameId === values.gameId)
+  if (updateId && !previous) throw new Error('Preset no longer exists')
+  const normalized = normalizeSensitivityForGame(values.sensitivity, GAME_SENSITIVITY_PROFILE_BY_ID[values.gameId])
+  if (normalized === null || !Number.isFinite(values.dpi) || values.dpi < 1) throw new Error('Invalid preset')
+  const now = new Date().toISOString()
+  const preset: SensitivityPreset = {
+    ...previous, ...values, sensitivity: normalized, dpi: Math.round(values.dpi),
+    id: previous?.id ?? crypto.randomUUID(), isPrimary: previous?.isPrimary ?? false,
+    createdAt: previous?.createdAt ?? now, updatedAt: now,
+  }
+  const presets = previous ? profile.presets.map(item => item.id === preset.id ? preset : item) : [...profile.presets, preset]
+  writePlayerProfile(storage, { ...profile, presets: ensureSinglePrimary(presets) })
+  return preset
 }
 
 export function calculatePresetCm360(preset: Pick<SensitivityPreset, 'gameId' | 'sensitivity' | 'dpi'>) {

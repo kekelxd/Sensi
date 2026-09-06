@@ -1,7 +1,9 @@
 import type { WarmupExercise } from './warmupConfig'
 import type { summarizeSniper } from './sniperReaction'
+import type { SessionContext } from './playerProfileStore'
 
 export type WarmupMetrics = {
+  sessionContext?: SessionContext
   sniper?: ReturnType<typeof summarizeSniper>
   score: number
   accuracy: number
@@ -48,6 +50,7 @@ export function getAimBiasLabel(x = 0, y = 0) {
 
 export function toWarmupSessionSummary(metrics: WarmupMetrics): WarmupSessionSummary {
   return {
+    ...(metrics.sessionContext ? { sessionContext: { ...metrics.sessionContext } } : {}),
     ...(metrics.sniper ? { sniper: metrics.sniper } : {}),
     score: metrics.score,
     accuracy: metrics.accuracy,

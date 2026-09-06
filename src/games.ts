@@ -6,7 +6,6 @@ export type GameConfig = {
   id: GameId
   label: string
   shortLabel: string
-  iconFile?: string
   yaw?: number
   conversionEstimate?: boolean
   sensitivityMin: number
@@ -23,7 +22,6 @@ export const GAMES: GameConfig[] = LEGACY_GAME_PROFILE_IDS.map((profileId) => {
     id: profile.id as GameId,
     label: profile.name,
     shortLabel: profile.shortName,
-    iconFile: profile.iconFile,
     yaw: profile.angularModel.type === 'linear' ? profile.angularModel.coefficient : undefined,
     conversionEstimate: profile.id === 'arcraiders',
     sensitivityMin: input.min,

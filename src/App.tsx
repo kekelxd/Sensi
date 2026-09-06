@@ -4,6 +4,7 @@ import { Activity, Circle, Crosshair, Dot, MousePointer2, Plus, Settings2, Targe
 import { buildCalibrationReport, calculateRoundResult, createCalibrationSessionSummary, getTargetSpeed, isCalibrationComplete, readCalibrationHistory, ROUND_DURATION, ROUND_WARMUP, selectValidationCandidateIds, writeCalibrationSession, type CalibrationSessionSummary, type RoundCapture, type RoundIssue, type RoundResult, type TargetSpeedMode } from './calibration'
 import { appendValidationRounds, BASE_CANDIDATE_MULTIPLIERS, buildCalibrationCandidates, CALIBRATION_REPETITIONS, createCalibrationPlan, createRefinementPlan, MIN_CALIBRATION_CANDIDATES, VALIDATION_FINALIST_COUNT, VALIDATION_REPETITIONS, type CalibrationPlan } from './calibrationPlan'
 import { GAME_BY_ID, GAMES, GameId } from './games'
+import { GameBadge } from './GameBadge'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
 import { SensitivityConverter } from './SensitivityConverter'
@@ -422,7 +423,7 @@ function App() {
         )}
       </header>
 
-      {view === 'home' ? <Home onNavigate={(next) => setView(next)} /> : view === 'analysis' ? <Analysis section={analysisSection} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); setView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); setView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
+      {view === 'home' ? <Home onNavigate={(next) => { if (next === 'converter') setConverterPreset(null); if (next === 'calibration') setFinderPreset(null); setView(next) }} /> : view === 'analysis' ? <Analysis section={analysisSection} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); setView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); setView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />
@@ -528,7 +529,7 @@ function App() {
                 <div className="option-group game-grid calibration-game-grid" role="radiogroup" aria-label={t('common.gameReference')}>
                   {GAMES.map((game) => (
                     <button key={game.id} className={selectedGame === game.id ? 'choice-card game-choice selected' : 'choice-card game-choice'} onClick={() => setSelectedGame(game.id)} type="button">
-                      <div className={`game-logo game-logo-${game.id}`}><img src={`./game-icons/${game.iconFile ?? `${game.id}.png`}`} alt="" /></div>
+                      <GameBadge gameId={game.id} size="lg" selected={selectedGame === game.id} />
                       <span className="game-card-name">{game.shortLabel}</span>
                     </button>
                   ))}

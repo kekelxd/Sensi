@@ -4,14 +4,12 @@ import { GAME_SENSITIVITY_PROFILES, GAME_SENSITIVITY_PROFILE_BY_ID, type GameSen
 import { convertSensitivity, isFullyVerified, validateGameProfile } from './sensitivityConversionEngine'
 import { formatSensitivity } from './sensitivity'
 import { useI18n } from './i18n'
+import { GameBadge } from './GameBadge'
+import { PresetSelection } from './PresetSelection'
+import { useSensitivityPreset, type PresetLaunch } from './useSensitivityPreset'
 
 const STATUS_KEYS: Record<VerificationStatus, 'converter.statusVerified' | 'converter.statusCrossVerified' | 'converter.statusMeasured' | 'converter.statusExperimental'> = {
   verified: 'converter.statusVerified', cross_verified: 'converter.statusCrossVerified', measured: 'converter.statusMeasured', experimental: 'converter.statusExperimental',
-}
-
-function ProfileIcon({ profile }: { profile: GameSensitivityProfile }) {
-  const file = profile.iconFile ?? (profile.id === 'rainbowsix' || profile.id === 'apex' ? null : `${profile.id}.png`)
-  return file ? <img src={`./game-icons/${file}`} alt="" /> : <span className="converter-game-fallback" aria-hidden="true">{profile.shortName.slice(0, 2).toUpperCase()}</span>
 }
 
 function coefficientOf(profile: GameSensitivityProfile) {
@@ -19,15 +17,16 @@ function coefficientOf(profile: GameSensitivityProfile) {
 }
 
 type SensitivityConverterProps = {
-  initialPreset?: { gameId: GameSensitivityProfileId; sensitivity: number; dpi: number } | null
+  initialPreset?: PresetLaunch | null
 }
 
 export function SensitivityConverter({ initialPreset = null }: SensitivityConverterProps) {
   const { t } = useI18n()
-  const [sourceId, setSourceId] = useState<GameSensitivityProfileId>(initialPreset?.gameId ?? 'cs2')
+  const config = useSensitivityPreset('cs2', initialPreset)
+  const sourceId = config.draft.gameId
   const [targetId, setTargetId] = useState<GameSensitivityProfileId>(initialPreset?.gameId === 'fortnite' ? 'cs2' : 'fortnite')
-  const [sourceValue, setSourceValue] = useState(initialPreset ? String(initialPreset.sensitivity) : '1')
-  const [sourceDpi, setSourceDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
+  const { sensitivity: sourceValue, dpi: sourceDpi } = config.draft
+  const { setSensitivity: setSourceValue, setDpi: setSourceDpi } = config
   const [targetDpi, setTargetDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
   const [copied, setCopied] = useState(false)
   const source = GAME_SENSITIVITY_PROFILE_BY_ID[sourceId]
@@ -49,9 +48,8 @@ export function SensitivityConverter({ initialPreset = null }: SensitivityConver
   const errorLabel = result === null ? '—' : result.relativeErrorPercent < 0.01 ? t('converter.residualUnder') : `${result.relativeErrorPercent.toFixed(3)}%`
 
   const swapGames = () => {
-    setSourceId(targetId); setTargetId(sourceId)
-    if (result !== null) setSourceValue(formatSensitivity(result.configurableSensitivity))
-    setSourceDpi(targetDpi); setTargetDpi(sourceDpi); setCopied(false)
+    config.replace(targetId, result !== null ? formatSensitivity(result.configurableSensitivity) : sourceValue, targetDpi)
+    setTargetId(sourceId); setTargetDpi(sourceDpi); setCopied(false)
   }
   const copyResult = async () => {
     if (result === null) return
@@ -64,7 +62,8 @@ export function SensitivityConverter({ initialPreset = null }: SensitivityConver
     <div className="converter-card">
       <div className="converter-side">
         <span className="converter-label">{t('converter.from')}</span>
-        <label className="converter-select"><ProfileIcon profile={source} /><select value={sourceId} onChange={(event) => { setSourceId(event.target.value as GameSensitivityProfileId); setCopied(false) }}>{GAME_SENSITIVITY_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+        <label className="converter-select"><GameBadge gameId={sourceId} /><select aria-label={t('converter.sourceGame')} value={sourceId} onChange={(event) => { config.selectGame(event.target.value as GameSensitivityProfileId); setCopied(false) }}>{GAME_SENSITIVITY_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+        <PresetSelection draft={config.draft} presets={config.presets} onSelect={config.selectPreset} />
         <div className="converter-values">
           <label className="converter-field"><span>{t('converter.currentSensitivity')}</span><input type="text" inputMode="decimal" value={sourceValue} onChange={(event) => setSourceValue(event.target.value)} aria-label={t('converter.currentSensitivity')} /></label>
           <label className="converter-field"><span>{t('converter.sourceDpi')}</span><input type="text" inputMode="numeric" value={sourceDpi} onChange={(event) => setSourceDpi(event.target.value)} aria-label={t('converter.sourceDpi')} /></label>
@@ -74,7 +73,7 @@ export function SensitivityConverter({ initialPreset = null }: SensitivityConver
       <button className="converter-swap" onClick={swapGames} aria-label={t('converter.swap')}><RefreshCw size={18} /></button>
       <div className="converter-side">
         <span className="converter-label">{t('converter.to')}</span>
-        <label className="converter-select"><ProfileIcon profile={target} /><select value={targetId} onChange={(event) => { setTargetId(event.target.value as GameSensitivityProfileId); setCopied(false) }}>{GAME_SENSITIVITY_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+        <label className="converter-select"><GameBadge gameId={targetId} /><select aria-label={t('converter.targetGame')} value={targetId} onChange={(event) => { setTargetId(event.target.value as GameSensitivityProfileId); setCopied(false) }}>{GAME_SENSITIVITY_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
         <div className="converter-values">
           <div className="converter-field converter-result"><span>{t('converter.equivalent360')}</span><strong>{configurableLabel}</strong><button onClick={copyResult} disabled={result === null} aria-label={t('converter.copy')}>{copied ? <Check size={18} /> : <Copy size={18} />}</button></div>
           <label className="converter-field"><span>{t('converter.targetDpi')}</span><input type="text" inputMode="numeric" value={targetDpi} onChange={(event) => setTargetDpi(event.target.value)} aria-label={t('converter.targetDpi')} /></label>

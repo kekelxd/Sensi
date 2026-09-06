@@ -4,10 +4,12 @@ import { AvatarArtwork } from './AvatarArtwork'
 import { XENSI_AVATARS, type AvatarId } from './avatars'
 import { GAME_SENSITIVITY_PROFILES, GAME_SENSITIVITY_PROFILE_BY_ID, type GameSensitivityProfileId } from './gameSensitivityProfiles'
 import { useI18n, type Locale } from './i18n'
-import { calculatePresetCm360, ensureSinglePrimary, readPlayerProfile, writePlayerProfile, type PlayerProfileData, type SensitivityPreset } from './playerProfileStore'
+import { calculatePresetCm360, ensureSinglePrimary, writePlayerProfile, type PlayerProfileData, type SensitivityPreset } from './playerProfileStore'
+import { GameBadge } from './GameBadge'
+import { usePlayerProfile } from './useSensitivityPreset'
 import { normalizeSensitivityForGame } from './sensitivityConversionEngine'
 
-export type ProfilePresetLaunch = Pick<SensitivityPreset, 'gameId' | 'sensitivity' | 'dpi'>
+export type ProfilePresetLaunch = Pick<SensitivityPreset, 'id' | 'gameId' | 'sensitivity' | 'dpi'>
 
 type PlayerProfileProps = {
   onConvert: (preset: ProfilePresetLaunch) => void
@@ -42,16 +44,10 @@ function createPresetId() {
   return globalThis.crypto?.randomUUID?.() ?? `preset-${Date.now()}`
 }
 
-function GameIcon({ profileId }: { profileId: GameSensitivityProfileId }) {
-  const profile = GAME_SENSITIVITY_PROFILE_BY_ID[profileId]
-  const file = profile.iconFile ?? (profile.id === 'rainbowsix' || profile.id === 'apex' ? null : `${profile.id}.png`)
-  return file ? <img src={`./game-icons/${file}`} alt="" /> : <span>{profile.shortName.slice(0, 2).toUpperCase()}</span>
-}
-
 export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
   const { locale } = useI18n()
   const text = copy[locale]
-  const [profile, setProfile] = useState<PlayerProfileData>(() => readPlayerProfile(window.localStorage))
+  const profile = usePlayerProfile()
   const [identityOpen, setIdentityOpen] = useState(false)
   const [identityDraft, setIdentityDraft] = useState({ nickname: profile.nickname, avatarId: profile.avatarId })
   const [presetDraft, setPresetDraft] = useState<PresetDraft | null>(null)
@@ -59,9 +55,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
   const [error, setError] = useState('')
 
   const persist = (next: PlayerProfileData) => {
-    setProfile(next)
     writePlayerProfile(window.localStorage, next)
-    window.dispatchEvent(new Event('xensi-profile-updated'))
     setStatus(text.saved)
     window.setTimeout(() => setStatus(''), 1600)
   }
@@ -106,13 +100,16 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
     const exists = profile.presets.some((preset) => preset.id === saved.id)
     const nextPresets = exists ? profile.presets.map((preset) => preset.id === saved.id ? saved : preset) : [...profile.presets, saved]
     const withPrimary = saved.isPrimary
-      ? nextPresets.map((preset) => ({ ...preset, isPrimary: preset.id === saved.id }))
+      ? ensureSinglePrimary(nextPresets.map((preset) => preset.gameId === saved.gameId ? { ...preset, isPrimary: preset.id === saved.id } : preset))
       : ensureSinglePrimary(nextPresets)
     persist({ ...profile, presets: withPrimary })
     setPresetDraft(null)
   }
 
-  const setPrimary = (id: string) => persist({ ...profile, presets: profile.presets.map((preset) => ({ ...preset, isPrimary: preset.id === id })) })
+  const setPrimary = (id: string) => {
+    const gameId = profile.presets.find(preset => preset.id === id)?.gameId
+    persist({ ...profile, presets: profile.presets.map(preset => preset.gameId === gameId ? { ...preset, isPrimary: preset.id === id } : preset) })
+  }
 
   const removePreset = (id: string) => {
     if (!window.confirm(text.confirmRemove)) return
@@ -144,7 +141,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
             const cm360 = calculatePresetCm360(preset)
             const canCalibrate = CALIBRATOR_GAMES.has(preset.gameId)
             return <article className={`profile-preset-card${preset.isPrimary ? ' primary' : ''}`} key={preset.id}>
-              <header><div className="profile-preset-game"><span><GameIcon profileId={preset.gameId} /></span><div><small>{preset.name || game.name}</small><strong>{game.shortName}</strong></div></div>{preset.isPrimary ? <b><Star size={12} /> {text.primary}</b> : <button type="button" onClick={() => setPrimary(preset.id)}><Star size={13} /> {text.setPrimary}</button>}</header>
+              <header><div className="profile-preset-game"><GameBadge gameId={preset.gameId} selected={preset.isPrimary} /><div><small>{preset.name || game.name}</small><strong>{game.shortName}</strong></div></div>{preset.isPrimary ? <b><Star size={12} /> {text.primary}</b> : <button type="button" onClick={() => setPrimary(preset.id)}><Star size={13} /> {text.setPrimary}</button>}</header>
               <dl><div><dt>{text.sensitivity}</dt><dd>{preset.sensitivity}</dd></div><div><dt>{text.dpi}</dt><dd>{preset.dpi}</dd></div><div className="profile-preset-distance"><dt>CM / 360</dt><dd title={cm360 === null ? text.unavailableHint : undefined}>{cm360 === null ? text.unavailable : `${cm360.toFixed(2)} cm/360`}</dd></div></dl>
               <footer><button type="button" onClick={() => openPreset(preset)}><Edit3 size={14} /> {text.edit}</button><button type="button" onClick={() => onCalibrate(preset)} disabled={!canCalibrate} title={!canCalibrate ? text.calibratorUnavailable : undefined}><Gauge size={14} /> {text.calibrate}</button><button className="profile-preset-convert" type="button" onClick={() => onConvert(preset)}><RefreshCw size={14} /> {text.convert} →</button><button className="profile-preset-remove" type="button" onClick={() => removePreset(preset.id)} aria-label={text.remove}><Trash2 size={14} /></button></footer>
             </article>
@@ -154,6 +151,6 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
 
     {identityOpen && <div className="modal-backdrop"><section className="profile-v1-modal" role="dialog" aria-modal="true" aria-labelledby="identity-modal-title"><button className="modal-close" type="button" onClick={() => setIdentityOpen(false)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.identity}</span><h2 id="identity-modal-title">{text.editIdentity}</h2><label>{text.nickname}<input value={identityDraft.nickname} maxLength={24} onChange={(event) => setIdentityDraft({ ...identityDraft, nickname: event.target.value })} /></label><div className="profile-v1-avatar-field"><span>{text.avatar}</span><div className="profile-avatar-picker">{XENSI_AVATARS.map((avatar) => <button key={avatar.id} type="button" className={identityDraft.avatarId === avatar.id ? 'selected' : ''} onClick={() => setIdentityDraft({ ...identityDraft, avatarId: avatar.id as AvatarId })} aria-label={avatar.label} aria-pressed={identityDraft.avatarId === avatar.id}><AvatarArtwork avatarId={avatar.id} size="picker" selected={identityDraft.avatarId === avatar.id} /></button>)}</div></div><footer><button className="secondary-button" type="button" onClick={() => setIdentityOpen(false)}>{text.cancel}</button><button className="primary-button" type="button" onClick={saveIdentity}><Check size={15} /> {text.save}</button></footer></section></div>}
 
-    {presetDraft && <div className="modal-backdrop"><section className="profile-v1-modal profile-v1-preset-modal" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title"><button className="modal-close" type="button" onClick={() => setPresetDraft(null)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.sensitivities}</span><h2 id="preset-modal-title">{presetDraft.id ? text.editPreset : text.addPreset}</h2><div className="profile-v1-form-grid"><label>{text.game}<select value={presetDraft.gameId} onChange={(event) => setPresetDraft({ ...presetDraft, gameId: event.target.value as GameSensitivityProfileId })}>{GAME_SENSITIVITY_PROFILES.map((game) => <option value={game.id} key={game.id}>{game.name}</option>)}</select></label><label>{text.presetName}<input value={presetDraft.name} maxLength={32} onChange={(event) => setPresetDraft({ ...presetDraft, name: event.target.value })} /></label><label>{text.sensitivity}<input inputMode="decimal" value={presetDraft.sensitivity} onChange={(event) => setPresetDraft({ ...presetDraft, sensitivity: event.target.value })} /></label><label>{text.dpi}<input inputMode="numeric" value={presetDraft.dpi} onChange={(event) => setPresetDraft({ ...presetDraft, dpi: event.target.value })} /></label></div><label className="profile-v1-primary-toggle"><input type="checkbox" checked={presetDraft.isPrimary} onChange={(event) => setPresetDraft({ ...presetDraft, isPrimary: event.target.checked })} /><Star size={15} /> {text.setPrimary}</label>{error && <p className="profile-v1-error">{error}</p>}<footer><button className="secondary-button" type="button" onClick={() => setPresetDraft(null)}>{text.cancel}</button><button className="primary-button" type="button" onClick={savePreset}><Check size={15} /> {text.save}</button></footer></section></div>}
+    {presetDraft && <div className="modal-backdrop"><section className="profile-v1-modal profile-v1-preset-modal" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title"><button className="modal-close" type="button" onClick={() => setPresetDraft(null)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.sensitivities}</span><h2 id="preset-modal-title">{presetDraft.id ? text.editPreset : text.addPreset}</h2><div className="profile-v1-form-grid"><label>{text.game}<select aria-label={text.game} value={presetDraft.gameId} onChange={(event) => setPresetDraft({ ...presetDraft, gameId: event.target.value as GameSensitivityProfileId })}>{GAME_SENSITIVITY_PROFILES.map((game) => <option value={game.id} key={game.id}>{game.name}</option>)}</select></label><label>{text.presetName}<input value={presetDraft.name} maxLength={32} onChange={(event) => setPresetDraft({ ...presetDraft, name: event.target.value })} /></label><label>{text.sensitivity}<input inputMode="decimal" value={presetDraft.sensitivity} onChange={(event) => setPresetDraft({ ...presetDraft, sensitivity: event.target.value })} /></label><label>{text.dpi}<input inputMode="numeric" value={presetDraft.dpi} onChange={(event) => setPresetDraft({ ...presetDraft, dpi: event.target.value })} /></label></div><label className="profile-v1-primary-toggle"><input type="checkbox" checked={presetDraft.isPrimary} onChange={(event) => setPresetDraft({ ...presetDraft, isPrimary: event.target.checked })} /><Star size={15} /> {text.setPrimary}</label>{error && <p className="profile-v1-error">{error}</p>}<footer><button className="secondary-button" type="button" onClick={() => setPresetDraft(null)}>{text.cancel}</button><button className="primary-button" type="button" onClick={savePreset}><Check size={15} /> {text.save}</button></footer></section></div>}
   </section>
 }

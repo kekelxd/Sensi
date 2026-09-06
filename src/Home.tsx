@@ -13,21 +13,21 @@ const WARMUP_EXERCISES: WarmupExercise[] = ['switch', 'tracking', 'flick', 'refl
 
 const productText = {
   pt: {
-    precision: 'PRECISÃO PARA FPS', subtitle: 'Treinos de precisão, análise de desempenho e calibração de sensibilidade para FPS em um único ambiente.', start: 'Começar treino', live: 'DEMONSTRAÇÃO ATIVA', chain: 'SEQUÊNCIA DEMO',
+    subtitle: 'Treinos de precisão, análise de desempenho e calibração de sensibilidade para FPS em um único ambiente.', start: 'Começar treino', live: 'DEMONSTRAÇÃO ATIVA', chain: 'SEQUÊNCIA DEMO',
     control: 'SEU CONTROLE', analysis: 'Ver análise', accuracy: 'Precisão', tracking: 'Tracking', reaction: 'Reação', sensitivity: 'Sensibilidade atual', sessions: 'sessões salvas', consistency: 'de consistência', calibrated: 'última calibração', noSessions: 'Nenhuma sessão ainda.', noSessionsHint: 'Complete seu primeiro treino para começar a montar seu perfil de mira.',
     quick: 'AÇÕES RÁPIDAS', quickHint: 'Escolha o que quer fazer agora.', setup: 'TESTE SEU SETUP', setupHint: 'Confira como seus dispositivos respondem antes da partida.',
     actions: [['Treinar', 'Comece uma sessão curta de mira.'], ['Calibrar', 'Encontre sua região de sensibilidade.'], ['Converter', 'Preserve sua referência de 360° entre jogos.']],
     polling: 'Polling Rate', pollingHint: 'Confira a frequência de atualização recebida do mouse.', pollingAction: 'Testar polling rate', input: 'Diagnóstico de entrada', inputHint: 'Analise estabilidade, botões e interrupções do input.', inputAction: 'Abrir diagnóstico', daysToday: 'hoje', daysAgo: 'há {days} dias',
   },
   en: {
-    precision: 'FPS PRECISION', subtitle: 'Precision training, performance analysis, and sensitivity calibration for FPS in one environment.', start: 'Start training', live: 'ACTIVE DEMO', chain: 'DEMO CHAIN',
+    subtitle: 'Precision training, performance analysis, and sensitivity calibration for FPS in one environment.', start: 'Start training', live: 'ACTIVE DEMO', chain: 'DEMO CHAIN',
     control: 'YOUR CONTROL', analysis: 'View analysis', accuracy: 'Accuracy', tracking: 'Tracking', reaction: 'Reaction', sensitivity: 'Current sensitivity', sessions: 'saved sessions', consistency: 'consistency', calibrated: 'last calibration', noSessions: 'No sessions yet.', noSessionsHint: 'Complete your first training session to start building your aim profile.',
     quick: 'QUICK ACTIONS', quickHint: 'Choose what you want to do now.', setup: 'TEST YOUR SETUP', setupHint: 'Check how your devices respond before a match.',
     actions: [['Train', 'Start a short aim session.'], ['Calibrate', 'Find your sensitivity region.'], ['Convert', 'Preserve your 360° reference across games.']],
     polling: 'Polling Rate', pollingHint: 'Check the mouse update frequency received by the browser.', pollingAction: 'Test polling rate', input: 'Input diagnostics', inputHint: 'Analyze input stability, buttons, and interruptions.', inputAction: 'Open diagnostics', daysToday: 'today', daysAgo: '{days} days ago',
   },
   es: {
-    precision: 'PRECISIÓN PARA FPS', subtitle: 'Entrenamiento de precisión, análisis de rendimiento y calibración de sensibilidad para FPS en un solo entorno.', start: 'Empezar entrenamiento', live: 'DEMO ACTIVA', chain: 'SECUENCIA DEMO',
+    subtitle: 'Entrenamiento de precisión, análisis de rendimiento y calibración de sensibilidad para FPS en un solo entorno.', start: 'Empezar entrenamiento', live: 'DEMO ACTIVA', chain: 'SECUENCIA DEMO',
     control: 'TU CONTROL', analysis: 'Ver análisis', accuracy: 'Precisión', tracking: 'Tracking', reaction: 'Reacción', sensitivity: 'Sensibilidad actual', sessions: 'sesiones guardadas', consistency: 'de consistencia', calibrated: 'última calibración', noSessions: 'Aún no hay sesiones.', noSessionsHint: 'Completa tu primer entrenamiento para empezar a crear tu perfil de mira.',
     quick: 'ACCIONES RÁPIDAS', quickHint: 'Elige qué quieres hacer ahora.', setup: 'PRUEBA TU SETUP', setupHint: 'Comprueba cómo responden tus dispositivos antes de la partida.',
     actions: [['Entrenar', 'Empieza una sesión corta de mira.'], ['Calibrar', 'Encuentra tu región de sensibilidad.'], ['Convertir', 'Conserva tu referencia de 360° entre juegos.']],
@@ -132,7 +132,6 @@ export function Home({ onNavigate }: Props) {
     <div className="xensi-reference-shell">
       <section className="xensi-reference-hero" aria-labelledby="home-title">
         <div className="xensi-reference-copy">
-          <span className="xensi-reference-kicker">◎ {copy.precision}</span>
           <h1 id="home-title"><span>{heroLineOne}</span><span>{heroLineTwo}</span></h1>
           <p>{copy.subtitle}</p>
           <button type="button" className="xensi-reference-cta" onClick={() => onNavigate('warmup')}>{copy.start} <ArrowRight size={20} /></button>

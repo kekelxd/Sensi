@@ -1,26 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
 import { CalibrationLanding } from './CalibrationLanding'
 import { GAME_BY_ID, type GameId } from './games'
 import { cmPer360FromSensitivity } from './sensMath'
-import { saveRecommendedSensitivity } from './settingsService'
 import { useBinarySensSearch } from './useBinarySensSearch'
 import { useI18n } from './i18n'
+import { GamePicker } from './GamePicker'
+import { PresetSelection } from './PresetSelection'
+import { presetCopy } from './presetCopy'
+import { useSensitivityPreset, type PresetLaunch } from './useSensitivityPreset'
+import { saveSensitivityPreset } from './playerProfileStore'
+import { useDialogFocus } from './useDialogFocus'
 
 const FINDER_GAMES: GameId[] = ['cs2', 'valorant', 'overwatch2', 'warzone']
 const DPI_PRESETS = [400, 800, 1600, 3200]
 
 type SensitivityFinderModalProps = {
-  initialPreset?: { gameId: GameId; sensitivity: number; dpi: number } | null
+  initialPreset?: PresetLaunch | null
 }
 
 export function SensitivityFinderModal({ initialPreset = null }: SensitivityFinderModalProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const text = presetCopy[locale]
   const [setupOpen, setSetupOpen] = useState(Boolean(initialPreset))
-  const [gameId, setGameId] = useState<GameId>(initialPreset?.gameId ?? 'cs2')
-  const [dpi, setDpi] = useState(initialPreset ? String(initialPreset.dpi) : '800')
-  const [baseSensitivity, setBaseSensitivity] = useState(initialPreset ? String(initialPreset.sensitivity) : '1')
+  const setupRef = useRef<HTMLElement>(null)
+  useDialogFocus(setupRef, setupOpen)
+  const config = useSensitivityPreset('cs2', initialPreset)
+  const gameId = config.draft.gameId as GameId
+  const { dpi, sensitivity: baseSensitivity } = config.draft
+  const { setDpi, setSensitivity: setBaseSensitivity } = config
+  const [saveError, setSaveError] = useState('')
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
   const search = useBinarySensSearch()
@@ -40,11 +50,13 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
     setSaved(false); setCopied(false); setSetupOpen(false)
     search.start(parsedBaseSensitivity)
   }
-  const save = () => {
+  const save = (updateId?: string) => {
     const cmPer360 = sensitivity === null || !game.yaw ? null : cmPer360FromSensitivity(sensitivity, game.yaw, parsedDpi)
     if (sensitivity === null || cmPer360 === null) return
-    saveRecommendedSensitivity(window.localStorage, { gameId, sensitivity, cmPer360, savedAt: new Date().toISOString() })
-    setSaved(true)
+    try {
+      saveSensitivityPreset(window.localStorage, { gameId, sensitivity, dpi: parsedDpi }, updateId)
+      setSaved(true); setSaveError('')
+    } catch { setSaveError(text.error) }
   }
   const copy = async () => {
     if (sensitivity === null) return
@@ -82,13 +94,15 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
         <div><span>{t('finder.physicalDistance')}</span><strong>{cmPer360 ? `${cmPer360.toFixed(1)} cm/360°` : '--'}</strong></div>
       </div>
       <section className="finder-explanation"><Target size={17} /><p><strong>{t('finder.why')}</strong> {t('finder.whyDescription')} {baseCmPer360 && cmPer360 ? t('finder.distanceChanged', { from: baseCmPer360.toFixed(1), to: cmPer360.toFixed(1) }) : ''}</p></section>
-      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? t('finder.copied') : t('finder.copy')}</button><button className="primary-button" onClick={save}><Save size={16} /> {saved ? t('finder.saved') : t('finder.save')}</button><button className="secondary-button" onClick={search.reset}><RotateIcon /> {t('finder.new')}</button></div>
+      <div className="finder-report-actions"><button className="secondary-button" onClick={() => void copy()}><Clipboard size={16} /> {copied ? t('finder.copied') : t('finder.copy')}</button><button className="primary-button" disabled={saved} onClick={() => save()}><Save size={16} /> {saved ? text.done : text.save}</button>{config.presets.some(preset => preset.gameId === gameId && preset.isPrimary) && <button className="secondary-button" disabled={saved} onClick={() => save(config.presets.find(preset => preset.gameId === gameId && preset.isPrimary)?.id)}>{text.update}</button>}<button className="secondary-button" onClick={search.reset}><RotateIcon /> {t('finder.new')}</button></div>
+      {saveError && <p role="alert">{saveError}</p>}
     </section>
   }
 
   return <><CalibrationLanding finder rounds="8" seconds="30s" onStart={() => setSetupOpen(true)} />
-    {setupOpen && <div className="modal-backdrop"><section className="modal finder-setup-modal"><button className="modal-close" onClick={() => setSetupOpen(false)} aria-label={t('common.close')}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>{t('finder.setupTitle')}</h2><p>{t('finder.setupDescription')}</p>
-      <label>{t('finder.targetGame')}<div className="finder-game-picker">{FINDER_GAMES.map((id) => <button key={id} className={gameId === id ? 'selected' : ''} onClick={() => setGameId(id)}>{GAME_BY_ID[id].shortLabel}</button>)}</div></label>
+    {setupOpen && <div className="modal-backdrop"><section ref={setupRef} className="modal finder-setup-modal" role="dialog" aria-modal="true" aria-label={t('finder.setupTitle')} onKeyDown={event => { if (event.key === 'Escape') setSetupOpen(false) }}><button className="modal-close" onClick={() => setSetupOpen(false)} aria-label={t('common.close')}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>{t('finder.setupTitle')}</h2><p>{t('finder.setupDescription')}</p>
+      <div>{t('finder.targetGame')}<GamePicker gameIds={FINDER_GAMES} value={gameId} onChange={config.selectGame} presets={config.presets} /></div>
+      <PresetSelection draft={config.draft} presets={config.presets} onSelect={config.selectPreset} />
       <label>{t('finder.currentSensitivity', { game: game.shortLabel })}<input value={baseSensitivity} inputMode="decimal" onChange={(event) => setBaseSensitivity(event.target.value)} aria-label={t('finder.currentSensitivity', { game: game.shortLabel })} /></label>
       <label>{t('common.mouseDpi')}<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label={t('common.mouseDpi')} /></div></label>
       <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0 || !Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax} onClick={start}>{t('finder.start')}</button>

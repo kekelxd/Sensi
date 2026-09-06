@@ -25,7 +25,6 @@ export interface GameSensitivityProfile {
   id: GameSensitivityProfileId
   name: string
   shortName: string
-  iconFile?: string
   inputModel: SensitivityInputModel
   angularModel: { type: 'linear'; coefficient: number } | { type: 'unavailable' }
   supportedMethods: { hipfire360: boolean; ads: boolean }
@@ -102,7 +101,7 @@ export const GAME_SENSITIVITY_PROFILES: GameSensitivityProfile[] = [
     },
   },
   {
-    id: 'overwatch2', name: 'Overwatch 2', shortName: 'Overwatch', iconFile: 'overwatch2.svg', inputModel: { type: 'step', min: 0.01, max: 100, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.0066 }, supportedMethods: { hipfire360: true, ads: false },
+    id: 'overwatch2', name: 'Overwatch 2', shortName: 'Overwatch', inputModel: { type: 'step', min: 0.01, max: 100, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.0066 }, supportedMethods: { hipfire360: true, ads: false },
     verification: {
       status: 'measured', profileVersion: 2, auditedAt: '2026-09-05',
       notes: 'O coeficiente 0.0066 e sustentado pelo preset e pelo metodo reproduzivel do Sensitivity Matcher. A Blizzard documenta entrada com duas casas decimais e uso da taxa nativa do mouse, mas nao publica o coeficiente angular. O limite minimo e maximo permanece provisório e ADS por heroi nao faz parte deste perfil.',
@@ -117,12 +116,12 @@ export const GAME_SENSITIVITY_PROFILES: GameSensitivityProfile[] = [
   experimentalProfile({ id: 'rainbowsix', name: 'Rainbow Six Siege', shortName: 'Rainbow Six', inputModel: { type: 'unavailable' }, angularModel: { type: 'unavailable' }, supportedMethods: { hipfire360: false, ads: false } }, unavailableNote),
   experimentalProfile({ id: 'apex', name: 'Apex Legends', shortName: 'Apex', inputModel: { type: 'step', min: 0.01, max: 100, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.0066 }, supportedMethods: { hipfire360: true, ads: false } }),
   experimentalProfile({ id: 'fortnite', name: 'Fortnite', shortName: 'Fortnite', inputModel: { type: 'step', min: 0.1, max: 100, step: 0.1, decimals: 1 }, angularModel: { type: 'linear', coefficient: 0.005555 }, supportedMethods: { hipfire360: true, ads: false } }),
-  experimentalProfile({ id: 'pubg', name: 'PUBG: Battlegrounds', shortName: 'PUBG', iconFile: 'pubg.jpg', inputModel: { type: 'integer', min: 1, max: 100 }, angularModel: { type: 'unavailable' }, supportedMethods: { hipfire360: false, ads: false } }, unavailableNote),
-  experimentalProfile({ id: 'battlefield6', name: 'Battlefield 6', shortName: 'Battlefield 6', iconFile: 'battlefield6.jpg', inputModel: { type: 'integer', min: 1, max: 100 }, angularModel: { type: 'unavailable' }, supportedMethods: { hipfire360: false, ads: false } }, unavailableNote),
+  experimentalProfile({ id: 'pubg', name: 'PUBG: Battlegrounds', shortName: 'PUBG', inputModel: { type: 'integer', min: 1, max: 100 }, angularModel: { type: 'unavailable' }, supportedMethods: { hipfire360: false, ads: false } }, unavailableNote),
+  experimentalProfile({ id: 'battlefield6', name: 'Battlefield 6', shortName: 'Battlefield 6', inputModel: { type: 'integer', min: 1, max: 100 }, angularModel: { type: 'unavailable' }, supportedMethods: { hipfire360: false, ads: false } }, unavailableNote),
   experimentalProfile({ id: 'blackops7', name: 'Call of Duty: Black Ops 7', shortName: 'Black Ops 7', inputModel: { type: 'step', min: 0.1, max: 20, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.0066 }, supportedMethods: { hipfire360: true, ads: false } }),
   experimentalProfile({ id: 'warzone', name: 'Call of Duty: Warzone', shortName: 'Warzone', inputModel: { type: 'step', min: 0.1, max: 20, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.0066 }, supportedMethods: { hipfire360: true, ads: false } }),
-  experimentalProfile({ id: 'arcraiders', name: 'ARC Raiders', shortName: 'ARC Raiders', iconFile: 'arcraiders.jpg', inputModel: { type: 'integer', min: 5, max: 100 }, angularModel: { type: 'linear', coefficient: 0.00132 }, supportedMethods: { hipfire360: true, ads: false } }),
-  experimentalProfile({ id: 'rust', name: 'Rust', shortName: 'Rust', iconFile: 'rust.jpg', inputModel: { type: 'step', min: 0.01, max: 10, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.11247 }, supportedMethods: { hipfire360: true, ads: false } }),
+  experimentalProfile({ id: 'arcraiders', name: 'ARC Raiders', shortName: 'ARC Raiders', inputModel: { type: 'integer', min: 5, max: 100 }, angularModel: { type: 'linear', coefficient: 0.00132 }, supportedMethods: { hipfire360: true, ads: false } }),
+  experimentalProfile({ id: 'rust', name: 'Rust', shortName: 'Rust', inputModel: { type: 'step', min: 0.01, max: 10, step: 0.01, decimals: 2 }, angularModel: { type: 'linear', coefficient: 0.11247 }, supportedMethods: { hipfire360: true, ads: false } }),
 ]
 
 export const GAME_SENSITIVITY_PROFILE_BY_ID = Object.fromEntries(

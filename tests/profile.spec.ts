@@ -45,7 +45,7 @@ test('creates a preset and prefills converter and calibrator', async ({ page }, 
   await expect(page.getByText('79.93 cm/360')).toBeVisible()
   const card = page.locator('.profile-preset-card').first()
   await expect(card.getByText('Principal')).toBeVisible()
-  await expect.poll(() => card.locator('.profile-preset-game img').evaluate((image) => image.naturalWidth)).toBeGreaterThan(0)
+  await expect(card.locator('.xensi-game-badge')).toHaveText('CS')
   await page.screenshot({ path: testInfo.outputPath('profile-preset.png'), fullPage: true })
 
   await card.getByRole('button', { name: /Converter/ }).click()

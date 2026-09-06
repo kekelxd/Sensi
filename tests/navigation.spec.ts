@@ -42,7 +42,7 @@ test.describe('Diagnostics navigation', () => {
 
   test('closes when the user clicks outside', async ({ page }) => {
     await page.getByRole('button', diagnostics()).click()
-    await page.getByRole('heading', { name: /Treine sua mira/i }).click()
+    await page.getByRole('heading', { name: 'SEU CONTROLE', exact: true }).click()
     await expect(page.getByRole('menu', { name: 'DIAGNÓSTICO' })).toBeHidden()
   })
 
