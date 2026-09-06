@@ -4,9 +4,13 @@ export const DEFAULT_HORIZONTAL_FOV = 103
 export const MIN_HORIZONTAL_FOV = 60
 export const MAX_HORIZONTAL_FOV = 140
 
+export function getAimGain(game: GameConfig, sensitivity: number, modelScale = 1) {
+  if (!game.yaw || !Number.isFinite(sensitivity) || sensitivity <= 0 || !Number.isFinite(modelScale) || modelScale <= 0) return null
+  return game.yaw * sensitivity * modelScale
+}
+
 export function getDegreesPerCount(game: GameConfig, sensitivity: number) {
-  if (!game.yaw || !Number.isFinite(sensitivity) || sensitivity <= 0) return null
-  return game.yaw * sensitivity
+  return getAimGain(game, sensitivity)
 }
 
 export function getCmPer360(game: GameConfig, sensitivity: number, dpi: number) {
@@ -21,9 +25,8 @@ export function getSensitivityForCmPer360(game: GameConfig, cmPer360: number, dp
 }
 
 export function getCanvasGain(game: GameConfig, sensitivity: number, horizontalFov: number, canvasWidth: number) {
-  const degreesPerCount = getDegreesPerCount(game, sensitivity)
-  if (degreesPerCount === null || !Number.isFinite(horizontalFov) || horizontalFov <= 0 || !Number.isFinite(canvasWidth) || canvasWidth <= 0) return null
-  return degreesPerCount * canvasWidth / horizontalFov
+  if (!Number.isFinite(horizontalFov) || horizontalFov <= 0 || !Number.isFinite(canvasWidth) || canvasWidth <= 0) return null
+  return getAimGain(game, sensitivity, canvasWidth / horizontalFov)
 }
 
 export function getRelativeCanvasGain(multiplier: number) {

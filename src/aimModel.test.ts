@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCanvasGain, getCmPer360, getSensitivityForCmPer360 } from './aimModel'
+import { getAimGain, getCanvasGain, getCmPer360, getSensitivityForCmPer360 } from './aimModel'
 import { GAME_BY_ID } from './games'
 
 describe('physical aim model', () => {
@@ -17,6 +17,22 @@ describe('physical aim model', () => {
     const restored = getSensitivityForCmPer360(GAME_BY_ID.cs2, cmPer360 ?? 0, 1600)
 
     expect(restored).toBeCloseTo(1.25, 10)
+  })
+
+  it('keeps DPI in the physical reference layer', () => {
+    const at800Dpi = getCmPer360(GAME_BY_ID.cs2, .2, 800)
+    const at1600Dpi = getCmPer360(GAME_BY_ID.cs2, .2, 1600)
+    const equivalentAt1600Dpi = getCmPer360(GAME_BY_ID.cs2, .1, 1600)
+
+    expect(at1600Dpi).toBeCloseTo((at800Dpi ?? 0) / 2, 10)
+    expect(equivalentAt1600Dpi).toBeCloseTo(at800Dpi ?? 0, 10)
+  })
+
+  it('derives canvas projection from the shared DPI-free aim gain', () => {
+    const aimGain = getAimGain(GAME_BY_ID.cs2, .7)
+    const canvasGain = getCanvasGain(GAME_BY_ID.cs2, .7, 100, 1600)
+
+    expect(canvasGain).toBeCloseTo((aimGain ?? 0) * 16, 10)
   })
 
   it('projects angular movement in proportion to FOV and canvas width', () => {

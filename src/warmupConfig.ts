@@ -1,4 +1,5 @@
-import { GameConfig } from './games'
+import type { GameConfig } from './games'
+import { getAimGain } from './aimModel'
 
 export type WarmupDifficulty = 'easy' | 'medium' | 'hard' | 'adaptive'
 export type FixedWarmupDifficulty = Exclude<WarmupDifficulty, 'adaptive'>
@@ -21,12 +22,9 @@ export const WARMUP_DIFFICULTIES: Record<WarmupDifficulty, WarmupDifficultyConfi
   adaptive: { label: 'Adaptativa', targetScale: 0.94, targetSpeed: 0.34, dwellMs: 470, respawnMs: 150 },
 }
 
-export function getWarmupPointerGain(game: GameConfig, sensitivity: number, dpi: number) {
-  const dpiScale = dpi / 800
-  const gameScale = game.yaw
-    ? sensitivity * game.yaw / 0.022
-    : sensitivity / 50
-  return Math.max(0.12, Math.min(4, gameScale * dpiScale))
+export function getWarmupPointerGain(game: GameConfig, sensitivity: number) {
+  const gameScale = getAimGain(game, sensitivity, 1 / 0.022) ?? sensitivity / 50
+  return Math.max(0.12, Math.min(4, gameScale))
 }
 
 export function calculateWarmupAccuracy(hits: number, shots: number) {

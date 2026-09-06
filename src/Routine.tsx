@@ -50,7 +50,7 @@ export function Routine() {
   const validSetup = parsedSensitivity !== null && parsedDpi !== null
   const normalizedSensitivity = parsedSensitivity === null ? null : normalizeSensitivity(parsedSensitivity, game)
   const effectiveDifficulty: FixedWarmupDifficulty = difficulty === 'adaptive' ? adaptiveLevel : difficulty
-  const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin, parsedDpi ?? 800)
+  const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin)
   const exerciseId = preset.exercises[stageIndex]
   const exercise = EXERCISES.find((item) => item.id === exerciseId) ?? EXERCISES[0]
   const nextExercise = EXERCISES.find((item) => item.id === preset.exercises[stageIndex + 1])
