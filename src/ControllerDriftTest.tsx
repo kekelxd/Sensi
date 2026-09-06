@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import { Gamepad2, Play, RotateCcw, TriangleAlert } from 'lucide-react'
+import { Gamepad2, RotateCcw, TriangleAlert } from 'lucide-react'
 import { analyzeDriftCollection, DRIFT_MOVEMENT_THRESHOLD, stickMagnitude, type DriftCollectionResult, type StickDriftStats } from './controllerDriftMetrics'
 import { rawAxis, type StickPoint } from './gamepadMetrics'
 import { selectActiveGamepad, subscribeGamepads, type GamepadSnapshot } from './gamepadInput'
@@ -8,9 +8,14 @@ import { useI18n } from './i18n'
 const DRIFT_COUNTDOWN_MS = 3000
 const DRIFT_SAMPLE_MS = 4000
 
-type DriftPhase = 'idle' | 'countdown' | 'measuring' | 'done' | 'invalid' | 'disconnected'
+type DriftPhase = 'waiting_for_controller' | 'ready' | 'countdown' | 'measuring' | 'completed' | 'invalid'
 type LiveStick = { x: number; y: number; magnitude: number }
 const EMPTY_LIVE: LiveStick = { x: 0, y: 0, magnitude: 0 }
+const STICK_CLICK_BUTTONS = new Set([10, 11])
+
+function isStartTriggerDown(gamepad: GamepadSnapshot) {
+  return gamepad.buttons.some((button, index) => !STICK_CLICK_BUTTONS.has(index) && (button.pressed || button.value > .5))
+}
 
 function drawStick(canvas: HTMLCanvasElement | null, x: number, y: number) {
   if (!canvas) return
@@ -71,7 +76,7 @@ export function ControllerDriftTest() {
   const leftCanvasRef = useRef<HTMLCanvasElement>(null)
   const rightCanvasRef = useRef<HTMLCanvasElement>(null)
   const selectedIndexRef = useRef(0)
-  const phaseRef = useRef<DriftPhase>('idle')
+  const phaseRef = useRef<DriftPhase>('waiting_for_controller')
   const countdownEndsRef = useRef(0)
   const measurementStartedRef = useRef(0)
   const leftSamplesRef = useRef<StickPoint[]>([])
@@ -79,7 +84,8 @@ export function ControllerDriftTest() {
   const deviceSignatureRef = useRef('')
   const lastUiUpdateRef = useRef(0)
   const lastProgressUpdateRef = useRef(0)
-  const [phase, setPhase] = useState<DriftPhase>('idle')
+  const startTriggerWasDownRef = useRef(false)
+  const [phase, setPhase] = useState<DriftPhase>('waiting_for_controller')
   const [gamepads, setGamepads] = useState<GamepadSnapshot[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [countdown, setCountdown] = useState(3)
@@ -100,11 +106,12 @@ export function ControllerDriftTest() {
       }
       const active = selectActiveGamepad(next, selectedIndexRef.current)
       if (!active) {
+        startTriggerWasDownRef.current = false
         drawStick(leftCanvasRef.current, 0, 0)
         drawStick(rightCanvasRef.current, 0, 0)
-        if (phaseRef.current === 'countdown' || phaseRef.current === 'measuring') {
-          phaseRef.current = 'disconnected'
-          setPhase('disconnected')
+        if (phaseRef.current !== 'waiting_for_controller') {
+          phaseRef.current = 'waiting_for_controller'
+          setPhase('waiting_for_controller')
           setResult(null)
         }
         return
@@ -125,6 +132,29 @@ export function ControllerDriftTest() {
         setRightLive({ ...right, magnitude: rightMagnitude })
         lastUiUpdateRef.current = frameTime
       }
+
+      const startTriggerDown = isStartTriggerDown(active)
+      if (phaseRef.current === 'waiting_for_controller') {
+        startTriggerWasDownRef.current = startTriggerDown
+        phaseRef.current = 'ready'
+        setPhase('ready')
+        return
+      }
+      if (phaseRef.current === 'ready') {
+        if (startTriggerDown && !startTriggerWasDownRef.current) {
+          leftSamplesRef.current = []
+          rightSamplesRef.current = []
+          setResult(null)
+          setProgress(0)
+          setCountdown(3)
+          countdownEndsRef.current = performance.now() + DRIFT_COUNTDOWN_MS
+          phaseRef.current = 'countdown'
+          setPhase('countdown')
+        }
+        startTriggerWasDownRef.current = startTriggerDown
+        return
+      }
+      startTriggerWasDownRef.current = startTriggerDown
 
       if (phaseRef.current === 'countdown') {
         const remaining = Math.max(0, countdownEndsRef.current - performance.now())
@@ -159,14 +189,14 @@ export function ControllerDriftTest() {
       if (elapsed >= DRIFT_SAMPLE_MS) {
         const nextResult = analyzeDriftCollection(leftSamplesRef.current, rightSamplesRef.current)
         setResult(nextResult)
-        phaseRef.current = nextResult.valid ? 'done' : 'invalid'
+        phaseRef.current = nextResult.valid ? 'completed' : 'invalid'
         setPhase(phaseRef.current)
         setProgress(100)
       }
     })
   }, [])
 
-  const start = () => {
+  const measureAgain = () => {
     if (!gamepads.length) return
     leftSamplesRef.current = []
     rightSamplesRef.current = []
@@ -181,7 +211,7 @@ export function ControllerDriftTest() {
   const active = selectActiveGamepad(gamepads, selectedIndex)
   const leftResult = result?.valid ? result.left : null
   const rightResult = result?.valid ? result.right : null
-  const message = phase === 'countdown' ? t('drift.release') : phase === 'measuring' ? t('drift.measuring') : phase === 'done' ? t('drift.complete') : phase === 'invalid' ? t('drift.invalid') : phase === 'disconnected' ? t('drift.disconnected') : t('drift.ready')
+  const message = phase === 'countdown' ? t('drift.release') : phase === 'measuring' ? t('drift.doNotTouch') : phase === 'completed' ? t('drift.complete') : phase === 'invalid' ? t('drift.invalid') : t('drift.pressAnyButton')
 
   return <section className="diagnostic-tool-workspace drift-workspace">
     <header className="diagnostic-tool-heading">
@@ -190,16 +220,16 @@ export function ControllerDriftTest() {
       <p>{t('drift.subtitle')}</p>
     </header>
 
-    {!active ? <div className="gamepad-empty drift-empty" aria-live="polite">{phase === 'disconnected' ? <TriangleAlert size={28} /> : <Gamepad2 size={28} />}<strong>{phase === 'disconnected' ? t('drift.disconnected') : t('drift.noController')}</strong><span>{t('drift.connectPrompt')}</span></div> : <>
+    {!active ? <div className="gamepad-empty drift-empty" aria-live="polite"><Gamepad2 size={28} /><strong>{t('drift.noController')}</strong><span>{t('drift.connectPrompt')}</span></div> : <>
       <div className="drift-device-row">
         <div><span>{t('drift.detected')}</span><strong title={active.id}>{active.id || t('gamepad.unknown')}</strong></div>
         {gamepads.length > 1 && <div className="gamepad-selector" role="tablist" aria-label={t('gamepad.connectedControllers')}>{gamepads.map((gamepad) => <button type="button" role="tab" aria-selected={gamepad.index === active.index} className={gamepad.index === active.index ? 'active' : ''} key={gamepad.index} onClick={() => setSelectedIndex(gamepad.index)}>{t('gamepad.controller')} {gamepad.index + 1}</button>)}</div>}
-        <button type="button" className="primary-button" onClick={start} disabled={phase === 'countdown' || phase === 'measuring'}>{phase === 'done' || phase === 'invalid' || phase === 'disconnected' ? <RotateCcw size={16} /> : <Play size={16} />}{phase === 'done' || phase === 'invalid' || phase === 'disconnected' ? t('drift.again') : t('drift.start')}</button>
+        {(phase === 'completed' || phase === 'invalid') && <button type="button" className="primary-button" onClick={measureAgain}><RotateCcw size={16} />{t('drift.again')}</button>}
       </div>
 
       <div className={`drift-status ${phase}`} aria-live="polite">
-        {(phase === 'invalid' || phase === 'disconnected') && <TriangleAlert size={17} />}
-        <strong>{phase === 'countdown' ? `${message} ${countdown}` : message}</strong>
+        {phase === 'invalid' && <TriangleAlert size={17} />}
+        <strong>{message}{phase === 'countdown' && <b>{countdown}</b>}</strong>
         <span>{t('drift.restWindow')}</span>
       </div>
       <div className="diagnostic-progress"><i style={{ width: `${progress}%` }} /></div>

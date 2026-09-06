@@ -7143,6 +7143,7 @@ body:has(.home-reboot) {
 .drift-device-row > div:first-child { min-width: 0; flex: 1; display: grid; gap: 4px; }.drift-device-row > div:first-child span { color: #7f888b; font: 500 8px 'DM Mono', monospace; text-transform: uppercase; }.drift-device-row > div:first-child strong { overflow: hidden; color: #d9d9d3; font: 600 12px Manrope, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
 .drift-device-row .primary-button { flex: none; }.drift-device-row .gamepad-selector { margin: 0; }
 .drift-status { width: min(1180px, 100%); margin: 0 auto; display: flex; align-items: center; gap: 9px; min-height: 42px; color: #8df3ca; }.drift-status strong { font: 600 11px Manrope, sans-serif; }.drift-status span { margin-left: auto; color: #717b7e; font: 500 9px 'DM Mono', monospace; }.drift-status.invalid, .drift-status.disconnected { color: #ff6a73; }
+.drift-status strong b { margin-left: 8px; color: #ff6570; font: 600 15px 'DM Mono', monospace; }
 .drift-workspace > .diagnostic-progress { width: min(1180px, 100%); margin: 0 auto 12px; }
 .drift-sticks-grid { width: min(1180px, 100%); margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .drift-stick-panel { min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: rgba(8,11,15,.82); }

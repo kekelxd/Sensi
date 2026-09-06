@@ -28,7 +28,7 @@ test.describe('Diagnostic tools', () => {
 
   test('measures raw controller drift and handles disconnects', async ({ page }) => {
     await page.addInitScript(() => {
-      const state = { connected: false, axes: [0.012, -0.008, 0.02, 0.006] }
+      const state = { connected: false, axes: [0.012, -0.008, 0.02, 0.006], startPressed: false, leftStickPressed: false }
       Object.defineProperty(window, '__xensiMockPad', { value: state })
       Object.defineProperty(navigator, 'getGamepads', {
         configurable: true,
@@ -39,7 +39,11 @@ test.describe('Diagnostic tools', () => {
           mapping: 'standard',
           timestamp: performance.now(),
           axes: state.axes,
-          buttons: Array.from({ length: 17 }, () => ({ pressed: false, touched: false, value: 0 })),
+          buttons: Array.from({ length: 17 }, (_, index) => ({
+            pressed: index === 0 ? state.startPressed : index === 10 ? state.leftStickPressed : false,
+            touched: false,
+            value: index === 0 && state.startPressed || index === 10 && state.leftStickPressed ? 1 : 0,
+          })),
           vibrationActuator: null,
           hapticActuators: [],
         }] : [],
@@ -52,16 +56,35 @@ test.describe('Diagnostic tools', () => {
     await page.evaluate(() => { (window as unknown as { __xensiMockPad: { connected: boolean } }).__xensiMockPad.connected = true })
     await page.clock.runFor(100)
     await expect(page.getByText('XENSI Test Controller')).toBeVisible()
+    await expect(page.getByText('Pressione qualquer botão do controle para iniciar.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Iniciar medição' })).toHaveCount(0)
 
-    await page.getByRole('button', { name: 'Iniciar medição' }).click()
-    await page.clock.runFor(7200)
+    await page.evaluate(() => { (window as unknown as { __xensiMockPad: { leftStickPressed: boolean } }).__xensiMockPad.leftStickPressed = true })
+    await page.clock.runFor(100)
+    await expect(page.getByText('Pressione qualquer botão do controle para iniciar.')).toBeVisible()
+
+    await page.evaluate(() => { (window as unknown as { __xensiMockPad: { leftStickPressed: boolean } }).__xensiMockPad.leftStickPressed = false })
+    await page.clock.runFor(100)
+    await page.evaluate(() => { (window as unknown as { __xensiMockPad: { startPressed: boolean } }).__xensiMockPad.startPressed = true })
+    await page.clock.runFor(20)
+    expect(await page.locator('.drift-status strong').textContent()).toContain('Solte completamente os analógicos')
+    await page.evaluate(() => { (window as unknown as { __xensiMockPad: { startPressed: boolean } }).__xensiMockPad.startPressed = false })
+    await page.clock.runFor(3100)
+    expect(await page.locator('.drift-status strong').textContent()).toContain('Não toque nos analógicos.')
+    await page.clock.runFor(4100)
     await expect(page.getByText('Medição concluída')).toBeVisible()
     await expect(page.getByText('Deslocamento do centro').first()).toBeVisible()
     await expect(page.getByText(/não confirma defeito físico/i)).toBeVisible()
 
     await page.getByRole('button', { name: 'Medir novamente' }).click()
+    await page.clock.runFor(3100)
+    await page.evaluate(() => { (window as unknown as { __xensiMockPad: { axes: number[] } }).__xensiMockPad.axes = [0.6, 0, 0.02, 0.006] })
+    await page.clock.runFor(100)
+    await expect(page.getByText(/Movimento amplo detectado/i)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Medir novamente' }).click()
     await page.evaluate(() => { (window as unknown as { __xensiMockPad: { connected: boolean } }).__xensiMockPad.connected = false })
     await page.clock.runFor(100)
-    await expect(page.getByText(/controle foi desconectado/i)).toBeVisible()
+    await expect(page.getByText('Nenhum controle detectado')).toBeVisible()
   })
 })
