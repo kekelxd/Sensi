@@ -25,9 +25,12 @@ export function editSensitivityDraft(draft: SensitivityDraft, patch: Partial<Pic
 }
 
 // Saved presets supply defaults. Only explicit user actions replace a session draft.
-export function useSensitivityPreset(defaultGame: GameSensitivityProfileId, initial?: PresetLaunch | null) {
+export function useSensitivityPreset(defaultGame: GameSensitivityProfileId, initial?: PresetLaunch | null, preferPrimary = false) {
   const profile = usePlayerProfile()
-  const [draft, setDraft] = useState(() => draftFromPreset(initial?.gameId ?? defaultGame, initial ?? selectGamePreset(profile.presets, defaultGame)))
+  const [draft, setDraft] = useState(() => {
+    const launchPreset = initial ?? (preferPrimary ? profile.presets.find(item => item.isPrimary) : null) ?? selectGamePreset(profile.presets, defaultGame)
+    return draftFromPreset(launchPreset?.gameId ?? defaultGame, launchPreset)
+  })
   const preset = profile.presets.find(item => item.id === draft.presetId && item.gameId === draft.gameId) ?? null
   const selectGame = (gameId: GameSensitivityProfileId) => {
     if (gameId !== draft.gameId) setDraft(draftFromPreset(gameId, selectGamePreset(profile.presets, gameId)))

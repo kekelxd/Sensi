@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Clipboard, Save, Settings2, Target, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Clipboard, Play, Save, Settings2, Target, X } from 'lucide-react'
 import { FinderCanvas } from './FinderCanvas'
 import { CalibrationLanding } from './CalibrationLanding'
 import { GAME_BY_ID, type GameId } from './games'
@@ -7,14 +7,15 @@ import { cmPer360FromSensitivity } from './sensMath'
 import { useBinarySensSearch } from './useBinarySensSearch'
 import { useI18n } from './i18n'
 import { GamePicker } from './GamePicker'
-import { PresetSelection } from './PresetSelection'
+import { SensitivityConfigFields } from './SensitivityConfigFields'
+import { WizardStepPanel, WizardStepper } from './SetupWizard'
 import { presetCopy } from './presetCopy'
 import { useSensitivityPreset, type PresetLaunch } from './useSensitivityPreset'
 import { saveSensitivityPreset } from './playerProfileStore'
 import { useDialogFocus } from './useDialogFocus'
 
 const FINDER_GAMES: GameId[] = ['cs2', 'valorant', 'overwatch2', 'warzone']
-const DPI_PRESETS = [400, 800, 1600, 3200]
+type FinderSetupStep = 1 | 2
 
 type SensitivityFinderModalProps = {
   initialPreset?: PresetLaunch | null
@@ -24,9 +25,11 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
   const { t, locale } = useI18n()
   const text = presetCopy[locale]
   const [setupOpen, setSetupOpen] = useState(Boolean(initialPreset))
+  const [setupStep, setSetupStep] = useState<FinderSetupStep>(1)
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1)
   const setupRef = useRef<HTMLElement>(null)
   useDialogFocus(setupRef, setupOpen)
-  const config = useSensitivityPreset('cs2', initialPreset)
+  const config = useSensitivityPreset('cs2', initialPreset, true)
   const gameId = config.draft.gameId as GameId
   const { dpi, sensitivity: baseSensitivity } = config.draft
   const { setDpi, setSensitivity: setBaseSensitivity } = config
@@ -38,6 +41,7 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
   const parsedDpi = Number(dpi.replace(',', '.'))
   const parsedBaseSensitivity = Number(baseSensitivity.replace(',', '.'))
   const sensitivity = search.finalSensitivity
+  const setupValid = Boolean(game.yaw) && Number.isFinite(parsedDpi) && parsedDpi > 0 && Number.isFinite(parsedBaseSensitivity) && parsedBaseSensitivity >= game.sensitivityMin && parsedBaseSensitivity <= game.sensitivityMax
 
   useEffect(() => {
     if (search.stage !== 'complete') return
@@ -46,7 +50,7 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
   }, [search.stage])
 
   const start = () => {
-    if (!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0 || !Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax) return
+    if (!setupValid) return
     setSaved(false); setCopied(false); setSetupOpen(false)
     search.start(parsedBaseSensitivity)
   }
@@ -99,13 +103,21 @@ export function SensitivityFinderModal({ initialPreset = null }: SensitivityFind
     </section>
   }
 
-  return <><CalibrationLanding finder rounds="8" seconds="30s" onStart={() => setSetupOpen(true)} />
+  const openSetup = () => { setSetupStep(1); setStepDirection(1); setSetupOpen(true) }
+
+  return <><CalibrationLanding finder rounds="8" seconds="30s" onStart={openSetup} />
     {setupOpen && <div className="modal-backdrop"><section ref={setupRef} className="modal finder-setup-modal" role="dialog" aria-modal="true" aria-label={t('finder.setupTitle')} onKeyDown={event => { if (event.key === 'Escape') setSetupOpen(false) }}><button className="modal-close" onClick={() => setSetupOpen(false)} aria-label={t('common.close')}><X size={18} /></button><Settings2 className="modal-icon" size={21} /><h2>{t('finder.setupTitle')}</h2><p>{t('finder.setupDescription')}</p>
-      <div>{t('finder.targetGame')}<GamePicker gameIds={FINDER_GAMES} value={gameId} onChange={config.selectGame} presets={config.presets} /></div>
-      <PresetSelection draft={config.draft} presets={config.presets} onSelect={config.selectPreset} />
-      <label>{t('finder.currentSensitivity', { game: game.shortLabel })}<input value={baseSensitivity} inputMode="decimal" onChange={(event) => setBaseSensitivity(event.target.value)} aria-label={t('finder.currentSensitivity', { game: game.shortLabel })} /></label>
-      <label>{t('common.mouseDpi')}<div className="finder-dpi-picker">{DPI_PRESETS.map((value) => <button key={value} className={dpi === String(value) ? 'selected' : ''} onClick={() => setDpi(String(value))}>{value}</button>)}<input value={dpi} inputMode="numeric" onChange={(event) => setDpi(event.target.value)} aria-label={t('common.mouseDpi')} /></div></label>
-      <button className="primary-button wide" disabled={!game.yaw || !Number.isFinite(parsedDpi) || parsedDpi <= 0 || !Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax} onClick={start}>{t('finder.start')}</button>
+      <WizardStepper current={setupStep} steps={[t('warmup.stepGame'), t('warmup.stepSettings')]} />
+      <div className="warmup-step-content"><WizardStepPanel key={setupStep} step={setupStep} direction={stepDirection}>
+        {setupStep === 1 && <><h3>{t('warmup.chooseGame')}</h3><GamePicker gameIds={FINDER_GAMES} value={gameId} onChange={config.selectGame} presets={config.presets} /></>}
+        {setupStep === 2 && <SensitivityConfigFields draft={config.draft} presets={config.presets} onSelectPreset={config.selectPreset} onSensitivityChange={setBaseSensitivity} onDpiChange={setDpi} sensitivityInvalid={!Number.isFinite(parsedBaseSensitivity) || parsedBaseSensitivity < game.sensitivityMin || parsedBaseSensitivity > game.sensitivityMax} dpiInvalid={!Number.isFinite(parsedDpi) || parsedDpi <= 0} />}
+      </WizardStepPanel></div>
+      <div className="warmup-wizard-actions">
+        {setupStep === 2 && <button className="secondary-button" onClick={() => { setStepDirection(-1); setSetupStep(1) }}><ArrowLeft size={15} /> {t('warmup.back')}</button>}
+        {setupStep === 1
+          ? <button className="primary-button" onClick={() => { setStepDirection(1); setSetupStep(2) }}>{t('warmup.next')} <ArrowRight size={15} /></button>
+          : <button className="primary-button" disabled={!setupValid} onClick={start}><Play size={15} /> {t('finder.start')}</button>}
+      </div>
     </section></div>}
   </>
 }

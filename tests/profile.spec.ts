@@ -57,7 +57,9 @@ test('creates a preset and prefills converter and calibrator', async ({ page }, 
   await page.getByRole('button', { name: 'Meu perfil', exact: true }).click()
   await page.locator('.profile-preset-card').first().getByRole('button', { name: /Calibrar/ }).click()
   await expect(page.getByRole('heading', { name: /Configure o calibrador/i })).toBeVisible()
-  await expect(page.getByLabel(/Sensibilidade atual/)).toHaveValue('0.65')
+  await expect(page.getByRole('button', { name: /Counter-Strike 2/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: /Continuar/ }).click()
+  await expect(page.getByRole('textbox', { name: 'Sensibilidade', exact: true })).toHaveValue('0.65')
   await expect(page.getByRole('textbox', { name: 'DPI do mouse' })).toHaveValue('800')
 })
 

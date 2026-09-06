@@ -3,7 +3,8 @@ import { flushSync } from 'react-dom'
 import { Activity, ArrowLeft, ArrowRight, Crosshair, Dot, Circle, Plus, LogOut, MousePointer2, Play, RotateCcw, Settings2, Sparkles, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { GamePicker } from './GamePicker'
-import { PresetSelection } from './PresetSelection'
+import { SensitivityConfigFields } from './SensitivityConfigFields'
+import { WizardStepPanel, WizardStepper } from './SetupWizard'
 import { useSensitivityPreset } from './useSensitivityPreset'
 import { createSessionContext, type SessionContext } from './playerProfileStore'
 import { useDialogFocus } from './useDialogFocus'
@@ -663,11 +664,12 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   const setupRef = useRef<HTMLElement>(null)
   useDialogFocus(setupRef, phase === 'setup')
   const [setupStep, setSetupStep] = useState<SetupStep>(1)
+  const [stepDirection, setStepDirection] = useState<1 | -1>(1)
   const [inputReady, setInputReady] = useState(false)
   const [exercise, setExercise] = useState<WarmupExercise>(initialExercise ?? 'switch')
   const [difficulty, setDifficulty] = useState<WarmupDifficulty>('easy')
   const [adaptiveLevel, setAdaptiveLevel] = useState<FixedWarmupDifficulty>('medium')
-  const config = useSensitivityPreset('cs2')
+  const config = useSensitivityPreset('cs2', null, true)
   const selectedGame = config.draft.gameId as GameId
   const { sensitivity, dpi } = config.draft
   const { setSensitivity, setDpi } = config
@@ -717,6 +719,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
     setSniperFocused(false)
     setExercise(nextExercise)
     setSetupStep(1)
+    setStepDirection(1)
     setPhase('setup')
   }
 
@@ -831,32 +834,26 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
               <h2>{t('warmup.configureExercise', { exercise: exerciseConfig.name })}</h2>
               <p>{t(exerciseConfig.description)}</p>
 
-              <div className="warmup-stepper" aria-label={t('warmup.configure')}>
-                {([['warmup.stepGame', 1], ['warmup.stepSettings', 2], ['warmup.stepCrosshair', 3]] as Array<[TranslationKey, SetupStep]>).map(([label, step]) => (
-                  <div key={step} className={setupStep === step ? 'active' : setupStep > step ? 'complete' : ''}><i>{step}</i><span>{t(label)}</span></div>
-                ))}
-              </div>
+              <WizardStepper current={setupStep} steps={[t('warmup.stepGame'), t('warmup.stepSettings'), t('warmup.stepCrosshair')]} />
 
               <div className="warmup-step-content">
+                <WizardStepPanel key={setupStep} step={setupStep} direction={stepDirection}>
                 {setupStep === 1 && <>
                   <h3>{t('warmup.chooseGame')}</h3>
                   <GamePicker gameIds={GAMES.map(item => item.id)} value={selectedGame} onChange={config.selectGame} presets={config.presets} />
                 </>}
 
                 {setupStep === 2 && <>
-                  <h3>{t('warmup.settingsTitle')}</h3>
-                  <div className="setup-fields">
-                    <label>{t('calibration.currentSensitivity', { game: game.label })}<input type="text" inputMode="decimal" value={sensitivity} onChange={(event) => setSensitivity(event.target.value)} aria-invalid={parsedSensitivity === null} /></label>
-                    <label>{t('common.mouseDpi')}<input type="text" inputMode="numeric" value={dpi} onChange={(event) => setDpi(event.target.value)} aria-invalid={parsedDpi === null} /></label>
-                  </div>
-                  <div className="warmup-config-label">{t('warmup.difficulty')}</div>
-                  <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
-                    {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).filter(level => exercise !== 'sniper-reaction' || level !== 'adaptive').map((level) => (
-                      <button type="button" key={level} className={difficulty === level ? 'selected' : ''} onClick={() => { setDifficulty(level); if (level === 'adaptive') setAdaptiveLevel('medium') }}>
-                        <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
-                      </button>
-                    ))}
-                  </div>
+                  <SensitivityConfigFields draft={config.draft} presets={config.presets} onSelectPreset={config.selectPreset} onSensitivityChange={setSensitivity} onDpiChange={setDpi} sensitivityInvalid={parsedSensitivity === null} dpiInvalid={parsedDpi === null}>
+                    <div className="warmup-config-label">{t('warmup.difficulty')}</div>
+                    <div className="warmup-difficulty" role="radiogroup" aria-label={t('warmup.difficulty')}>
+                      {(Object.keys(WARMUP_DIFFICULTIES) as WarmupDifficulty[]).filter(level => exercise !== 'sniper-reaction' || level !== 'adaptive').map((level) => (
+                        <button type="button" key={level} className={difficulty === level ? 'selected' : ''} aria-pressed={difficulty === level} onClick={() => { setDifficulty(level); if (level === 'adaptive') setAdaptiveLevel('medium') }}>
+                          <i aria-hidden="true" /> <strong>{t(`difficulty.${level}` as TranslationKey)}</strong><small>{t(`difficulty.${level}Description` as TranslationKey)}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </SensitivityConfigFields>
                 </>}
 
                 {setupStep === 3 && <>
@@ -865,14 +862,13 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
                     {CROSSHAIRS.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} className={crosshair === item.id ? 'selected' : ''} onClick={() => setCrosshair(item.id)}><Icon size={16} /><span>{t(item.label)}</span></button> })}
                   </div>
                 </>}
+                </WizardStepPanel>
               </div>
 
-              {setupStep < 3 && <PresetSelection draft={config.draft} presets={config.presets} onSelect={config.selectPreset} />}
-
               <div className="warmup-wizard-actions">
-                {setupStep > 1 && <button className="secondary-button" onClick={() => setSetupStep((setupStep - 1) as SetupStep)}><ArrowLeft size={15} /> {t('warmup.back')}</button>}
+                {setupStep > 1 && <button className="secondary-button" onClick={() => { setStepDirection(-1); setSetupStep((setupStep - 1) as SetupStep) }}><ArrowLeft size={15} /> {t('warmup.back')}</button>}
                 {setupStep < 3
-                  ? <button className="primary-button" onClick={() => setSetupStep((setupStep + 1) as SetupStep)} disabled={setupStep === 2 && !validSetup}>{t('warmup.next')} <ArrowRight size={15} /></button>
+                  ? <button className="primary-button" onClick={() => { setStepDirection(1); setSetupStep((setupStep + 1) as SetupStep) }} disabled={setupStep === 2 && !validSetup}>{t('warmup.next')} <ArrowRight size={15} /></button>
                   : <button className="primary-button" onClick={start} disabled={!validSetup}><Play size={15} /> {t('warmup.start')}</button>}
               </div>
             </section>
