@@ -106,10 +106,10 @@ export function selectGamePreset(presets: SensitivityPreset[], gameId: GameSensi
   return matches.find(preset => preset.id === explicitId) ?? matches.find(preset => preset.isPrimary) ?? matches[0] ?? null
 }
 
-export type SessionContext = { presetId?: string; gameId: GameSensitivityProfileId; sensitivity: number; dpi: number }
+export type SessionContext = { presetId?: string; gameId: GameSensitivityProfileId; sensitivity: number; dpi: number; configuration?: { difficulty: string; durationSeconds: number } }
 
-export function createSessionContext(gameId: GameSensitivityProfileId, sensitivity: number, dpi: number, presetId?: string): SessionContext {
-  return { gameId, sensitivity, dpi, ...(presetId ? { presetId } : {}) }
+export function createSessionContext(gameId: GameSensitivityProfileId, sensitivity: number, dpi: number, presetId?: string, configuration?: SessionContext['configuration']): SessionContext {
+  return { gameId, sensitivity, dpi, ...(presetId ? { presetId } : {}), ...(configuration ? { configuration } : {}) }
 }
 
 export function saveSensitivityPreset(storage: Pick<Storage, 'getItem' | 'setItem'>, values: Omit<SessionContext, 'presetId'>, updateId?: string) {

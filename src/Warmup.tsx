@@ -15,7 +15,9 @@ import { clampAimCoordinate, requestStablePointerLock, sanitizePointerMovement }
 import { EXERCISES, EXERCISE_CATEGORIES, type ExerciseCategory } from './warmupExercises'
 import { SniperReaction, summarizeSniper } from './sniperReaction'
 import './sniperReaction.css'
-import { createEmptyWarmupMetrics, getAimBiasLabel, getAimDiagnosis, getWarmupRecommendation, readWarmupSession, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
+import { createEmptyWarmupMetrics, getAimBiasLabel, getAimDiagnosis, getWarmupRecommendation, readWarmupSession, readWarmupSessionHistory, toWarmupSessionSummary, writeWarmupSession, type WarmupMetrics, type WarmupSessionSummary } from './warmupTelemetry'
+import { evaluatePersonalBest, formatPersonalBestValue, type PersonalBestResult } from './personalBests'
+import { PERSONAL_BEST_COPY } from './personalBestCopy'
 
 export type { WarmupMetrics } from './warmupTelemetry'
 
@@ -144,6 +146,20 @@ function WarmupReport({ metrics, previous, exercise, onSelectRecommendation }: {
       </>}
     </div>
   )
+}
+
+function PersonalBestFeedback({ result, exercise, gameLabel }: { result: PersonalBestResult; exercise: WarmupExercise; gameLabel: string }) {
+  const { t, locale } = useI18n()
+  const copy = PERSONAL_BEST_COPY[locale]
+  if (result.status === 'none') return null
+  const metricLabel = result.definition.primaryMetric === 'reactionTimeMs' ? t('sniper.best') : result.definition.primaryMetric === 'accuracy' ? t('common.accuracy') : t('common.score')
+  const context = result.current.sessionContext
+  return <section className={`personal-best-feedback personal-best-${result.status}`} aria-live="polite">
+    <div className="personal-best-heading"><Target size={17} /><span>{result.status === 'first' ? copy.first : copy.new}</span></div>
+    <div className="personal-best-main"><strong>{exercise === 'sniper-reaction' ? 'Sniper Reaction' : metricLabel}</strong><b>{formatPersonalBestValue(result)}</b>{result.delta !== null && <small>{result.definition.direction === 'higher' ? '↑' : '↓'} {result.delta.toFixed(result.definition.precision)} {result.definition.unit === 'milliseconds' ? 'ms' : result.definition.unit === 'percent' ? '%' : ''}</small>}</div>
+    {result.previousValue !== null && <div className="personal-best-previous"><span>{copy.previous}</span><strong>{result.previousValue.toFixed(result.definition.precision)} {result.definition.unit === 'milliseconds' ? 'ms' : result.definition.unit === 'percent' ? '%' : ''}</strong></div>}
+    {context && <small className="personal-best-context">{gameLabel} · {context.sensitivity} · {context.dpi} DPI</small>}
+  </section>
 }
 
 type ArenaProps = {
@@ -666,6 +682,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   const activePreview = sniperFocused ? 'sniper-reaction' : previewExercise
   const [metrics, setMetrics] = useState<WarmupMetrics>(() => createEmptyWarmupMetrics(WARMUP_DURATION))
   const [previousSession, setPreviousSession] = useState<WarmupSessionSummary | null>(null)
+  const [personalBest, setPersonalBest] = useState<PersonalBestResult | null>(null)
 
   const game = GAME_BY_ID[selectedGame]
   const parsedSensitivity = parsePositiveNumberInput(sensitivity)
@@ -706,6 +723,8 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   const start = () => {
     if (!validSetup || normalizedSensitivity === null || parsedDpi === null) return
     sessionContext.current = createSessionContext(selectedGame, normalizedSensitivity, Math.round(parsedDpi), config.draft.presetId)
+    sessionContext.current.configuration = { difficulty: effectiveDifficulty, durationSeconds: WARMUP_DURATION }
+    setPersonalBest(null)
     setSensitivity(String(normalizedSensitivity))
     setDpi(String(Math.round(parsedDpi)))
     setInputReady(false)
@@ -718,6 +737,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   }
 
   const repeat = () => {
+    setPersonalBest(null)
     setInputReady(false)
     setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
@@ -728,6 +748,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   }
 
   const playNextRound = () => {
+    setPersonalBest(null)
     setInputReady(false)
     setMetrics(createEmptyWarmupMetrics(WARMUP_DURATION))
     flushSync(() => {
@@ -738,9 +759,13 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
   }
 
   const completeWarmup = (result: WarmupMetrics) => {
+    const withContext = { ...result, sessionContext: sessionContext.current }
+    const currentSummary = toWarmupSessionSummary(withContext)
+    const history = readWarmupSessionHistory(window.localStorage, exercise)
+    setPersonalBest(evaluatePersonalBest(exercise, currentSummary, history))
     setPreviousSession(readWarmupSession(window.localStorage, exercise))
-    writeWarmupSession(window.localStorage, exercise, { ...result, sessionContext: sessionContext.current })
-    setMetrics(result)
+    writeWarmupSession(window.localStorage, exercise, withContext)
+    setMetrics(withContext)
     setPhase('result')
   }
 
@@ -862,6 +887,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
               <h2>{exerciseConfig.name}</h2>
               <p>{difficultyLabel} · {exercise === 'sniper-reaction' ? '' : `${game.label} · `}{WARMUP_DURATION}s</p>
               <div className="warmup-result-score"><span>{t('common.score')}</span><strong>{metrics.score}</strong></div>
+              {personalBest && <PersonalBestFeedback result={personalBest} exercise={exercise} gameLabel={game.label} />}
               <WarmupReport metrics={metrics} previous={previousSession} exercise={exercise} onSelectRecommendation={openSetup} />
               <div className="warmup-next-hint">
                 {t('warmup.fixedNextHint', { level: difficultyLabel })}

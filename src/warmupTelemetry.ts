@@ -22,6 +22,7 @@ export type WarmupMetrics = {
 }
 
 export type WarmupSessionSummary = Omit<WarmupMetrics, 'remaining'>
+type StoredWarmupSession = WarmupSessionSummary & { history?: WarmupSessionSummary[] }
 
 export function createEmptyWarmupMetrics(duration: number): WarmupMetrics {
   return {
@@ -103,16 +104,30 @@ export function readWarmupSession(storage: Storage, exercise: WarmupExercise): W
   try {
     const saved = storage.getItem(warmupSessionStorageKey(exercise))
     if (!saved) return null
-    const parsed = JSON.parse(saved) as WarmupSessionSummary
+    const parsed = JSON.parse(saved) as StoredWarmupSession
     return Number.isFinite(parsed.score) && Number.isFinite(parsed.accuracy) ? parsed : null
   } catch {
     return null
   }
 }
 
+export function readWarmupSessionHistory(storage: Storage, exercise: WarmupExercise): WarmupSessionSummary[] {
+  try {
+    const saved = storage.getItem(warmupSessionStorageKey(exercise))
+    if (!saved) return []
+    const parsed = JSON.parse(saved) as StoredWarmupSession
+    const history = Array.isArray(parsed.history) ? parsed.history : [parsed]
+    return history.filter(item => Number.isFinite(item?.score) && Number.isFinite(item?.accuracy))
+  } catch {
+    return []
+  }
+}
+
 export function writeWarmupSession(storage: Storage, exercise: WarmupExercise, metrics: WarmupMetrics) {
   try {
-    storage.setItem(warmupSessionStorageKey(exercise), JSON.stringify(toWarmupSessionSummary(metrics)))
+    const summary = toWarmupSessionSummary(metrics)
+    const history = [...readWarmupSessionHistory(storage, exercise), summary].slice(-100)
+    storage.setItem(warmupSessionStorageKey(exercise), JSON.stringify({ ...summary, history }))
   } catch {
     // Training still works when storage is unavailable or full.
   }

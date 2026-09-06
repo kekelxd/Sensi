@@ -7073,6 +7073,17 @@ body:has(.home-reboot) {
 .xensi-training-dropdown { width: 350px; }
 .xensi-nav-dropdown > button > span { min-width: 0; }
 .xensi-navigation button:focus-visible, .xensi-profile-dropdown select:focus-visible { outline: 2px solid var(--mint); outline-offset: -2px; }
+.personal-best-feedback { display: grid; gap: 10px; margin: 18px 0 20px; padding: 16px 18px; border: 1px solid rgba(255,89,102,.58); border-radius: 10px; background: linear-gradient(115deg, rgba(255,89,102,.11), rgba(15,20,25,.94) 58%); box-shadow: 0 0 26px rgba(255,70,87,.1); animation: personalBestIn .24s ease both; }
+.personal-best-heading { display: flex; align-items: center; gap: 8px; color: #ff7580; font: 600 11px/1.4 'DM Mono', monospace; letter-spacing: .12em; }
+.personal-best-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+.personal-best-main strong { color: #f1eee7; font: 600 13px/1.4 Manrope, sans-serif; }
+.personal-best-main b { color: #8dfbd3; font: 700 28px/1 'DM Mono', monospace; text-shadow: 0 0 16px rgba(141,251,211,.22); }
+.personal-best-main small { color: #8dfbd3; font: 600 12px/1.4 'DM Mono', monospace; }
+.personal-best-previous { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 9px; border-top: 1px solid rgba(255,255,255,.09); color: #9ca4aa; font: 500 12px/1.45 Manrope, sans-serif; }
+.personal-best-previous strong { color: #c8ced0; font: 600 12px/1.45 'DM Mono', monospace; }
+.personal-best-context { color: #abb7b2; font: 500 11px/1.45 'DM Mono', monospace; }
+@keyframes personalBestIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .personal-best-feedback { animation: none; } }
 @media (max-width: 1080px) {
   .xensi-primary-nav { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
   .xensi-primary-nav::-webkit-scrollbar { display: none; }
