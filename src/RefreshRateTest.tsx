@@ -9,6 +9,87 @@ const REFRESH_SAMPLE_MS = 4000
 type RefreshStatus = 'idle' | 'running' | 'done' | 'invalid'
 type InvalidReason = 'interrupted' | 'insufficient-samples' | 'throttled'
 
+const motionRates = (observedHz: number) => [observedHz, observedHz / 2, observedHz / 4]
+
+function MotionComparison({ observedHz }: { observedHz: number }) {
+  const { localeTag, t } = useI18n()
+  const [speed, setSpeed] = useState(.5)
+  const speedRef = useRef(speed)
+  const trackRefs = useRef<Array<HTMLDivElement | null>>([])
+  const targetRefs = useRef<Array<HTMLDivElement | null>>([])
+  const rates = motionRates(observedHz)
+  const labels = [t('refresh.observedCadence'), t('refresh.halfCadence'), t('refresh.quarterCadence')]
+
+  useEffect(() => { speedRef.current = speed }, [speed])
+
+  useEffect(() => {
+    const rates = motionRates(observedHz)
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const travelDistance = [0, 0, 0]
+    const lastUpdate = [0, 0, 0]
+    const updateTravelDistance = (index: number) => {
+      const track = trackRefs.current[index]
+      travelDistance[index] = track ? Math.max(0, track.clientWidth - 28) : 0
+    }
+    const observers = trackRefs.current.map((track, index) => {
+      if (!track) return null
+      updateTravelDistance(index)
+      const observer = new ResizeObserver(() => updateTravelDistance(index))
+      observer.observe(track)
+      return observer
+    })
+    const moveTarget = (index: number, progress: number) => {
+      const target = targetRefs.current[index]
+      if (target) target.style.transform = `translate3d(${travelDistance[index] * progress}px, -50%, 0)`
+    }
+
+    if (reducedMotion) {
+      rates.forEach((_, index) => moveTarget(index, .5))
+      return () => observers.forEach((observer) => observer?.disconnect())
+    }
+
+    let frame = 0
+    const tick = (timestamp: number) => {
+      const travelDuration = 2600 - speedRef.current * 1600
+      const progress = (timestamp % travelDuration) / travelDuration
+      rates.forEach((rate, index) => {
+        if (timestamp - lastUpdate[index] >= 1000 / Math.max(1, rate)) {
+          moveTarget(index, progress)
+          lastUpdate[index] = timestamp
+        }
+      })
+      frame = window.requestAnimationFrame(tick)
+    }
+    frame = window.requestAnimationFrame(tick)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      observers.forEach((observer) => observer?.disconnect())
+    }
+  }, [observedHz])
+
+  return <section className="motion-comparison" aria-labelledby="motion-comparison-title">
+    <header>
+      <div><span className="panel-label">{t('refresh.comparisonTitle')}</span><h2 id="motion-comparison-title">{t('refresh.comparisonTitle')}</h2></div>
+      <p>{t('refresh.comparisonDescription')}</p>
+    </header>
+    <div className="motion-comparison-lanes">
+      {rates.map((rate, index) => <div className="motion-comparison-lane" key={labels[index]}>
+        <span>{labels[index]}</span>
+        <div className="motion-comparison-track" ref={(node) => { trackRefs.current[index] = node }}>
+          <div className="motion-comparison-target" ref={(node) => { targetRefs.current[index] = node }} aria-label={`${labels[index]}: ${Math.round(rate).toLocaleString(localeTag)} Hz`}><i /></div>
+        </div>
+        <strong>{Math.round(rate).toLocaleString(localeTag)} <small>Hz</small></strong>
+      </div>)}
+    </div>
+    <label className="motion-comparison-speed">
+      <span>{t('refresh.slow')}</span>
+      <input type="range" min="0" max="1" step="0.05" value={speed} aria-label={t('refresh.speed')} onChange={(event) => setSpeed(Number(event.target.value))} />
+      <span>{t('refresh.fast')}</span>
+    </label>
+    <p className="motion-comparison-disclaimer">{t('refresh.comparisonDisclaimer')}</p>
+  </section>
+}
+
 export function RefreshRateTest() {
   const { localeTag, t } = useI18n()
   const [status, setStatus] = useState<RefreshStatus>('idle')
@@ -129,6 +210,8 @@ export function RefreshRateTest() {
       <div><span>{t('refresh.stability')}</span><strong>{result ? `${result.stability.toFixed(1)}%` : '--'}<small>{result ? classification : ''}</small></strong></div>
       <div><span>{t('refresh.delayed')}</span><strong>{result ? result.delayedFrames : '--'}</strong></div>
     </div>
+
+    {result && <MotionComparison observedHz={result.observedHz} />}
 
     <details className="diagnostic-details">
       <summary><Activity size={15} /> {t('refresh.details')}</summary>

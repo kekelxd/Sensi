@@ -19,6 +19,11 @@ test.describe('Diagnostic tools', () => {
     await page.clock.runFor(5000)
     await expect(page.getByText('Teste concluído')).toBeVisible()
     await expect(page.getByText('Refresh observado')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Comparação de movimento' })).toBeVisible()
+    await expect(page.getByText('Taxa observada', { exact: true })).toBeVisible()
+    await expect(page.getByText('Metade da taxa', { exact: true })).toBeVisible()
+    await expect(page.getByText('1/4 da taxa', { exact: true })).toBeVisible()
+    await page.getByRole('slider', { name: 'Velocidade' }).fill('1')
     await expect(page.getByText(/não confirma a especificação física do monitor/i)).toBeVisible()
 
     await page.getByRole('button', { name: 'Testar novamente' }).click()
