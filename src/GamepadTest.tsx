@@ -1,33 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Gamepad2, RotateCcw, Vibrate } from 'lucide-react'
 import { clampAxis, circularityError, rawAxis, type StickPoint } from './gamepadMetrics'
+import { selectActiveGamepad, subscribeGamepads, type GamepadSnapshot } from './gamepadInput'
 import { useI18n } from './i18n'
-
-type GamepadSnapshot = {
-  index: number
-  id: string
-  connected: boolean
-  timestamp: number
-  axes: number[]
-  buttons: Array<{ pressed: boolean, value: number }>
-}
 
 type StickName = 'left' | 'right'
 
 const EMPTY_SNAPSHOT: GamepadSnapshot = { index: 0, id: '', connected: false, timestamp: 0, axes: [0, 0, 0, 0], buttons: [] }
 const buttonValue = (gamepad: GamepadSnapshot, index: number) => gamepad.buttons[index]?.value ?? 0
 const isPressed = (gamepad: GamepadSnapshot, index: number) => Boolean(gamepad.buttons[index]?.pressed || buttonValue(gamepad, index) > .5)
-
-function snapshotGamepad(gamepad: Gamepad): GamepadSnapshot {
-  return {
-    index: gamepad.index,
-    id: gamepad.id,
-    connected: gamepad.connected,
-    timestamp: gamepad.timestamp,
-    axes: Array.from(gamepad.axes, rawAxis),
-    buttons: Array.from(gamepad.buttons, (button) => ({ pressed: button.pressed, value: button.value })),
-  }
-}
 
 function StickVisualizer({ name, x, y, points, error }: { name: StickName, x: number, y: number, points: StickPoint[], error: number | null }) {
   const { t } = useI18n()
@@ -98,11 +79,9 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => { activeIndexRef.current = activeIndex }, [activeIndex])
 
   useEffect(() => {
-    let frame = 0
-    const poll = () => {
-      const next = Array.from(navigator.getGamepads?.() ?? []).filter((gamepad): gamepad is Gamepad => Boolean(gamepad?.connected)).map(snapshotGamepad)
+    return subscribeGamepads((next) => {
       setGamepads(next)
-      const selected = next.find((gamepad) => gamepad.index === activeIndexRef.current) ?? next[0]
+      const selected = selectActiveGamepad(next, activeIndexRef.current)
       if (selected && selected.index !== activeIndexRef.current) setActiveIndex(selected.index)
       if (selected) {
         const left = { x: rawAxis(selected.axes[0]), y: rawAxis(selected.axes[1]) }
@@ -110,17 +89,7 @@ export function GamepadTest({ embedded = false }: { embedded?: boolean }) {
         if (Math.hypot(left.x, left.y) > .08) setLeftPointsByPad((points) => ({ ...points, [selected.index]: [...(points[selected.index] ?? []).slice(-799), left] }))
         if (Math.hypot(right.x, right.y) > .08) setRightPointsByPad((points) => ({ ...points, [selected.index]: [...(points[selected.index] ?? []).slice(-799), right] }))
       }
-      frame = window.requestAnimationFrame(poll)
-    }
-    const refresh = () => { frame ||= window.requestAnimationFrame(poll) }
-    window.addEventListener('gamepadconnected', refresh)
-    window.addEventListener('gamepaddisconnected', refresh)
-    frame = window.requestAnimationFrame(poll)
-    return () => {
-      window.cancelAnimationFrame(frame)
-      window.removeEventListener('gamepadconnected', refresh)
-      window.removeEventListener('gamepaddisconnected', refresh)
-    }
+    })
   }, [])
 
   const active = gamepads.find((gamepad) => gamepad.index === activeIndex) ?? gamepads[0] ?? EMPTY_SNAPSHOT

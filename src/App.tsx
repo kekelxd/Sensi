@@ -7,6 +7,8 @@ import { GAME_BY_ID, GAMES, GameId } from './games'
 import { GameBadge } from './GameBadge'
 import { MouseButtonTest } from './MouseButtonTest'
 import { PollingRateTest } from './PollingRateTest'
+import { RefreshRateTest } from './RefreshRateTest'
+import { ControllerDriftTest } from './ControllerDriftTest'
 import { SensitivityConverter } from './SensitivityConverter'
 import { SensitivityFinderModal } from './SensitivityFinderModal'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
@@ -507,7 +509,7 @@ function App() {
         <div className="footer-status">{active && <><MousePointer2 size={16} /> {t('calibration.trackingActive')}</>}</div>
         <div className="controls" />
         <div className="dpi-status">{t('calibration.physicalProfile', { dpi: confirmedDpi, fov: confirmedHorizontalFov })}</div>
-      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter initialPreset={converterPreset} /> : view === 'polling' ? <PollingRateTest /> : <MouseButtonTest />}
+      </footer></> : <CalibrationLanding rounds={`${BASE_CANDIDATE_MULTIPLIERS.length * CALIBRATION_REPETITIONS}+${VALIDATION_FINALIST_COUNT * VALIDATION_REPETITIONS}`} seconds={ROUND_DURATION} onStart={start} /> : view === 'converter' ? <SensitivityConverter initialPreset={converterPreset} /> : view === 'polling' ? <PollingRateTest /> : view === 'buttons' ? <MouseButtonTest /> : view === 'refresh-rate' ? <RefreshRateTest /> : <ControllerDriftTest />}
 
       {view === 'calibration' && setupOpen && (
         <div className="modal-backdrop">
