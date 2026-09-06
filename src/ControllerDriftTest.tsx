@@ -227,12 +227,21 @@ export function ControllerDriftTest() {
         {(phase === 'completed' || phase === 'invalid') && <button type="button" className="primary-button" onClick={measureAgain}><RotateCcw size={16} />{t('drift.again')}</button>}
       </div>
 
-      <div className={`drift-status ${phase}`} aria-live="polite">
-        {phase === 'invalid' && <TriangleAlert size={17} />}
-        <strong>{message}{phase === 'countdown' && <b>{countdown}</b>}</strong>
-        <span>{t('drift.restWindow')}</span>
-      </div>
-      <div className="diagnostic-progress"><i style={{ width: `${progress}%` }} /></div>
+      {phase === 'ready' ? <section className="drift-ready-callout" aria-live="polite">
+        <div className="drift-ready-icon" aria-hidden="true"><Gamepad2 size={21} /></div>
+        <div>
+          <span>{t('drift.readyLabel')}</span>
+          <strong>{t('drift.readyTitle')}</strong>
+          <p>{t('drift.readyDescription')}</p>
+        </div>
+      </section> : <>
+        <div className={`drift-status ${phase}`} aria-live="polite">
+          {phase === 'invalid' && <TriangleAlert size={17} />}
+          <strong>{message}{phase === 'countdown' && <b>{countdown}</b>}</strong>
+          <span>{t('drift.restWindow')}</span>
+        </div>
+        <div className="diagnostic-progress"><i style={{ width: `${progress}%` }} /></div>
+      </>}
 
       <div className="drift-sticks-grid">
         <StickPanel side="left" canvasRef={leftCanvasRef} live={leftLive} result={leftResult} />

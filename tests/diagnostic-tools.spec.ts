@@ -56,12 +56,14 @@ test.describe('Diagnostic tools', () => {
     await page.evaluate(() => { (window as unknown as { __xensiMockPad: { connected: boolean } }).__xensiMockPad.connected = true })
     await page.clock.runFor(100)
     await expect(page.getByText('XENSI Test Controller')).toBeVisible()
-    await expect(page.getByText('Pressione qualquer botão do controle para iniciar.')).toBeVisible()
+    await expect(page.getByText('PRONTO', { exact: true })).toBeVisible()
+    await expect(page.getByText('PRESSIONE QUALQUER BOTÃO DO CONTROLE', { exact: true })).toBeVisible()
+    await expect(page.getByText('para iniciar a medição', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Iniciar medição' })).toHaveCount(0)
 
     await page.evaluate(() => { (window as unknown as { __xensiMockPad: { leftStickPressed: boolean } }).__xensiMockPad.leftStickPressed = true })
     await page.clock.runFor(100)
-    await expect(page.getByText('Pressione qualquer botão do controle para iniciar.')).toBeVisible()
+    await expect(page.getByText('PRONTO', { exact: true })).toBeVisible()
 
     await page.evaluate(() => { (window as unknown as { __xensiMockPad: { leftStickPressed: boolean } }).__xensiMockPad.leftStickPressed = false })
     await page.clock.runFor(100)
