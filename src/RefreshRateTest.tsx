@@ -43,17 +43,13 @@ function MotionComparison({ observedHz }: { observedHz: number }) {
       if (target) target.style.transform = `translate3d(${travelDistance[index] * progress}px, -50%, 0)`
     }
 
-    if (reducedMotion) {
-      rates.forEach((_, index) => moveTarget(index, .5))
-      return () => observers.forEach((observer) => observer?.disconnect())
-    }
-
     let frame = 0
     const tick = (timestamp: number) => {
-      const travelDuration = 2600 - speedRef.current * 1600
+      const travelDuration = (2600 - speedRef.current * 1600) * (reducedMotion ? 1.45 : 1)
       const progress = (timestamp % travelDuration) / travelDuration
       rates.forEach((rate, index) => {
-        if (timestamp - lastUpdate[index] >= 1000 / Math.max(1, rate)) {
+        const cadence = Math.max(1, rate * (reducedMotion ? .35 : 1))
+        if (timestamp - lastUpdate[index] >= 1000 / cadence) {
           moveTarget(index, progress)
           lastUpdate[index] = timestamp
         }

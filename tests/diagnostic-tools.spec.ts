@@ -12,6 +12,7 @@ test.describe('Diagnostic tools', () => {
   })
 
   test('measures browser-observed refresh and invalidates focus loss', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.clock.install()
     await page.goto('./')
     await openDiagnostic(page, /Refresh Rate/)
@@ -23,6 +24,11 @@ test.describe('Diagnostic tools', () => {
     await expect(page.getByText('Taxa observada', { exact: true })).toBeVisible()
     await expect(page.getByText('Metade da taxa', { exact: true })).toBeVisible()
     await expect(page.getByText('1/4 da taxa', { exact: true })).toBeVisible()
+    const target = page.locator('.motion-comparison-target').first()
+    await page.clock.runFor(100)
+    const beforeMotion = await target.getAttribute('style')
+    await page.clock.runFor(500)
+    await expect(target).not.toHaveAttribute('style', beforeMotion ?? '')
     await page.getByRole('slider', { name: 'Velocidade' }).fill('1')
     await expect(page.getByText(/não confirma a especificação física do monitor/i)).toBeVisible()
 
