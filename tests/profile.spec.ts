@@ -37,7 +37,8 @@ test('empty profile, avatar picker and navbar share normalized assets', async ({
 test('creates a preset and prefills converter and calibrator', async ({ page }, testInfo) => {
   await openProfile(page)
   await page.getByRole('button', { name: 'Adicionar sensibilidade' }).click()
-  await page.getByLabel('Jogo').selectOption('cs2')
+  await page.getByRole('dialog', { name: 'Adicionar sensibilidade' }).getByRole('button', { name: 'Counter-Strike 2' }).click()
+  await page.getByRole('option', { name: 'Counter-Strike 2' }).click()
   await page.getByRole('textbox', { name: 'Sensibilidade', exact: true }).fill('0.65')
   await page.getByRole('textbox', { name: 'DPI', exact: true }).fill('800')
   await page.getByRole('button', { name: 'Salvar', exact: true }).click()

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Check, Crosshair, Edit3, Gauge, Plus, RefreshCw, Star, Trash2, UserRound, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check, ChevronRight, Crosshair, Edit3, Gauge, MoreVertical, Plus, RefreshCw, Search, Star, Trash2, UserRound, X } from 'lucide-react'
 import { AvatarArtwork } from './AvatarArtwork'
 import { XENSI_AVATARS, type AvatarId } from './avatars'
 import { GAME_SENSITIVITY_PROFILES, GAME_SENSITIVITY_PROFILE_BY_ID, type GameSensitivityProfileId } from './gameSensitivityProfiles'
@@ -28,13 +28,163 @@ type PresetDraft = {
 
 const copy = {
   pt: {
-    kicker: 'Configuração pessoal', title: 'Perfil', subtitle: 'Sua identidade e sensibilidades salvas.', identity: 'Identidade', editProfile: 'Editar perfil', nickname: 'Nickname', avatar: 'Avatar XENSI', saved: 'Alterações salvas', sensitivities: 'Sensibilidades salvas', add: 'Adicionar', emptyTitle: 'Nenhuma sensibilidade salva.', emptyText: 'Salve a configuração dos jogos que você usa para acessar rapidamente o conversor e a calibração.', addSensitivity: 'Adicionar sensibilidade', primary: 'Principal', setPrimary: 'Definir como principal', sensitivity: 'Sensibilidade', dpi: 'DPI', unavailable: 'cm/360 indisponível', unavailableHint: 'Este perfil de jogo ainda não possui cálculo físico compatível.', edit: 'Editar', calibrate: 'Calibrar', convert: 'Converter', remove: 'Remover', editIdentity: 'Editar identidade', editPreset: 'Editar sensibilidade', addPreset: 'Adicionar sensibilidade', game: 'Jogo', presetName: 'Nome do preset (opcional)', save: 'Salvar', cancel: 'Cancelar', confirmRemove: 'Remover esta sensibilidade salva?', calibratorUnavailable: 'Calibração indisponível para este jogo', invalid: 'Informe sensibilidade e DPI válidos.',
+    kicker: 'Configuração pessoal',
+    title: 'Perfil',
+    subtitle: 'Sua identidade e sensibilidades salvas.',
+    identity: 'Identidade',
+    editProfile: 'Editar perfil',
+    nickname: 'Nickname',
+    avatar: 'Avatar XENSI',
+    saved: 'Alterações salvas',
+    sensitivities: 'Sensibilidades salvas',
+    add: 'Adicionar',
+    emptyTitle: 'Nenhuma sensibilidade salva.',
+    emptyText: 'Salve a configuração dos jogos que você usa para acessar rapidamente o conversor e a calibração.',
+    addSensitivity: 'Adicionar sensibilidade',
+    activeConfig: 'Configuração ativa',
+    inUseNow: 'Em uso agora',
+    level: 'Nível',
+    playerLevel: 'Jogador',
+    focus: 'Foco',
+    focusValue: 'FPS Competitivo',
+    status: 'Status',
+    active: 'Ativo',
+    memberSince: 'Membro desde abr. 2024',
+    allGames: 'Todos os jogos',
+    filterGame: 'Filtro de presets',
+    searchPlaceholder: 'Buscar configurações...',
+    clearSearch: 'Limpar busca',
+    noResults: 'Nenhuma sensibilidade encontrada.',
+    addTileTitle: 'Adicionar nova sensibilidade',
+    addTileText: 'Salve suas configurações para seus jogos favoritos.',
+    primary: 'Principal',
+    setPrimary: 'Definir como principal',
+    sensitivity: 'Sensibilidade',
+    dpi: 'DPI',
+    unavailable: 'cm/360 indisponível',
+    unavailableHint: 'Este perfil de jogo ainda não possui cálculo físico compatível.',
+    edit: 'Editar',
+    editAvatar: 'Editar avatar',
+    calibrate: 'Calibrar',
+    convert: 'Converter',
+    remove: 'Remover',
+    editIdentity: 'Editar identidade',
+    editPreset: 'Editar sensibilidade',
+    addPreset: 'Adicionar sensibilidade',
+    game: 'Jogo',
+    presetName: 'Nome do preset (opcional)',
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    confirmRemoveTitle: 'Remover sensibilidade?',
+    confirmRemoveText: 'Esta configuração será removida do seu perfil.',
+    calibratorUnavailable: 'Calibração indisponível para este jogo',
+    invalid: 'Informe sensibilidade e DPI válidos.',
   },
   en: {
-    kicker: 'Personal settings', title: 'Profile', subtitle: 'Your identity and saved sensitivities.', identity: 'Identity', editProfile: 'Edit profile', nickname: 'Nickname', avatar: 'XENSI avatar', saved: 'Changes saved', sensitivities: 'Saved sensitivities', add: 'Add', emptyTitle: 'No saved sensitivities.', emptyText: 'Save the settings for the games you use to quickly access conversion and calibration.', addSensitivity: 'Add sensitivity', primary: 'Primary', setPrimary: 'Set as primary', sensitivity: 'Sensitivity', dpi: 'DPI', unavailable: 'cm/360 unavailable', unavailableHint: 'This game profile does not support a compatible physical calculation yet.', edit: 'Edit', calibrate: 'Calibrate', convert: 'Convert', remove: 'Remove', editIdentity: 'Edit identity', editPreset: 'Edit sensitivity', addPreset: 'Add sensitivity', game: 'Game', presetName: 'Preset name (optional)', save: 'Save', cancel: 'Cancel', confirmRemove: 'Remove this saved sensitivity?', calibratorUnavailable: 'Calibration is unavailable for this game', invalid: 'Enter a valid sensitivity and DPI.',
+    kicker: 'Personal settings',
+    title: 'Profile',
+    subtitle: 'Your identity and saved sensitivities.',
+    identity: 'Identity',
+    editProfile: 'Edit profile',
+    nickname: 'Nickname',
+    avatar: 'XENSI avatar',
+    saved: 'Changes saved',
+    sensitivities: 'Saved sensitivities',
+    add: 'Add',
+    emptyTitle: 'No saved sensitivities.',
+    emptyText: 'Save the settings for the games you use to quickly access conversion and calibration.',
+    addSensitivity: 'Add sensitivity',
+    activeConfig: 'Active configuration',
+    inUseNow: 'In use now',
+    level: 'Level',
+    playerLevel: 'Player',
+    focus: 'Focus',
+    focusValue: 'Competitive FPS',
+    status: 'Status',
+    active: 'Active',
+    memberSince: 'Member since Apr. 2024',
+    allGames: 'All games',
+    filterGame: 'Preset filter',
+    searchPlaceholder: 'Search configurations...',
+    clearSearch: 'Clear search',
+    noResults: 'No sensitivities found.',
+    addTileTitle: 'Add new sensitivity',
+    addTileText: 'Save settings for your favorite games.',
+    primary: 'Primary',
+    setPrimary: 'Set as primary',
+    sensitivity: 'Sensitivity',
+    dpi: 'DPI',
+    unavailable: 'cm/360 unavailable',
+    unavailableHint: 'This game profile does not support a compatible physical calculation yet.',
+    edit: 'Edit',
+    editAvatar: 'Edit avatar',
+    calibrate: 'Calibrate',
+    convert: 'Convert',
+    remove: 'Remove',
+    editIdentity: 'Edit identity',
+    editPreset: 'Edit sensitivity',
+    addPreset: 'Add sensitivity',
+    game: 'Game',
+    presetName: 'Preset name (optional)',
+    save: 'Save',
+    cancel: 'Cancel',
+    confirmRemoveTitle: 'Remove sensitivity?',
+    confirmRemoveText: 'This configuration will be removed from your profile.',
+    calibratorUnavailable: 'Calibration is unavailable for this game',
+    invalid: 'Enter a valid sensitivity and DPI.',
   },
   es: {
-    kicker: 'Configuración personal', title: 'Perfil', subtitle: 'Tu identidad y sensibilidades guardadas.', identity: 'Identidad', editProfile: 'Editar perfil', nickname: 'Nickname', avatar: 'Avatar XENSI', saved: 'Cambios guardados', sensitivities: 'Sensibilidades guardadas', add: 'Añadir', emptyTitle: 'No hay sensibilidades guardadas.', emptyText: 'Guarda la configuración de tus juegos para acceder rápidamente al conversor y a la calibración.', addSensitivity: 'Añadir sensibilidad', primary: 'Principal', setPrimary: 'Marcar como principal', sensitivity: 'Sensibilidad', dpi: 'DPI', unavailable: 'cm/360 no disponible', unavailableHint: 'Este perfil de juego aún no admite un cálculo físico compatible.', edit: 'Editar', calibrate: 'Calibrar', convert: 'Convertir', remove: 'Eliminar', editIdentity: 'Editar identidad', editPreset: 'Editar sensibilidad', addPreset: 'Añadir sensibilidad', game: 'Juego', presetName: 'Nombre del preset (opcional)', save: 'Guardar', cancel: 'Cancelar', confirmRemove: '¿Eliminar esta sensibilidad guardada?', calibratorUnavailable: 'La calibración no está disponible para este juego', invalid: 'Introduce una sensibilidad y un DPI válidos.',
+    kicker: 'Configuración personal',
+    title: 'Perfil',
+    subtitle: 'Tu identidad y sensibilidades guardadas.',
+    identity: 'Identidad',
+    editProfile: 'Editar perfil',
+    nickname: 'Nickname',
+    avatar: 'Avatar XENSI',
+    saved: 'Cambios guardados',
+    sensitivities: 'Sensibilidades guardadas',
+    add: 'Añadir',
+    emptyTitle: 'No hay sensibilidades guardadas.',
+    emptyText: 'Guarda la configuración de tus juegos para acceder rápidamente al conversor y a la calibración.',
+    addSensitivity: 'Añadir sensibilidad',
+    activeConfig: 'Configuración activa',
+    inUseNow: 'En uso ahora',
+    level: 'Nivel',
+    playerLevel: 'Jugador',
+    focus: 'Foco',
+    focusValue: 'FPS competitivo',
+    status: 'Estado',
+    active: 'Activo',
+    memberSince: 'Miembro desde abr. 2024',
+    allGames: 'Todos los juegos',
+    filterGame: 'Filtro de presets',
+    searchPlaceholder: 'Buscar configuraciones...',
+    clearSearch: 'Limpiar búsqueda',
+    noResults: 'No se encontraron sensibilidades.',
+    addTileTitle: 'Añadir nueva sensibilidad',
+    addTileText: 'Guarda configuraciones para tus juegos favoritos.',
+    primary: 'Principal',
+    setPrimary: 'Marcar como principal',
+    sensitivity: 'Sensibilidad',
+    dpi: 'DPI',
+    unavailable: 'cm/360 no disponible',
+    unavailableHint: 'Este perfil de juego aún no admite un cálculo físico compatible.',
+    edit: 'Editar',
+    editAvatar: 'Editar avatar',
+    calibrate: 'Calibrar',
+    convert: 'Convertir',
+    remove: 'Eliminar',
+    editIdentity: 'Editar identidad',
+    editPreset: 'Editar sensibilidad',
+    addPreset: 'Añadir sensibilidad',
+    game: 'Juego',
+    presetName: 'Nombre del preset (opcional)',
+    save: 'Guardar',
+    cancel: 'Cancelar',
+    confirmRemoveTitle: '¿Eliminar sensibilidad?',
+    confirmRemoveText: 'Esta configuración será eliminada de tu perfil.',
+    calibratorUnavailable: 'La calibración no está disponible para este juego',
+    invalid: 'Introduce una sensibilidad y un DPI válidos.',
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -51,8 +201,27 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
   const [identityOpen, setIdentityOpen] = useState(false)
   const [identityDraft, setIdentityDraft] = useState({ nickname: profile.nickname, avatarId: profile.avatarId })
   const [presetDraft, setPresetDraft] = useState<PresetDraft | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<SensitivityPreset | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [gameFilter, setGameFilter] = useState<'all' | GameSensitivityProfileId>('all')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [presetGameOpen, setPresetGameOpen] = useState(false)
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
+
+  const activePreset = profile.presets.find((preset) => preset.isPrimary) ?? profile.presets[0] ?? null
+  const activeGame = activePreset ? GAME_SENSITIVITY_PROFILE_BY_ID[activePreset.gameId] : null
+  const activeCm360 = activePreset ? calculatePresetCm360(activePreset) : null
+  const selectedFilterLabel = gameFilter === 'all' ? text.allGames : GAME_SENSITIVITY_PROFILE_BY_ID[gameFilter].name
+  const filteredPresets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase()
+    return profile.presets.filter((preset) => {
+      const game = GAME_SENSITIVITY_PROFILE_BY_ID[preset.gameId]
+      const matchesGame = gameFilter === 'all' || preset.gameId === gameFilter
+      const haystack = `${preset.name ?? ''} ${game.name} ${game.shortName} ${preset.sensitivity} ${preset.dpi}`.toLowerCase()
+      return matchesGame && (!query || haystack.includes(query))
+    })
+  }, [gameFilter, profile.presets, searchQuery])
 
   const persist = (next: PlayerProfileData) => {
     writePlayerProfile(window.localStorage, next)
@@ -72,11 +241,13 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
 
   const openNewPreset = () => {
     setError('')
+    setPresetGameOpen(false)
     setPresetDraft({ gameId: 'cs2', name: '', sensitivity: '1', dpi: '800', isPrimary: profile.presets.length === 0 })
   }
 
   const openPreset = (preset: SensitivityPreset) => {
     setError('')
+    setPresetGameOpen(false)
     setPresetDraft({ id: preset.id, gameId: preset.gameId, name: preset.name ?? '', sensitivity: String(preset.sensitivity), dpi: String(preset.dpi), isPrimary: preset.isPrimary, createdAt: preset.createdAt })
   }
 
@@ -112,45 +283,86 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
   }
 
   const removePreset = (id: string) => {
-    if (!window.confirm(text.confirmRemove)) return
     persist({ ...profile, presets: ensureSinglePrimary(profile.presets.filter((preset) => preset.id !== id)) })
+    setPendingRemove(null)
   }
 
   return <section className="profile-v1-workspace">
     <div className="profile-v1-shell">
       <header className="profile-v1-heading">
-        <span><UserRound size={15} /> {text.kicker}</span>
-        <h1>{text.title}</h1>
-        <p>{text.subtitle}</p>
+        <div>
+          <span><UserRound size={15} /> {text.kicker}</span>
+          <h1>{text.title}</h1>
+          <p>{text.subtitle}</p>
+        </div>
+        <aside aria-hidden="true"><span>MAIS CONTROLE.</span><span>MAIS RESULTADOS.</span><i /></aside>
         {status && <small className="profile-v1-status"><Check size={14} /> {status}</small>}
       </header>
 
-      <article className="profile-v1-identity">
-        <span className="profile-v1-label">{text.identity}</span>
-        <div className="profile-v1-person">
-          <AvatarArtwork avatarId={profile.avatarId} size="lg" />
-          <div><h2>{profile.nickname}</h2><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
-        </div>
-      </article>
+      <div className="profile-v1-hero-grid">
+        <article className="profile-v1-identity">
+          <span className="profile-v1-label">{text.identity}</span>
+          <div className="profile-v1-person">
+            <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /><button type="button" onClick={openIdentity} aria-label={text.editAvatar}><Edit3 size={16} /></button></div>
+            <div><h2>{profile.nickname}</h2><p>{text.memberSince}</p><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
+          </div>
+          <dl className="profile-v1-identity-meta">
+            <div><dt>{text.level}</dt><dd>{text.playerLevel}</dd></div>
+            <div><dt>{text.focus}</dt><dd>{text.focusValue}</dd></div>
+            <div><dt>{text.status}</dt><dd><i /> {text.active}</dd></div>
+          </dl>
+        </article>
+
+        <article className="profile-v1-active-card">
+          <header><span className="profile-v1-label">{text.activeConfig}</span><small><i /> {text.inUseNow}</small></header>
+          {activePreset && activeGame ? <>
+            <div className="profile-v1-active-game"><GameBadge gameId={activePreset.gameId} selected /><h2>{activeGame.name}</h2><ChevronRight size={19} /></div>
+            <dl>
+              <div><dt>{text.sensitivity}</dt><dd>{activePreset.sensitivity}</dd></div>
+              <div><dt>{text.dpi}</dt><dd>{activePreset.dpi}</dd></div>
+              <div><dt>CM / 360</dt><dd>{activeCm360 === null ? text.unavailable : `${activeCm360.toFixed(2)} cm`}</dd></div>
+            </dl>
+            <footer>
+              <button type="button" className="profile-v1-active-primary" onClick={() => onCalibrate(activePreset)} disabled={!CALIBRATOR_GAMES.has(activePreset.gameId)} title={!CALIBRATOR_GAMES.has(activePreset.gameId) ? text.calibratorUnavailable : undefined}><Gauge size={17} /> {text.calibrate}</button>
+              <button type="button" onClick={() => onConvert(activePreset)}><RefreshCw size={17} /> {text.convert}</button>
+            </footer>
+          </> : <div className="profile-v1-active-empty"><Crosshair size={24} /><h2>{text.activeConfig}</h2><p>{text.emptyText}</p><button type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button></div>}
+        </article>
+      </div>
 
       <section className="profile-v1-presets">
-        <header><div><span className="profile-v1-label">{text.sensitivities}</span><small>{profile.presets.length}</small></div><button className="profile-v1-add" type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button></header>
+        <header>
+          <div><span className="profile-v1-label">{text.sensitivities}</span><small>{profile.presets.length}</small></div>
+          <div className="profile-v1-tools">
+            <label><Search size={16} /><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder={text.searchPlaceholder} aria-label={text.searchPlaceholder} />{searchQuery && <button type="button" onClick={() => setSearchQuery('')} aria-label={text.clearSearch}><X size={14} /></button>}</label>
+            <div className="profile-v1-filter">
+              <button type="button" aria-label={text.filterGame} aria-haspopup="listbox" aria-expanded={filterOpen} onClick={() => setFilterOpen((open) => !open)}>{selectedFilterLabel}<ChevronRight size={14} /></button>
+              {filterOpen && <div role="listbox" aria-label={text.filterGame}>
+                <button type="button" role="option" aria-selected={gameFilter === 'all'} onClick={() => { setGameFilter('all'); setFilterOpen(false) }}>{text.allGames}</button>
+                {GAME_SENSITIVITY_PROFILES.map((game) => <button type="button" role="option" aria-selected={gameFilter === game.id} key={game.id} onClick={() => { setGameFilter(game.id); setFilterOpen(false) }}>{game.name}</button>)}
+              </div>}
+            </div>
+            <button className="profile-v1-add" type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button>
+          </div>
+        </header>
         {profile.presets.length === 0 ? <div className="profile-v1-empty"><Crosshair size={24} /><h2>{text.emptyTitle}</h2><p>{text.emptyText}</p><button type="button" onClick={openNewPreset}><Plus size={16} /> {text.addSensitivity}</button></div>
-          : <div className="profile-v1-grid">{profile.presets.map((preset) => {
+          : <div className="profile-v1-grid">{filteredPresets.map((preset) => {
             const game = GAME_SENSITIVITY_PROFILE_BY_ID[preset.gameId]
             const cm360 = calculatePresetCm360(preset)
             const canCalibrate = CALIBRATOR_GAMES.has(preset.gameId)
             return <article className={`profile-preset-card${preset.isPrimary ? ' primary' : ''}`} key={preset.id}>
-              <header><div className="profile-preset-game"><GameBadge gameId={preset.gameId} selected={preset.isPrimary} /><div><small>{preset.name || game.name}</small><strong>{game.shortName}</strong></div></div>{preset.isPrimary ? <b><Star size={12} /> {text.primary}</b> : <button type="button" onClick={() => setPrimary(preset.id)}><Star size={13} /> {text.setPrimary}</button>}</header>
+              <header><div className="profile-preset-game"><GameBadge gameId={preset.gameId} selected={preset.isPrimary} /><div><small>{preset.name || game.name}</small><strong>{game.shortName}</strong></div></div>{preset.isPrimary ? <b><Star size={12} /> {text.primary}</b> : <button type="button" onClick={() => setPrimary(preset.id)}><Star size={13} /> {text.setPrimary}</button>}<MoreVertical size={17} aria-hidden="true" /></header>
               <dl><div><dt>{text.sensitivity}</dt><dd>{preset.sensitivity}</dd></div><div><dt>{text.dpi}</dt><dd>{preset.dpi}</dd></div><div className="profile-preset-distance"><dt>CM / 360</dt><dd title={cm360 === null ? text.unavailableHint : undefined}>{cm360 === null ? text.unavailable : `${cm360.toFixed(2)} cm/360`}</dd></div></dl>
-              <footer><button type="button" onClick={() => openPreset(preset)}><Edit3 size={14} /> {text.edit}</button><button type="button" onClick={() => onCalibrate(preset)} disabled={!canCalibrate} title={!canCalibrate ? text.calibratorUnavailable : undefined}><Gauge size={14} /> {text.calibrate}</button><button className="profile-preset-convert" type="button" onClick={() => onConvert(preset)}><RefreshCw size={14} /> {text.convert} →</button><button className="profile-preset-remove" type="button" onClick={() => removePreset(preset.id)} aria-label={text.remove}><Trash2 size={14} /></button></footer>
+              <footer><button type="button" onClick={() => openPreset(preset)}><Edit3 size={14} /> {text.edit}</button><button type="button" onClick={() => onCalibrate(preset)} disabled={!canCalibrate} title={!canCalibrate ? text.calibratorUnavailable : undefined}><Gauge size={14} /> {text.calibrate}</button><button className="profile-preset-convert" type="button" onClick={() => onConvert(preset)}><RefreshCw size={14} /> {text.convert}</button><button className="profile-preset-remove" type="button" onClick={() => setPendingRemove(preset)} aria-label={text.remove}><Trash2 size={14} /></button></footer>
             </article>
-          })}</div>}
+          })}<button className="profile-v1-add-tile" type="button" onClick={openNewPreset}><Plus size={24} /><strong>{text.addTileTitle}</strong><span>{text.addTileText}</span></button>{filteredPresets.length === 0 && <p className="profile-v1-no-results">{text.noResults}</p>}</div>}
       </section>
     </div>
 
     {identityOpen && <div className="modal-backdrop"><section className="profile-v1-modal" role="dialog" aria-modal="true" aria-labelledby="identity-modal-title"><button className="modal-close" type="button" onClick={() => setIdentityOpen(false)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.identity}</span><h2 id="identity-modal-title">{text.editIdentity}</h2><label>{text.nickname}<input value={identityDraft.nickname} maxLength={24} onChange={(event) => setIdentityDraft({ ...identityDraft, nickname: event.target.value })} /></label><div className="profile-v1-avatar-field"><span>{text.avatar}</span><div className="profile-avatar-picker">{XENSI_AVATARS.map((avatar) => <button key={avatar.id} type="button" className={identityDraft.avatarId === avatar.id ? 'selected' : ''} onClick={() => setIdentityDraft({ ...identityDraft, avatarId: avatar.id as AvatarId })} aria-label={avatar.label} aria-pressed={identityDraft.avatarId === avatar.id}><AvatarArtwork avatarId={avatar.id} size="picker" selected={identityDraft.avatarId === avatar.id} /></button>)}</div></div><footer><button className="secondary-button" type="button" onClick={() => setIdentityOpen(false)}>{text.cancel}</button><button className="primary-button" type="button" onClick={saveIdentity}><Check size={15} /> {text.save}</button></footer></section></div>}
 
-    {presetDraft && <div className="modal-backdrop"><section className="profile-v1-modal profile-v1-preset-modal" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title"><button className="modal-close" type="button" onClick={() => setPresetDraft(null)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.sensitivities}</span><h2 id="preset-modal-title">{presetDraft.id ? text.editPreset : text.addPreset}</h2><div className="profile-v1-form-grid"><label>{text.game}<select aria-label={text.game} value={presetDraft.gameId} onChange={(event) => setPresetDraft({ ...presetDraft, gameId: event.target.value as GameSensitivityProfileId })}>{GAME_SENSITIVITY_PROFILES.map((game) => <option value={game.id} key={game.id}>{game.name}</option>)}</select></label><label>{text.presetName}<input value={presetDraft.name} maxLength={32} onChange={(event) => setPresetDraft({ ...presetDraft, name: event.target.value })} /></label><label>{text.sensitivity}<input inputMode="decimal" value={presetDraft.sensitivity} onChange={(event) => setPresetDraft({ ...presetDraft, sensitivity: event.target.value })} /></label><label>{text.dpi}<input inputMode="numeric" value={presetDraft.dpi} onChange={(event) => setPresetDraft({ ...presetDraft, dpi: event.target.value })} /></label></div><label className="profile-v1-primary-toggle"><input type="checkbox" checked={presetDraft.isPrimary} onChange={(event) => setPresetDraft({ ...presetDraft, isPrimary: event.target.checked })} /><Star size={15} /> {text.setPrimary}</label>{error && <p className="profile-v1-error">{error}</p>}<footer><button className="secondary-button" type="button" onClick={() => setPresetDraft(null)}>{text.cancel}</button><button className="primary-button" type="button" onClick={savePreset}><Check size={15} /> {text.save}</button></footer></section></div>}
+    {presetDraft && <div className="modal-backdrop"><section className="profile-v1-modal profile-v1-preset-modal" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title"><button className="modal-close" type="button" onClick={() => setPresetDraft(null)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.sensitivities}</span><h2 id="preset-modal-title">{presetDraft.id ? text.editPreset : text.addPreset}</h2><div className="profile-v1-form-grid"><div className="profile-v1-modal-game"><span>{text.game}</span><button type="button" aria-haspopup="listbox" aria-expanded={presetGameOpen} onClick={() => setPresetGameOpen((open) => !open)}>{GAME_SENSITIVITY_PROFILE_BY_ID[presetDraft.gameId].name}<ChevronRight size={14} /></button>{presetGameOpen && <div role="listbox" aria-label={text.game}>{GAME_SENSITIVITY_PROFILES.map((game) => <button type="button" role="option" aria-selected={presetDraft.gameId === game.id} key={game.id} onClick={() => { setPresetDraft({ ...presetDraft, gameId: game.id }); setPresetGameOpen(false) }}>{game.name}</button>)}</div>}</div><label>{text.presetName}<input value={presetDraft.name} maxLength={32} onChange={(event) => setPresetDraft({ ...presetDraft, name: event.target.value })} /></label><label>{text.sensitivity}<input inputMode="decimal" value={presetDraft.sensitivity} onChange={(event) => setPresetDraft({ ...presetDraft, sensitivity: event.target.value })} /></label><label>{text.dpi}<input inputMode="numeric" value={presetDraft.dpi} onChange={(event) => setPresetDraft({ ...presetDraft, dpi: event.target.value })} /></label></div><label className="profile-v1-primary-toggle"><input type="checkbox" checked={presetDraft.isPrimary} onChange={(event) => setPresetDraft({ ...presetDraft, isPrimary: event.target.checked })} /><Star size={15} /> {text.setPrimary}</label>{error && <p className="profile-v1-error">{error}</p>}<footer><button className="secondary-button" type="button" onClick={() => setPresetDraft(null)}>{text.cancel}</button><button className="primary-button" type="button" onClick={savePreset}><Check size={15} /> {text.save}</button></footer></section></div>}
+
+    {pendingRemove && <div className="modal-backdrop"><section className="profile-v1-modal profile-v1-confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-preset-title" aria-describedby="remove-preset-description"><button className="modal-close" type="button" onClick={() => setPendingRemove(null)} aria-label={text.cancel}><X size={18} /></button><span className="profile-v1-label">{text.remove}</span><h2 id="remove-preset-title">{text.confirmRemoveTitle}</h2><p id="remove-preset-description">{text.confirmRemoveText}</p><footer><button className="secondary-button" type="button" onClick={() => setPendingRemove(null)}>{text.cancel}</button><button className="primary-button" type="button" onClick={() => removePreset(pendingRemove.id)}><Trash2 size={15} /> {text.remove}</button></footer></section></div>}
   </section>
 }
