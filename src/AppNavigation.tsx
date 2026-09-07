@@ -29,6 +29,21 @@ const labels = {
 type OpenMenu = 'train' | 'calibrate' | 'diagnostic' | 'profile' | null
 type MenuName = Exclude<OpenMenu, null>
 
+type XensiLogoProps = {
+  as?: 'span' | 'button'
+  className?: string
+  disabled?: boolean
+  onClick?: () => void
+}
+
+export function XensiLogo({ as = 'span', className = '', disabled = false, onClick }: XensiLogoProps) {
+  const content = <><span>X</span>ENSI</>
+  const classes = `xensi-nav-brand ${className}`.trim()
+  return as === 'button'
+    ? <button type="button" className={classes} onClick={onClick} disabled={disabled} aria-label="XENSI home">{content}</button>
+    : <span className={classes} aria-label="XENSI">{content}</span>
+}
+
 function readNavProfile() {
   try {
     const profile = JSON.parse(window.localStorage.getItem('xensi-player-profile') ?? '{}') as { nickname?: string; avatarId?: string }
@@ -117,7 +132,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
   const diagnosticActive = isDiagnosticView(view)
 
   return <div className="xensi-navigation" ref={shellRef}>
-    <button type="button" className="xensi-nav-brand" onClick={() => navigate('home')} disabled={disabled} aria-label="XENSI home"><span>X</span>ENSI</button>
+    <XensiLogo as="button" onClick={() => navigate('home')} disabled={disabled} />
 
     <nav className="xensi-primary-nav" aria-label="XENSI">
       <button type="button" className={view === 'home' ? 'active' : ''} onClick={() => navigate('home')} disabled={disabled}>{text.home}</button>

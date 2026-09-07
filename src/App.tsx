@@ -24,10 +24,24 @@ import { useI18n, type TranslationKey } from './i18n'
 import { Analysis } from './Analysis'
 import { AppNavigation, type AnalysisSection, type NavigationView } from './AppNavigation'
 import type { WarmupExercise } from './warmupConfig'
+import { AuthScreen } from './AuthPages'
+import type { AuthMode } from './authService'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
 type AppView = NavigationView
 type CalibrationSetupStep = 1 | 2 | 3
+
+const AUTH_ROUTES: AuthMode[] = ['login', 'register', 'forgot-password']
+const APP_BASE_PATH = '/Sensi/'
+
+const getAuthRouteFromLocation = (): AuthMode | null => {
+  const pathname = window.location.pathname
+  const relative = pathname.startsWith(APP_BASE_PATH) ? pathname.slice(APP_BASE_PATH.length) : pathname.replace(/^\//, '')
+  const route = relative.replace(/\/+$/, '')
+  return AUTH_ROUTES.includes(route as AuthMode) ? route as AuthMode : null
+}
+
+const authRoutePath = (route: AuthMode) => `${APP_BASE_PATH}${route}`
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', description: 'crosshair.classicDescription', icon: Crosshair },
@@ -65,6 +79,7 @@ function App() {
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
   const [view, setView] = useState<AppView>('home')
+  const [authRoute, setAuthRoute] = useState<AuthMode | null>(() => getAuthRouteFromLocation())
   const [analysisSection, setAnalysisSection] = useState<AnalysisSection>('overview')
   const [warmupEntry, setWarmupEntry] = useState<WarmupExercise | null>(null)
   const [round, setRound] = useState(0)
@@ -97,6 +112,12 @@ function App() {
   const [calibrationHistory, setCalibrationHistory] = useState<CalibrationSessionSummary[]>([])
   const [converterPreset, setConverterPreset] = useState<ProfilePresetLaunch | null>(null)
   const [finderPreset, setFinderPreset] = useState<ProfilePresetLaunch | null>(null)
+
+  useEffect(() => {
+    const syncAuthRoute = () => setAuthRoute(getAuthRouteFromLocation())
+    window.addEventListener('popstate', syncAuthRoute)
+    return () => window.removeEventListener('popstate', syncAuthRoute)
+  }, [])
 
   const active = phase !== 'idle'
   const showLegacyCalibration = false
@@ -401,6 +422,21 @@ function App() {
     phaseRemainingMsRef.current = 3000
     document.exitPointerLock?.()
     leaveFullscreen()
+  }
+
+  const navigateAuth = (route: AuthMode) => {
+    window.history.pushState({}, '', authRoutePath(route))
+    setAuthRoute(route)
+  }
+
+  const completeAuth = () => {
+    window.history.pushState({}, '', APP_BASE_PATH)
+    setAuthRoute(null)
+    setView('home')
+  }
+
+  if (authRoute) {
+    return <AuthScreen mode={authRoute} onNavigate={navigateAuth} onAuthenticated={completeAuth} />
   }
 
   return (
