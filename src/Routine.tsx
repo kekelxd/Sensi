@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { flushSync } from 'react-dom'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Circle, Copy, Crosshair, Dot, GripVertical, Layers3, LogOut, Play, Plus, RotateCcw, Save, Sparkles, Trash2, X, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, Circle, Copy, Crosshair, Dot, GripVertical, Layers3, LogOut, MoreHorizontal, Pencil, Play, Plus, RotateCcw, Save, Sparkles, Trash2, X, type LucideIcon } from 'lucide-react'
 import { GAME_BY_ID, GAMES, type GameId } from './games'
 import { GamePicker } from './GamePicker'
 import { SensitivityConfigFields } from './SensitivityConfigFields'
 import { WizardStepPanel, WizardStepper } from './SetupWizard'
 import { useSensitivityPreset } from './useSensitivityPreset'
-import { createSessionContext, type SessionContext } from './playerProfileStore'
+import { createSessionContext, selectGamePreset, type SessionContext } from './playerProfileStore'
 import { useDialogFocus } from './useDialogFocus'
 import { normalizeSensitivity, parsePositiveNumberInput } from './sensitivity'
 import type { CrosshairStyle } from './TrackingArena'
@@ -15,11 +15,13 @@ import { getWarmupPointerGain, type FixedWarmupDifficulty, type WarmupDifficulty
 import { EXERCISES } from './warmupExercises'
 import { createEmptyWarmupMetrics, readWarmupSessionHistory, toWarmupSessionSummary, writeWarmupSession } from './warmupTelemetry'
 import { evaluatePersonalBest, formatPersonalBestValue, type PersonalBestResult } from './personalBests'
-import { createRoutineItem, formatRoutineDuration, getRoutineTotalSeconds, readCustomRoutine, ROUTINE_ITEM_DURATIONS, supportsRoutineDifficulty, validateRoutine, writeCustomRoutine, type CustomRoutine, type CustomRoutineItem, type RoutineItemDuration } from './routineConfig'
+import { createDefaultRoutine, createRoutineItem, deleteRoutineFromLibrary, formatRoutineDuration, getRoutineTotalSeconds, readCustomRoutine, readRoutineLibrary, ROUTINE_ITEM_DURATIONS, saveRoutineToLibrary, supportsRoutineDifficulty, validateRoutine, writeRoutineLibrary, type CustomRoutine, type CustomRoutineItem, type RoutineItemDuration } from './routineConfig'
 import { useI18n, type TranslationKey } from './i18n'
 
 type SetupStep = 1 | 2 | 3
 type RoutinePhase = 'builder' | 'countdown' | 'playing' | 'transition' | 'result'
+type RoutineScreen = 'library' | 'builder'
+type RoutineLaunchContext = { gameId: GameId; sensitivity: number; dpi: number; presetId?: string }
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', icon: Crosshair },
@@ -44,16 +46,55 @@ function ExerciseMicroPreview({ modeId }: { modeId: WarmupExercise }) {
   </div>
 }
 
-function RoutineItemCard({ item, index, total, children }: { item: CustomRoutineItem; index: number; total: number; children: ReactNode }) {
+function RoutineItemCard({
+  item,
+  index,
+  total,
+  expanded,
+  difficultyLabel,
+  onToggle,
+  onMoveUp,
+  onMoveDown,
+  onDuplicate,
+  onRemove,
+  children,
+}: {
+  item: CustomRoutineItem
+  index: number
+  total: number
+  expanded: boolean
+  difficultyLabel: (difficulty: WarmupDifficulty) => string
+  onToggle: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onDuplicate: () => void
+  onRemove: () => void
+  children: ReactNode
+}) {
   const exercise = exerciseById(item.modeId)
   const Icon = exercise.icon
-  return <article className="routine-builder-item">
-    <div className="routine-builder-order"><GripVertical size={15} /><span>{String(index + 1).padStart(2, '0')}</span></div>
-    <div className="routine-builder-main">
-      <div className="routine-builder-title"><Icon size={18} /><strong>{exercise.name}</strong><small>{formatRoutineDuration(item.durationSeconds)} · {index + 1}/{total}</small></div>
-      {children}
+  return <article className={`routine-builder-item${expanded ? ' expanded' : ''}`}>
+    <div className="routine-item-compact">
+      <div className="routine-builder-order" aria-label={`Item ${index + 1} de ${total}`}>
+        <GripVertical size={15} />
+        <span>{String(index + 1).padStart(2, '0')}</span>
+      </div>
+      <div className="routine-builder-title">
+        <Icon size={18} />
+        <span>
+          <strong>{exercise.name}</strong>
+          <small>{formatRoutineDuration(item.durationSeconds)} · {difficultyLabel(item.difficulty)}</small>
+        </span>
+      </div>
+      <div className="routine-row-actions">
+        <button type="button" onClick={onMoveUp} disabled={index === 0} aria-label="Mover para cima"><ArrowUp size={14} /></button>
+        <button type="button" onClick={onMoveDown} disabled={index === total - 1} aria-label="Mover para baixo"><ArrowDown size={14} /></button>
+        <button type="button" onClick={onDuplicate} aria-label="Repetir minigame"><Copy size={14} /></button>
+        <button className="routine-edit-action" type="button" onClick={onToggle} aria-expanded={expanded}><Pencil size={13} /> editar</button>
+        <button type="button" onClick={onRemove} aria-label="Remover exercício"><X size={15} /></button>
+      </div>
     </div>
-    <ExerciseMicroPreview modeId={item.modeId} />
+    {expanded && <div className="routine-item-expanded">{children}</div>}
   </article>
 }
 
@@ -61,21 +102,81 @@ function RoutineSummaryMetric({ label, value }: { label: string; value: string }
   return <div><span>{label}</span><strong>{value}</strong></div>
 }
 
+function RoutineLibraryCard({
+  routine,
+  presetLabel,
+  sequence,
+  actionOpen,
+  onStart,
+  onEdit,
+  onDuplicate,
+  onRename,
+  onDelete,
+  onToggleActions,
+}: {
+  routine: CustomRoutine
+  presetLabel: string
+  sequence: string
+  actionOpen: boolean
+  onStart: () => void
+  onEdit: () => void
+  onDuplicate: () => void
+  onRename: () => void
+  onDelete: () => void
+  onToggleActions: () => void
+}) {
+  const total = getRoutineTotalSeconds(routine.items)
+  return <article className="routine-library-card">
+    <header>
+      <div>
+        <span>Playlist salva</span>
+        <h2>{routine.name}</h2>
+      </div>
+      <div className="routine-card-actions">
+        <button type="button" className="routine-menu-trigger" aria-label={`Ações de ${routine.name}`} aria-expanded={actionOpen} onClick={onToggleActions}><MoreHorizontal size={18} /></button>
+        {actionOpen && <div className="routine-card-menu" role="menu">
+          <button type="button" role="menuitem" onClick={onEdit}><Pencil size={14} /> Editar</button>
+          <button type="button" role="menuitem" onClick={onDuplicate}><Copy size={14} /> Duplicar</button>
+          <button type="button" role="menuitem" onClick={onRename}><Pencil size={14} /> Renomear</button>
+          <button type="button" role="menuitem" onClick={onDelete}><Trash2 size={14} /> Excluir</button>
+        </div>}
+      </div>
+    </header>
+    <p className="routine-card-context">{presetLabel}</p>
+    <div className="routine-card-meta">
+      <span>{formatRoutineDuration(total)}</span>
+      <span>{routine.items.length} exercícios</span>
+    </div>
+    <p className="routine-card-sequence">{sequence}</p>
+    <footer>
+      <button type="button" className="primary-button routine-start-button" onClick={onStart}><Play size={14} /> Iniciar</button>
+    </footer>
+  </article>
+}
+
 export function Routine() {
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const setupRef = useRef<HTMLElement>(null)
   const [phase, setPhase] = useState<RoutinePhase>('builder')
-  useDialogFocus(setupRef, phase === 'builder')
+  const [screen, setScreen] = useState<RoutineScreen>('library')
+  useDialogFocus(setupRef, phase === 'builder' && screen === 'builder')
   const [setupStep, setSetupStep] = useState<SetupStep>(1)
   const [stepDirection, setStepDirection] = useState<1 | -1>(1)
   const config = useSensitivityPreset('cs2', null, true)
   const selectedGame = config.draft.gameId as GameId
   const { sensitivity, dpi } = config.draft
   const { setSensitivity, setDpi } = config
+  const [library, setLibrary] = useState<CustomRoutine[]>(() => readRoutineLibrary(window.localStorage, selectedGame))
   const [routine, setRoutine] = useState<CustomRoutine>(() => readCustomRoutine(window.localStorage, selectedGame))
+  const [launchContext, setLaunchContext] = useState<RoutineLaunchContext | null>(null)
   const [crosshair, setCrosshair] = useState<CrosshairStyle>('dot')
   const [addOpen, setAddOpen] = useState(false)
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null)
+  const [renameTarget, setRenameTarget] = useState<CustomRoutine | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<CustomRoutine | null>(null)
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
   const [selectedAddMode, setSelectedAddMode] = useState<WarmupExercise>('flick')
   const [selectedAddDuration, setSelectedAddDuration] = useState<RoutineItemDuration>(60)
   const [selectedAddDifficulty, setSelectedAddDifficulty] = useState<WarmupDifficulty>('medium')
@@ -89,12 +190,14 @@ export function Routine() {
   const [metrics, setMetrics] = useState<WarmupMetrics>(() => createEmptyWarmupMetrics(60))
   const sessionContext = useRef<SessionContext | undefined>(undefined)
 
-  const game = GAME_BY_ID[selectedGame]
+  const builderGame = GAME_BY_ID[selectedGame]
+  const game = launchContext ? GAME_BY_ID[launchContext.gameId] : builderGame
   const parsedSensitivity = parsePositiveNumberInput(sensitivity)
   const parsedDpi = parsePositiveNumberInput(dpi)
   const validSetup = parsedSensitivity !== null && parsedDpi !== null
-  const normalizedSensitivity = parsedSensitivity === null ? null : normalizeSensitivity(parsedSensitivity, game)
-  const pointerGain = getWarmupPointerGain(game, normalizedSensitivity ?? game.sensitivityMin)
+  const normalizedSensitivity = parsedSensitivity === null ? null : normalizeSensitivity(parsedSensitivity, builderGame)
+  const runtimeSensitivity = launchContext?.sensitivity ?? normalizedSensitivity
+  const pointerGain = getWarmupPointerGain(game, runtimeSensitivity ?? game.sensitivityMin)
   const orderedItems = useMemo(() => routine.items.slice().sort((left, right) => left.order - right.order), [routine.items])
   const activeItem = orderedItems[stageIndex] ?? orderedItems[0]
   const exercise = activeItem ? exerciseById(activeItem.modeId) : EXERCISES[0]
@@ -107,22 +210,41 @@ export function Routine() {
     ? t('difficulty.adaptive')
     : t(`difficulty.${difficulty}` as TranslationKey)
 
-  const startStage = useCallback((index: number) => {
-    const item = orderedItems[index]
-    if (!item || normalizedSensitivity === null || parsedDpi === null) return
-    sessionContext.current = createSessionContext(selectedGame, normalizedSensitivity, Math.round(parsedDpi), config.draft.presetId, {
+  const getRoutineContext = useCallback((targetRoutine: CustomRoutine): RoutineLaunchContext | null => {
+    const preset = selectGamePreset(config.presets, targetRoutine.gameId, targetRoutine.presetId)
+    const fallbackSensitivity = targetRoutine.gameId === selectedGame ? normalizedSensitivity : 1
+    const fallbackDpi = targetRoutine.gameId === selectedGame ? parsedDpi : 800
+    const contextSensitivity = preset?.sensitivity ?? fallbackSensitivity
+    const contextDpi = preset?.dpi ?? fallbackDpi
+    if (contextSensitivity === null || contextDpi === null) return null
+    const contextGame = GAME_BY_ID[targetRoutine.gameId as GameId]
+    return {
+      gameId: targetRoutine.gameId as GameId,
+      sensitivity: normalizeSensitivity(contextSensitivity, contextGame),
+      dpi: Math.round(contextDpi),
+      ...(preset?.id ? { presetId: preset.id } : {}),
+    }
+  }, [config.presets, normalizedSensitivity, parsedDpi, selectedGame])
+
+  const startStage = useCallback((index: number, targetRoutine = routine, context = launchContext) => {
+    const targetItems = targetRoutine.items.slice().sort((left, right) => left.order - right.order)
+    const item = targetItems[index]
+    if (!item || !context) return
+    sessionContext.current = createSessionContext(context.gameId, context.sensitivity, context.dpi, context.presetId, {
       difficulty: item.difficulty,
       durationSeconds: item.durationSeconds,
     })
     setInputReady(document.pointerLockElement?.classList.contains('warmup-arena') ?? false)
     setMetrics(createEmptyWarmupMetrics(item.durationSeconds))
     flushSync(() => {
+      setRoutine(targetRoutine)
+      setLaunchContext(context)
       setStageIndex(index)
       setSessionId((value) => value + 1)
       setPhase('countdown')
     })
     arenaRef.current?.requestPointerLock()
-  }, [config.draft.presetId, normalizedSensitivity, orderedItems, parsedDpi, selectedGame])
+  }, [launchContext, routine])
 
   useEffect(() => {
     setRoutine((current) => current.gameId === selectedGame && current.presetId === config.draft.presetId ? current : { ...current, gameId: selectedGame, ...(config.draft.presetId ? { presetId: config.draft.presetId } : { presetId: undefined }) })
@@ -176,10 +298,14 @@ export function Routine() {
     if (!supportsRoutineDifficulty(selectedAddMode, selectedAddDifficulty)) return
     const next = { ...createRoutineItem(selectedAddMode, orderedItems.length), durationSeconds: selectedAddDuration, difficulty: selectedAddDifficulty }
     updateItems([...orderedItems, next])
+    setExpandedItemId(next.id)
     setAddOpen(false)
   }
 
-  const removeItem = (id: string) => updateItems(orderedItems.filter((item) => item.id !== id))
+  const removeItem = (id: string) => {
+    updateItems(orderedItems.filter((item) => item.id !== id))
+    setExpandedItemId((current) => current === id ? null : current)
+  }
   const moveItem = (index: number, direction: -1 | 1) => {
     const target = index + direction
     if (target < 0 || target >= orderedItems.length) return
@@ -187,28 +313,102 @@ export function Routine() {
     const [item] = next.splice(index, 1)
     next.splice(target, 0, item)
     updateItems(next)
+    setExpandedItemId(item.id)
   }
 
   const duplicateItem = (item: CustomRoutineItem) => {
     const next = { ...item, id: crypto.randomUUID?.() ?? `${item.id}-copy-${Date.now()}`, order: orderedItems.length }
     updateItems([...orderedItems, next])
+    setExpandedItemId(next.id)
+  }
+
+  const refreshLibrary = () => setLibrary(readRoutineLibrary(window.localStorage, selectedGame))
+
+  const openBuilder = (targetRoutine: CustomRoutine) => {
+    const context = getRoutineContext(targetRoutine)
+    setActionMenuId(null)
+    setLaunchContext(null)
+    setRoutine(targetRoutine)
+    setExpandedItemId(null)
+    setSaveState('idle')
+    setScreen('builder')
+    config.replace(targetRoutine.gameId, String(context?.sensitivity ?? 1), String(context?.dpi ?? 800))
+  }
+
+  const createNewRoutine = () => {
+    const preset = selectGamePreset(config.presets, selectedGame)
+    openBuilder({
+      ...createDefaultRoutine(selectedGame, preset?.id),
+      id: crypto.randomUUID?.() ?? `routine-${Date.now()}`,
+      name: 'Nova rotina',
+    })
+  }
+
+  const duplicateRoutine = (targetRoutine: CustomRoutine) => {
+    const timestamp = new Date().toISOString()
+    const copy = {
+      ...targetRoutine,
+      id: crypto.randomUUID?.() ?? `${targetRoutine.id}-copy-${Date.now()}`,
+      name: `${targetRoutine.name} — cópia`.slice(0, 48),
+      items: targetRoutine.items.map((item, index) => ({
+        ...item,
+        id: crypto.randomUUID?.() ?? `${item.id}-copy-${Date.now()}-${index}`,
+        order: index,
+      })),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }
+    const next = writeRoutineLibrary(window.localStorage, [copy, ...library])
+    setLibrary(next)
+    setActionMenuId(null)
+  }
+
+  const requestRenameRoutine = (targetRoutine: CustomRoutine) => {
+    setActionMenuId(null)
+    setRenameTarget(targetRoutine)
+    setRenameValue(targetRoutine.name)
+  }
+
+  const confirmRenameRoutine = () => {
+    if (!renameTarget) return
+    const name = renameValue.trim()
+    if (!name) return
+    const nextRoutine = { ...renameTarget, name: name.slice(0, 48), updatedAt: new Date().toISOString() }
+    const next = writeRoutineLibrary(window.localStorage, [nextRoutine, ...library.filter((item) => item.id !== renameTarget.id)])
+    setLibrary(next)
+    if (routine.id === renameTarget.id) setRoutine(nextRoutine)
+    setRenameTarget(null)
+  }
+
+  const confirmDeleteRoutine = () => {
+    if (!deleteTarget) return
+    const next = deleteRoutineFromLibrary(window.localStorage, deleteTarget.id)
+    setLibrary(next)
+    setActionMenuId(null)
+    setDeleteTarget(null)
+    if (routine.id === deleteTarget.id) setRoutine(readCustomRoutine(window.localStorage, selectedGame))
   }
 
   const saveRoutine = () => {
     if (issues.includes('duration') || issues.includes('difficulty') || issues.includes('mode')) return
-    const saved = writeCustomRoutine(window.localStorage, { ...routine, items: orderedItems, name: routine.name.trim() || 'Minha rotina' })
+    const saved = saveRoutineToLibrary(window.localStorage, { ...routine, items: orderedItems, name: routine.name.trim() || 'Minha rotina' })
     setRoutine(saved)
+    refreshLibrary()
     setSaveState('saved')
     window.setTimeout(() => setSaveState('idle'), 1400)
+    return saved
   }
 
-  const startRoutine = () => {
-    if (!canStart) return
-    saveRoutine()
+  const startRoutine = (targetRoutine = routine) => {
+    const context = getRoutineContext(targetRoutine)
+    const targetIssues = validateRoutine(targetRoutine)
+    if (!context || targetIssues.length > 0) return
+    if (targetRoutine.id === routine.id) saveRoutine()
     setStageResults([])
-    setSensitivity(String(normalizedSensitivity))
-    setDpi(String(Math.round(parsedDpi)))
-    startStage(0)
+    setSensitivity(String(context.sensitivity))
+    setDpi(String(context.dpi))
+    setScreen('builder')
+    startStage(0, targetRoutine, context)
   }
 
   const completeStage = (result: WarmupMetrics) => {
@@ -242,6 +442,89 @@ export function Routine() {
     try { await navigator.clipboard?.writeText(content) } catch { /* sharing remains optional */ }
   }
 
+  const getRoutinePresetLabel = (targetRoutine: CustomRoutine) => {
+    const targetGame = GAME_BY_ID[targetRoutine.gameId as GameId]
+    const preset = selectGamePreset(config.presets, targetRoutine.gameId, targetRoutine.presetId)
+    return preset
+      ? `${targetGame.shortLabel} · ${preset.sensitivity} · ${preset.dpi} DPI`
+      : `${targetGame.shortLabel} · sem preset salvo`
+  }
+
+  const getRoutineSequence = (targetRoutine: CustomRoutine) => targetRoutine.items
+    .slice()
+    .sort((left, right) => left.order - right.order)
+    .map((item) => exerciseById(item.modeId).name)
+    .join(' · ')
+
+  if (phase === 'builder' && screen === 'library') {
+    return <section className="warmup-workspace routine-workspace routine-library-workspace">
+      <div className="routine-library-hero">
+        <div>
+          <div className="panel-label"><Layers3 size={15} /> ROTINAS</div>
+          <h1>Rotinas</h1>
+          <p>Monte, salve e reutilize suas playlists de treino.</p>
+        </div>
+        <button type="button" className="primary-button routine-create-button" onClick={createNewRoutine}><Plus size={15} /> Criar nova rotina</button>
+      </div>
+
+      <section className="routine-library-panel" aria-label="Minhas rotinas">
+        <div className="routine-library-heading">
+          <h2>Minhas rotinas</h2>
+          <span>{library.length} salvas</span>
+        </div>
+        {library.length === 0 ? <div className="routine-library-empty">
+          <Sparkles size={24} />
+          <strong>Você ainda não salvou nenhuma rotina.</strong>
+          <p>Combine seus minigames favoritos em uma playlist e reutilize seu treino sempre que quiser.</p>
+          <button type="button" className="primary-button" onClick={createNewRoutine}><Plus size={14} /> Criar primeira rotina</button>
+        </div> : <div className="routine-library-grid">
+          {library.map((savedRoutine) => (
+            <RoutineLibraryCard
+              key={savedRoutine.id}
+              routine={savedRoutine}
+              presetLabel={getRoutinePresetLabel(savedRoutine)}
+              sequence={getRoutineSequence(savedRoutine)}
+              actionOpen={actionMenuId === savedRoutine.id}
+              onToggleActions={() => setActionMenuId((current) => current === savedRoutine.id ? null : savedRoutine.id)}
+              onStart={() => startRoutine(savedRoutine)}
+              onEdit={() => openBuilder(savedRoutine)}
+              onDuplicate={() => duplicateRoutine(savedRoutine)}
+              onRename={() => requestRenameRoutine(savedRoutine)}
+              onDelete={() => { setActionMenuId(null); setDeleteTarget(savedRoutine) }}
+            />
+          ))}
+        </div>}
+      </section>
+
+      {renameTarget && <div className="modal-backdrop">
+        <section className="modal routine-action-modal" role="dialog" aria-modal="true" aria-label="Renomear rotina">
+          <button className="modal-close" onClick={() => setRenameTarget(null)} aria-label={t('common.close')}><X size={18} /></button>
+          <Pencil size={20} className="modal-icon" />
+          <h2>Renomear rotina</h2>
+          <p>Defina um nome curto e fácil de reconhecer na biblioteca.</p>
+          <label>Nome da rotina<input value={renameValue} maxLength={48} autoFocus onChange={(event) => setRenameValue(event.target.value)} /></label>
+          <div className="warmup-result-actions">
+            <button className="secondary-button" type="button" onClick={() => setRenameTarget(null)}>Cancelar</button>
+            <button className="primary-button" type="button" disabled={!renameValue.trim()} onClick={confirmRenameRoutine}><Save size={14} /> Salvar nome</button>
+          </div>
+        </section>
+      </div>}
+
+      {deleteTarget && <div className="modal-backdrop">
+        <section className="modal routine-action-modal" role="dialog" aria-modal="true" aria-label="Excluir rotina">
+          <button className="modal-close" onClick={() => setDeleteTarget(null)} aria-label={t('common.close')}><X size={18} /></button>
+          <Trash2 size={20} className="modal-icon" />
+          <h2>Excluir rotina?</h2>
+          <p>A rotina <strong>{deleteTarget.name}</strong> será removida da sua biblioteca. Esta ação não altera presets nem histórico de treino.</p>
+          <div className="warmup-result-actions">
+            <button className="secondary-button" type="button" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+            <button className="primary-button danger-button" type="button" onClick={confirmDeleteRoutine}><Trash2 size={14} /> Excluir</button>
+          </div>
+        </section>
+      </div>}
+    </section>
+  }
+
   if (phase === 'builder') {
     return <section className="warmup-workspace routine-workspace routine-builder-workspace" ref={setupRef}>
       <div className="routine-builder-hero">
@@ -250,11 +533,7 @@ export function Routine() {
           <h1>{t('routine.title')}</h1>
           <p>{t('routine.subtitle')}</p>
         </div>
-        <div className="routine-builder-summary" aria-label={t('routine.summary')}>
-          <RoutineSummaryMetric label={t('routine.totalDuration')} value={formatRoutineDuration(totalSeconds)} />
-          <RoutineSummaryMetric label={t('routine.exerciseCount')} value={String(orderedItems.length)} />
-          <RoutineSummaryMetric label={t('common.gameReference')} value={game.shortLabel} />
-        </div>
+        <button type="button" className="secondary-button routine-back-library" onClick={() => { refreshLibrary(); setScreen('library') }}><ArrowLeft size={14} /> Voltar para biblioteca</button>
       </div>
 
       <div className="routine-builder-layout">
@@ -284,9 +563,14 @@ export function Routine() {
         <section className="routine-playlist-panel" aria-label={t('routine.playlist')}>
           <div className="routine-playlist-head">
             <label>{t('routine.name')}<input value={routine.name} maxLength={48} onChange={(event) => { setSaveState('idle'); setRoutine(current => ({ ...current, name: event.target.value })) }} /></label>
-            <div>
+            <div className="routine-builder-summary" aria-label={t('routine.summary')}>
+              <RoutineSummaryMetric label={t('routine.totalDuration')} value={formatRoutineDuration(totalSeconds)} />
+              <RoutineSummaryMetric label={t('routine.exerciseCount')} value={String(orderedItems.length)} />
+              <RoutineSummaryMetric label={t('common.gameReference')} value={game.shortLabel} />
+            </div>
+            <div className="routine-playlist-actions">
               <button className="secondary-button" type="button" onClick={saveRoutine}><Save size={14} /> {saveState === 'saved' ? t('routine.saved') : t('routine.save')}</button>
-              <button className="primary-button" type="button" disabled={!canStart} onClick={startRoutine}><Play size={14} /> {t('routine.start')}</button>
+              <button className="primary-button" type="button" disabled={!canStart} onClick={() => startRoutine()}><Play size={14} /> {t('routine.start')}</button>
             </div>
           </div>
 
@@ -296,23 +580,45 @@ export function Routine() {
             <p>{t('routine.emptyDescription')}</p>
             <button className="primary-button" type="button" onClick={() => setAddOpen(true)}><Plus size={14} /> {t('routine.addExercise')}</button>
           </div> : <div className="routine-builder-list">
+            <div className="routine-playlist-label">
+              <h2>{t('routine.playlist')}</h2>
+              <span>{orderedItems.length} {t('routine.exercises')}</span>
+            </div>
             {orderedItems.map((item, index) => (
-              <RoutineItemCard key={item.id} item={item} index={index} total={orderedItems.length}>
+              <RoutineItemCard
+                key={item.id}
+                item={item}
+                index={index}
+                total={orderedItems.length}
+                expanded={expandedItemId === item.id}
+                difficultyLabel={difficultyLabel}
+                onToggle={() => setExpandedItemId((current) => current === item.id ? null : item.id)}
+                onMoveUp={() => moveItem(index, -1)}
+                onMoveDown={() => moveItem(index, 1)}
+                onDuplicate={() => duplicateItem(item)}
+                onRemove={() => removeItem(item.id)}
+              >
                 <div className="routine-item-controls">
-                  <select value={item.modeId} onChange={(event) => updateItem(item.id, { modeId: event.target.value as WarmupExercise })} aria-label={t('routine.exercise')}>
-                    {EXERCISES.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
-                  </select>
-                  <div className="routine-chip-row" aria-label={t('routine.duration')}>
-                    {ROUTINE_ITEM_DURATIONS.map((duration) => <button key={duration} type="button" className={item.durationSeconds === duration ? 'selected' : ''} onClick={() => updateItem(item.id, { durationSeconds: duration })}>{duration / 60}m</button>)}
-                  </div>
-                  <div className="routine-chip-row" aria-label={t('warmup.difficulty')}>
-                    {difficultyKeys.filter((difficulty) => supportsRoutineDifficulty(item.modeId, difficulty)).map((difficulty) => <button key={difficulty} type="button" className={item.difficulty === difficulty ? 'selected' : ''} onClick={() => updateItem(item.id, { difficulty })}>{difficultyLabel(difficulty)}</button>)}
-                  </div>
-                  <div className="routine-row-actions">
-                    <button type="button" onClick={() => moveItem(index, -1)} disabled={index === 0} aria-label={t('routine.moveUp')}><ArrowUp size={14} /></button>
-                    <button type="button" onClick={() => moveItem(index, 1)} disabled={index === orderedItems.length - 1} aria-label={t('routine.moveDown')}><ArrowDown size={14} /></button>
-                    <button type="button" onClick={() => duplicateItem(item)} aria-label={t('routine.duplicate')}><Copy size={14} /></button>
-                    <button type="button" onClick={() => removeItem(item.id)} aria-label={t('routine.remove')}><Trash2 size={14} /></button>
+                  <label>
+                    <span>{t('routine.duration')}</span>
+                    <div className="routine-chip-row" aria-label={t('routine.duration')}>
+                      {ROUTINE_ITEM_DURATIONS.map((duration) => <button key={duration} type="button" className={item.durationSeconds === duration ? 'selected' : ''} onClick={() => updateItem(item.id, { durationSeconds: duration })}>{duration / 60}m</button>)}
+                    </div>
+                  </label>
+                  <label>
+                    <span>{t('warmup.difficulty')}</span>
+                    <div className="routine-chip-row" aria-label={t('warmup.difficulty')}>
+                      {difficultyKeys.filter((difficulty) => supportsRoutineDifficulty(item.modeId, difficulty)).map((difficulty) => <button key={difficulty} type="button" className={item.difficulty === difficulty ? 'selected' : ''} onClick={() => updateItem(item.id, { difficulty })}>{difficultyLabel(difficulty)}</button>)}
+                    </div>
+                  </label>
+                  <label>
+                    <span>{t('routine.exercise')}</span>
+                    <select value={item.modeId} onChange={(event) => updateItem(item.id, { modeId: event.target.value as WarmupExercise })} aria-label={t('routine.exercise')}>
+                      {EXERCISES.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}
+                    </select>
+                  </label>
+                  <div className="routine-expanded-preview">
+                    <ExerciseMicroPreview modeId={item.modeId} />
                   </div>
                 </div>
               </RoutineItemCard>

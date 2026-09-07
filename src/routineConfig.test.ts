@@ -6,8 +6,11 @@ import {
   getRoutineTotalSeconds,
   isRoutineDurationSeconds,
   normalizeRoutine,
+  readRoutineLibrary,
   readCustomRoutine,
   ROUTINE_ITEM_DURATIONS,
+  ROUTINE_LIBRARY_STORAGE_KEY,
+  saveRoutineToLibrary,
   supportsRoutineDifficulty,
   validateRoutine,
   writeCustomRoutine,
@@ -70,6 +73,23 @@ describe('custom routine config', () => {
     expect(loaded.name).toBe('Warmup competitivo')
     expect(loaded.gameId).toBe('cs2')
     expect(loaded.items).toHaveLength(3)
+  })
+
+  it('persists a saved-routine library without changing the routine item model', () => {
+    const storage = new Map<string, string>()
+    const localStorageLike = {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => storage.set(key, value)),
+    }
+    const routine = { ...createDefaultRoutine('cs2'), id: 'library-one', name: 'Library one' }
+
+    saveRoutineToLibrary(localStorageLike, routine)
+    const library = readRoutineLibrary(localStorageLike)
+
+    expect(JSON.parse(storage.get(ROUTINE_LIBRARY_STORAGE_KEY)!)).toHaveLength(1)
+    expect(library[0]).toMatchObject({ id: 'library-one', name: 'Library one', gameId: 'cs2' })
+    expect(library[0].items[0]).toHaveProperty('durationSeconds')
+    expect(library[0].items[0]).toHaveProperty('difficulty')
   })
 
   it('blocks empty routines', () => {

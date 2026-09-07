@@ -2,6 +2,7 @@ import type { GameSensitivityProfileId } from './gameSensitivityProfiles'
 import type { WarmupDifficulty, WarmupExercise } from './warmupConfig'
 
 export const CUSTOM_ROUTINE_STORAGE_KEY = 'xensi-custom-routine:v1'
+export const ROUTINE_LIBRARY_STORAGE_KEY = 'xensi-routine-library:v1'
 export const ROUTINE_ITEM_DURATIONS = [60, 120, 180, 240, 300] as const
 export const ROUTINE_MAX_ITEM_SECONDS = 300
 export const ROUTINE_MIN_ITEM_SECONDS = 60
@@ -145,5 +146,58 @@ export function readCustomRoutine(storage: Pick<Storage, 'getItem'>, fallbackGam
 export function writeCustomRoutine(storage: Pick<Storage, 'setItem'>, routine: CustomRoutine) {
   const next = normalizeRoutine({ ...routine, updatedAt: now() }, routine.gameId)
   storage.setItem(CUSTOM_ROUTINE_STORAGE_KEY, JSON.stringify(next))
+  return next
+}
+
+export function readRoutineLibrary(storage: Pick<Storage, 'getItem'>, fallbackGameId: GameSensitivityProfileId = 'cs2') {
+  const seen = new Set<string>()
+  const normalizeList = (values: unknown[]) => values
+    .map((value) => normalizeRoutine(value, fallbackGameId))
+    .filter((routine) => {
+      if (seen.has(routine.id)) return false
+      seen.add(routine.id)
+      return true
+    })
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+
+  try {
+    const raw = storage.getItem(ROUTINE_LIBRARY_STORAGE_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? normalizeList(parsed) : []
+    }
+  } catch {
+    return []
+  }
+
+  try {
+    const legacyRaw = storage.getItem(CUSTOM_ROUTINE_STORAGE_KEY)
+    if (!legacyRaw) return []
+    const legacy = normalizeRoutine(JSON.parse(legacyRaw), fallbackGameId)
+    return legacy.items.length ? [legacy] : []
+  } catch {
+    return []
+  }
+}
+
+export function writeRoutineLibrary(storage: Pick<Storage, 'setItem'>, routines: CustomRoutine[]) {
+  const normalized = routines
+    .map((routine) => normalizeRoutine(routine, routine.gameId))
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  storage.setItem(ROUTINE_LIBRARY_STORAGE_KEY, JSON.stringify(normalized))
+  return normalized
+}
+
+export function saveRoutineToLibrary(storage: Pick<Storage, 'getItem' | 'setItem'>, routine: CustomRoutine) {
+  const saved = writeCustomRoutine(storage, routine)
+  const library = readRoutineLibrary(storage, saved.gameId)
+  const next = [saved, ...library.filter((item) => item.id !== saved.id)]
+  writeRoutineLibrary(storage, next)
+  return saved
+}
+
+export function deleteRoutineFromLibrary(storage: Pick<Storage, 'getItem' | 'setItem'>, id: string) {
+  const next = readRoutineLibrary(storage).filter((routine) => routine.id !== id)
+  writeRoutineLibrary(storage, next)
   return next
 }
