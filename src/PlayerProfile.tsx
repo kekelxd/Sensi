@@ -64,7 +64,7 @@ const copy = {
     unavailable: 'cm/360 indisponível',
     unavailableHint: 'Este perfil de jogo ainda não possui cálculo físico compatível.',
     edit: 'Editar',
-    editAvatar: 'Editar avatar',
+    editAvatar: 'Alterar avatar',
     calibrate: 'Calibrar',
     convert: 'Converter',
     remove: 'Remover',
@@ -303,7 +303,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
         <article className="profile-v1-identity">
           <span className="profile-v1-label">{text.identity}</span>
           <div className="profile-v1-person">
-            <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /><button type="button" onClick={openIdentity} aria-label={text.editAvatar}><Edit3 size={16} /></button></div>
+            <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /><button type="button" onClick={openIdentity} aria-label={text.editAvatar} title={text.editAvatar}><Edit3 size={16} /></button></div>
             <div><h2>{profile.nickname}</h2><p>{text.memberSince}</p><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
           </div>
           <dl className="profile-v1-identity-meta">
@@ -323,10 +323,10 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
               <div><dt>CM / 360</dt><dd>{activeCm360 === null ? text.unavailable : `${activeCm360.toFixed(2)} cm`}</dd></div>
             </dl>
             <footer>
-              <button type="button" className="profile-v1-active-primary" onClick={() => onCalibrate(activePreset)} disabled={!CALIBRATOR_GAMES.has(activePreset.gameId)} title={!CALIBRATOR_GAMES.has(activePreset.gameId) ? text.calibratorUnavailable : undefined}><Gauge size={17} /> {text.calibrate}</button>
-              <button type="button" onClick={() => onConvert(activePreset)}><RefreshCw size={17} /> {text.convert}</button>
+              <button type="button" className="primary-button profile-v1-active-primary" onClick={() => onCalibrate(activePreset)} disabled={!CALIBRATOR_GAMES.has(activePreset.gameId)} title={!CALIBRATOR_GAMES.has(activePreset.gameId) ? text.calibratorUnavailable : undefined}><Gauge size={17} /> {text.calibrate}</button>
+              <button type="button" className="secondary-button" onClick={() => onConvert(activePreset)}><RefreshCw size={17} /> {text.convert}</button>
             </footer>
-          </> : <div className="profile-v1-active-empty"><Crosshair size={24} /><h2>{text.activeConfig}</h2><p>{text.emptyText}</p><button type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button></div>}
+          </> : <div className="profile-v1-active-empty"><Crosshair size={24} /><h2>{text.activeConfig}</h2><p>{text.emptyText}</p><button className="primary-button" type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button></div>}
         </article>
       </div>
 
@@ -345,7 +345,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
             <button className="profile-v1-add" type="button" onClick={openNewPreset}><Plus size={16} /> {text.add}</button>
           </div>
         </header>
-        {profile.presets.length === 0 ? <div className="profile-v1-empty"><Crosshair size={24} /><h2>{text.emptyTitle}</h2><p>{text.emptyText}</p><button type="button" onClick={openNewPreset}><Plus size={16} /> {text.addSensitivity}</button></div>
+        {profile.presets.length === 0 ? <div className="profile-v1-empty"><Crosshair size={24} /><h2>{text.emptyTitle}</h2><p>{text.emptyText}</p><button className="primary-button" type="button" onClick={openNewPreset}><Plus size={16} /> {text.addSensitivity}</button></div>
           : <div className="profile-v1-grid">{filteredPresets.map((preset) => {
             const game = GAME_SENSITIVITY_PROFILE_BY_ID[preset.gameId]
             const cm360 = calculatePresetCm360(preset)
@@ -353,7 +353,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
             return <article className={`profile-preset-card${preset.isPrimary ? ' primary' : ''}`} key={preset.id}>
               <header><div className="profile-preset-game"><GameBadge gameId={preset.gameId} selected={preset.isPrimary} /><div><small>{preset.name || game.name}</small><strong>{game.shortName}</strong></div></div>{preset.isPrimary ? <b><Star size={12} /> {text.primary}</b> : <button type="button" onClick={() => setPrimary(preset.id)}><Star size={13} /> {text.setPrimary}</button>}<MoreVertical size={17} aria-hidden="true" /></header>
               <dl><div><dt>{text.sensitivity}</dt><dd>{preset.sensitivity}</dd></div><div><dt>{text.dpi}</dt><dd>{preset.dpi}</dd></div><div className="profile-preset-distance"><dt>CM / 360</dt><dd title={cm360 === null ? text.unavailableHint : undefined}>{cm360 === null ? text.unavailable : `${cm360.toFixed(2)} cm/360`}</dd></div></dl>
-              <footer><button type="button" onClick={() => openPreset(preset)}><Edit3 size={14} /> {text.edit}</button><button type="button" onClick={() => onCalibrate(preset)} disabled={!canCalibrate} title={!canCalibrate ? text.calibratorUnavailable : undefined}><Gauge size={14} /> {text.calibrate}</button><button className="profile-preset-convert" type="button" onClick={() => onConvert(preset)}><RefreshCw size={14} /> {text.convert}</button><button className="profile-preset-remove" type="button" onClick={() => setPendingRemove(preset)} aria-label={text.remove}><Trash2 size={14} /></button></footer>
+              <footer><button className="profile-preset-action" type="button" onClick={() => openPreset(preset)}><Edit3 size={14} /> {text.edit}</button><button className="profile-preset-action" type="button" onClick={() => onCalibrate(preset)} disabled={!canCalibrate} title={!canCalibrate ? text.calibratorUnavailable : undefined}><Gauge size={14} /> {text.calibrate}</button><button className="profile-preset-action profile-preset-convert" type="button" onClick={() => onConvert(preset)}><RefreshCw size={14} /> {text.convert}</button><button className="profile-preset-action profile-preset-remove" type="button" onClick={() => setPendingRemove(preset)} aria-label={text.remove}><Trash2 size={14} /></button></footer>
             </article>
           })}<button className="profile-v1-add-tile" type="button" onClick={openNewPreset}><Plus size={24} /><strong>{text.addTileTitle}</strong><span>{text.addTileText}</span></button>{filteredPresets.length === 0 && <p className="profile-v1-no-results">{text.noResults}</p>}</div>}
       </section>
