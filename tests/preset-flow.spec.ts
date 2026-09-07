@@ -62,7 +62,7 @@ test.describe('shared presets and game identity', () => {
     } else await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('xensi-player-profile')!).presets[0].sensitivity)).toBe(.65)
     await page.getByRole('button', { name: 'CALIBRAR', exact: true }).click()
-    await page.getByRole('button', { name: 'Calibrar sensibilidade', exact: true }).click()
+    await page.getByRole('menuitem', { name: /Calibrar sensibilidade/ }).click()
     await page.getByRole('button', { name: 'Configurar calibrador', exact: true }).click()
     const finder = page.getByRole('dialog')
     await expect(finder.locator('.xensi-wizard-stepper > div')).toHaveCount(2)
