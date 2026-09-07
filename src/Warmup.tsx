@@ -168,6 +168,7 @@ type ArenaProps = {
   countdown: number
   exercise: WarmupExercise
   difficulty: WarmupDifficulty
+  durationSeconds?: number
   crosshair: CrosshairStyle
   pointerGain: number
   sessionId: number
@@ -177,6 +178,7 @@ type ArenaProps = {
   progressLabel?: string
   completionOverlay?: ReactNode
   exitFullscreenOnComplete?: boolean
+  releasePointerLockOnComplete?: boolean
   onMetrics: (metrics: WarmupMetrics) => void
   onComplete: (metrics: WarmupMetrics) => void
   onPointerLockChange: (locked: boolean) => void
@@ -184,7 +186,7 @@ type ArenaProps = {
 
 export type ArenaHandle = { requestPointerLock: () => void }
 
-export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, progressLabel, completionOverlay, exitFullscreenOnComplete = true, onMetrics, onComplete, onPointerLockChange }, ref) {
+export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupArena({ phase, countdown, exercise, difficulty, durationSeconds = WARMUP_DURATION, crosshair, pointerGain, sessionId, sensitivityLabel, instruction, metrics, progressLabel, completionOverlay, exitFullscreenOnComplete = true, releasePointerLockOnComplete = true, onMetrics, onComplete, onPointerLockChange }, ref) {
   const { t } = useI18n()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sniperRef = useRef<SniperReaction | null>(null)
@@ -198,8 +200,10 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
   const exerciseRef = useRef(exercise)
   const configRef = useRef(WARMUP_DIFFICULTIES[difficulty])
   const gainRef = useRef(pointerGain)
+  const durationSecondsRef = useRef(durationSeconds)
   const crosshairRef = useRef(crosshair)
   const exitFullscreenOnCompleteRef = useRef(exitFullscreenOnComplete)
+  const releasePointerLockOnCompleteRef = useRef(releasePointerLockOnComplete)
   const onMetricsRef = useRef(onMetrics)
   const onCompleteRef = useRef(onComplete)
   const stateRef = useRef({
@@ -225,8 +229,10 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
   useEffect(() => { exerciseRef.current = exercise }, [exercise])
   useEffect(() => { configRef.current = WARMUP_DIFFICULTIES[difficulty] }, [difficulty])
   useEffect(() => { gainRef.current = pointerGain }, [pointerGain])
+  useEffect(() => { durationSecondsRef.current = durationSeconds }, [durationSeconds])
   useEffect(() => { crosshairRef.current = crosshair }, [crosshair])
   useEffect(() => { exitFullscreenOnCompleteRef.current = exitFullscreenOnComplete }, [exitFullscreenOnComplete])
+  useEffect(() => { releasePointerLockOnCompleteRef.current = releasePointerLockOnComplete }, [releasePointerLockOnComplete])
   useEffect(() => { onMetricsRef.current = onMetrics }, [onMetrics])
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
@@ -297,7 +303,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
       if (exerciseRef.current === 'sniper-reaction') {
         if (event.button !== 0 || phaseRef.current !== 'playing' || document.pointerLockElement !== canvas) return
         const state = stateRef.current
-        if (!state.startedAt || state.complete || performance.now() - state.startedAt >= WARMUP_DURATION * 1000) return
+        if (!state.startedAt || state.complete || performance.now() - state.startedAt >= durationSecondsRef.current * 1000) return
         const scale = Math.max(1, Math.min(state.width, state.height))
         sniperRef.current?.shoot(performance.now() - state.startedAt, (state.aimX - state.width / 2) / scale, (state.aimY - state.height / 2) / scale)
         return
@@ -400,17 +406,17 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
           if (phaseRef.current === 'playing' && pointerLockedRef.current && !state.complete) {
             if (!state.startedAt) state.startedAt = time
             const elapsed = time - state.startedAt
-            const remaining = Math.max(0, WARMUP_DURATION - elapsed / 1000)
+            const remaining = Math.max(0, durationSecondsRef.current - elapsed / 1000)
             if (remaining > 0) sniper.update(elapsed)
             if (time - state.lastMetricsAt >= 100 || remaining <= 0) {
               const summary = summarizeSniper(sniper.attempts)
-              const next = { ...createEmptyWarmupMetrics(WARMUP_DURATION), hits: summary.hits, shots: summary.shots, accuracy: summary.accuracy, reactionTimeMs: summary.reactionTimeMs, remaining, score: summary.hits * 100, clickErrors: summary.misses, sniper: summary }
+              const next = { ...createEmptyWarmupMetrics(durationSecondsRef.current), hits: summary.hits, shots: summary.shots, accuracy: summary.accuracy, reactionTimeMs: summary.reactionTimeMs, remaining, score: summary.hits * 100, clickErrors: summary.misses, sniper: summary }
               state.lastMetricsAt = time
               onMetricsRef.current(next)
               if (remaining <= 0) {
                 state.complete = true
                 sniper.stop()
-                document.exitPointerLock?.()
+                if (releasePointerLockOnCompleteRef.current) document.exitPointerLock?.()
                 if (exitFullscreenOnCompleteRef.current && document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
                 onCompleteRef.current(next)
               }
@@ -544,7 +550,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
         }
 
         const elapsed = time - state.startedAt
-        const remaining = Math.max(0, WARMUP_DURATION - elapsed / 1000)
+        const remaining = Math.max(0, durationSecondsRef.current - elapsed / 1000)
         const trackingAccuracy = elapsed > 0 ? state.onTargetMs / elapsed * 100 : 0
         const trackingBasedAccuracy = exercise === 'switch' || isTrackingExercise(exercise)
         const metrics: WarmupMetrics = {
@@ -566,7 +572,7 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
         if (time - state.lastMetricsAt >= 100) { state.lastMetricsAt = time; onMetricsRef.current(metrics) }
         if (remaining <= 0 && !state.complete) {
           state.complete = true
-          document.exitPointerLock?.()
+          if (releasePointerLockOnCompleteRef.current) document.exitPointerLock?.()
           if (exitFullscreenOnCompleteRef.current && document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
           onCompleteRef.current(metrics)
         }
