@@ -80,7 +80,6 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
 
   return <main className="xensi-auth-shell">
     <section className="xensi-auth-brand-panel" aria-labelledby="auth-brand-title">
-      <XensiLogo className="xensi-auth-logo" />
       <div>
         <h1 id="auth-brand-title">TREINE. CALIBRE. <span>EVOLUA.</span></h1>
         <p>Treine sua mira, calibre sua sensibilidade e acompanhe sua evolução.</p>
