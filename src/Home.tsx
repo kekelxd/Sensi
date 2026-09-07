@@ -1,164 +1,552 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowLeftRight, ArrowRight, Crosshair, Gauge, Mouse, Target } from 'lucide-react'
+import { useEffect, useMemo, useState, type ComponentType, type CSSProperties } from 'react'
+import {
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Crosshair,
+  Gamepad2,
+  History,
+  Mouse,
+  Play,
+  Radar,
+  Sparkles,
+  Target,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { readCalibrationHistory, type CalibrationSessionSummary } from './calibration'
 import { GAMES, type GameConfig } from './games'
+import { GAME_SENSITIVITY_PROFILE_BY_ID } from './gameSensitivityProfiles'
 import { useI18n, type Locale } from './i18n'
+import {
+  formatRoutineDuration,
+  getRoutineTotalSeconds,
+  readRoutineLibrary,
+  type CustomRoutine,
+} from './routineConfig'
+import {
+  calculatePresetCm360,
+  readPlayerProfile,
+  type SensitivityPreset,
+} from './playerProfileStore'
 import { readWarmupSession, type WarmupSessionSummary } from './warmupTelemetry'
 import type { WarmupExercise } from './warmupConfig'
 
-export type HomeDestination = 'analysis' | 'calibration' | 'converter' | 'warmup' | 'polling' | 'buttons'
+export type HomeDestination = 'analysis' | 'calibration' | 'converter' | 'warmup' | 'polling' | 'buttons' | 'routine' | 'profile'
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
-const WARMUP_EXERCISES: WarmupExercise[] = ['switch', 'tracking', 'flick', 'reflex', 'gridshot', 'strafetrack']
+const WARMUP_EXERCISES: WarmupExercise[] = ['switch', 'tracking', 'flick', 'reflex', 'gridshot', 'strafetrack', 'sniper-reaction']
 
-const productText = {
+const exerciseNames: Record<WarmupExercise, string> = {
+  switch: 'Target Switch',
+  tracking: 'Tracking',
+  flick: 'Target Shooting',
+  reflex: 'Reflex',
+  gridshot: 'Gridshot',
+  strafetrack: 'Strafetrack',
+  'sniper-reaction': 'Sniper Reaction',
+}
+
+const copy = {
   pt: {
-    subtitle: 'Treinos de precisão, análise de desempenho e calibração de sensibilidade para FPS em um único ambiente.', start: 'Começar treino', live: 'DEMONSTRAÇÃO ATIVA', chain: 'SEQUÊNCIA DEMO',
-    control: 'SEU CONTROLE', analysis: 'Ver análise', accuracy: 'Precisão', tracking: 'Tracking', reaction: 'Reação', sensitivity: 'Sensibilidade atual', sessions: 'sessões salvas', consistency: 'de consistência', calibrated: 'última calibração', noSessions: 'Nenhuma sessão ainda.', noSessionsHint: 'Complete seu primeiro treino para começar a montar seu perfil de mira.',
-    quick: 'AÇÕES RÁPIDAS', quickHint: 'Escolha o que quer fazer agora.', setup: 'TESTE SEU SETUP', setupHint: 'Confira como seus dispositivos respondem antes da partida.',
-    actions: [['Treinar', 'Comece uma sessão curta de mira.'], ['Calibrar', 'Encontre sua região de sensibilidade.'], ['Converter', 'Preserve sua referência de 360° entre jogos.']],
-    polling: 'Polling Rate', pollingHint: 'Confira a frequência de atualização recebida do mouse.', pollingAction: 'Testar polling rate', input: 'Diagnóstico de entrada', inputHint: 'Analise estabilidade, botões e interrupções do input.', inputAction: 'Abrir diagnóstico', daysToday: 'hoje', daysAgo: 'há {days} dias',
+    heroKicker: 'PERFORMANCE, COM PROPÓSITO',
+    heroTitleOne: 'Treine melhor.',
+    heroTitleTwo: 'Jogue diferente.',
+    heroDescription: 'Ferramentas, treinos e análises para você entender seu controle, evoluir sua mira e extrair o máximo da sua performance.',
+    primaryCta: 'Começar agora',
+    secondaryCta: 'Testar meu setup',
+    benefits: ['Gratuito para começar', 'Sem compromisso', 'Feito para jogadores reais'],
+    arenaStatus: 'DEMONSTRAÇÃO ATIVA',
+    arenaCallout: 'MAIS CONTROLE. MAIS RESULTADOS.',
+    arenaChain: 'SEQUÊNCIA DEMO',
+    pathKicker: 'ESCOLHA SEU CAMINHO',
+    pathTitle: 'Dois focos. Uma evolução.',
+    trainingTitle: 'Treino e Performance',
+    trainingDescription: 'Construa consistência com sessões curtas, calibre sua sensibilidade e acompanhe o que está melhorando.',
+    trainingItems: ['Treinar', 'Calibrar', 'Converter', 'Análise'],
+    trainingCta: 'Explorar treinos',
+    setupTitle: 'Diagnóstico do Setup',
+    setupDescription: 'Cheque mouse, teclado, tela e controle antes de entrar em partida. Menos dúvida, mais confiança.',
+    setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift do Controle'],
+    setupCta: 'Explorar ferramentas',
+    progressKicker: 'CONTINUE DE ONDE PAROU',
+    progressTitle: 'Seu painel rápido',
+    lastTraining: 'ÚLTIMO TREINO',
+    lastTrainingEmpty: 'Complete um treino para continuar daqui.',
+    preset: 'PRESET ATIVO',
+    presetEmpty: 'Adicione um preset no perfil para ver sua referência principal.',
+    routine: 'ROTINA SALVA',
+    routineEmpty: 'Salve uma rotina para retomar sua playlist com um clique.',
+    resumeTraining: 'Retomar treino',
+    viewPresets: 'Ver presets',
+    viewRoutine: 'Ver rotina completa',
+    noDate: 'Data não salva',
+    today: 'hoje',
+    daysAgo: 'há {days} dias',
+    accuracy: 'Precisão',
+    reaction: 'Reação',
+    duration: 'Duração',
+    dpi: 'DPI',
+    sens: 'Sensi',
+    edpi: 'eDPI',
+    exercises: 'exercícios',
+    ecosystemKicker: 'ECOSSISTEMA XENSI',
+    ecosystemTitle: 'Mais que ferramentas. Um ecossistema.',
+    ecosystemDescription: 'O XENSI conecta treino, calibração, conversão, análise e diagnóstico para transformar dados soltos em decisões melhores antes de jogar.',
+    ecosystemCta: 'Conheça o XENSI',
+    pillars: [
+      ['Evolução real', 'Métricas que mostram precisão, controle e consistência.'],
+      ['Interface limpa', 'Fluxos diretos para treinar, medir e decidir rápido.'],
+      ['Para todos os níveis', 'Útil para quem está começando e para quem já compete.'],
+      ['Sempre em desenvolvimento', 'O produto cresce com novas rotinas, diagnósticos e análises.'],
+    ],
+    footerLine: 'Feito por jogadores, para jogadores.',
+    footerLinks: ['Sobre', 'Privacidade', 'Termos', 'Contato'],
   },
   en: {
-    subtitle: 'Precision training, performance analysis, and sensitivity calibration for FPS in one environment.', start: 'Start training', live: 'ACTIVE DEMO', chain: 'DEMO CHAIN',
-    control: 'YOUR CONTROL', analysis: 'View analysis', accuracy: 'Accuracy', tracking: 'Tracking', reaction: 'Reaction', sensitivity: 'Current sensitivity', sessions: 'saved sessions', consistency: 'consistency', calibrated: 'last calibration', noSessions: 'No sessions yet.', noSessionsHint: 'Complete your first training session to start building your aim profile.',
-    quick: 'QUICK ACTIONS', quickHint: 'Choose what you want to do now.', setup: 'TEST YOUR SETUP', setupHint: 'Check how your devices respond before a match.',
-    actions: [['Train', 'Start a short aim session.'], ['Calibrate', 'Find your sensitivity region.'], ['Convert', 'Preserve your 360° reference across games.']],
-    polling: 'Polling Rate', pollingHint: 'Check the mouse update frequency received by the browser.', pollingAction: 'Test polling rate', input: 'Input diagnostics', inputHint: 'Analyze input stability, buttons, and interruptions.', inputAction: 'Open diagnostics', daysToday: 'today', daysAgo: '{days} days ago',
+    heroKicker: 'PERFORMANCE, WITH PURPOSE',
+    heroTitleOne: 'Train better.',
+    heroTitleTwo: 'Play different.',
+    heroDescription: 'Tools, training, and analysis to understand your control, improve your aim, and extract more from your performance.',
+    primaryCta: 'Start now',
+    secondaryCta: 'Test my setup',
+    benefits: ['Free to start', 'No commitment', 'Built for real players'],
+    arenaStatus: 'ACTIVE DEMO',
+    arenaCallout: 'MORE CONTROL. MORE RESULTS.',
+    arenaChain: 'DEMO CHAIN',
+    pathKicker: 'CHOOSE YOUR PATH',
+    pathTitle: 'Two focuses. One evolution.',
+    trainingTitle: 'Training and Performance',
+    trainingDescription: 'Build consistency with short sessions, calibrate sensitivity, and track what is improving.',
+    trainingItems: ['Train', 'Calibrate', 'Convert', 'Analysis'],
+    trainingCta: 'Explore training',
+    setupTitle: 'Setup Diagnostics',
+    setupDescription: 'Check mouse, keyboard, display, and controller before queueing. Less doubt, more confidence.',
+    setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Controller Drift'],
+    setupCta: 'Explore tools',
+    progressKicker: 'CONTINUE WHERE YOU LEFT OFF',
+    progressTitle: 'Your quick panel',
+    lastTraining: 'LAST TRAINING',
+    lastTrainingEmpty: 'Finish a training session to continue from here.',
+    preset: 'ACTIVE PRESET',
+    presetEmpty: 'Add a profile preset to show your main reference.',
+    routine: 'SAVED ROUTINE',
+    routineEmpty: 'Save a routine to resume your playlist in one click.',
+    resumeTraining: 'Resume training',
+    viewPresets: 'View presets',
+    viewRoutine: 'View full routine',
+    noDate: 'Date not saved',
+    today: 'today',
+    daysAgo: '{days} days ago',
+    accuracy: 'Accuracy',
+    reaction: 'Reaction',
+    duration: 'Duration',
+    dpi: 'DPI',
+    sens: 'Sens',
+    edpi: 'eDPI',
+    exercises: 'exercises',
+    ecosystemKicker: 'XENSI ECOSYSTEM',
+    ecosystemTitle: 'More than tools. An ecosystem.',
+    ecosystemDescription: 'XENSI connects training, calibration, conversion, analysis, and diagnostics to turn scattered data into better decisions before playing.',
+    ecosystemCta: 'Meet XENSI',
+    pillars: [
+      ['Real progress', 'Metrics that show accuracy, control, and consistency.'],
+      ['Clean interface', 'Direct flows to train, measure, and decide quickly.'],
+      ['For every level', 'Useful for beginners and competitive players.'],
+      ['Always evolving', 'The product grows with new routines, diagnostics, and analysis.'],
+    ],
+    footerLine: 'Made by players, for players.',
+    footerLinks: ['About', 'Privacy', 'Terms', 'Contact'],
   },
   es: {
-    subtitle: 'Entrenamiento de precisión, análisis de rendimiento y calibración de sensibilidad para FPS en un solo entorno.', start: 'Empezar entrenamiento', live: 'DEMO ACTIVA', chain: 'SECUENCIA DEMO',
-    control: 'TU CONTROL', analysis: 'Ver análisis', accuracy: 'Precisión', tracking: 'Tracking', reaction: 'Reacción', sensitivity: 'Sensibilidad actual', sessions: 'sesiones guardadas', consistency: 'de consistencia', calibrated: 'última calibración', noSessions: 'Aún no hay sesiones.', noSessionsHint: 'Completa tu primer entrenamiento para empezar a crear tu perfil de mira.',
-    quick: 'ACCIONES RÁPIDAS', quickHint: 'Elige qué quieres hacer ahora.', setup: 'PRUEBA TU SETUP', setupHint: 'Comprueba cómo responden tus dispositivos antes de la partida.',
-    actions: [['Entrenar', 'Empieza una sesión corta de mira.'], ['Calibrar', 'Encuentra tu región de sensibilidad.'], ['Convertir', 'Conserva tu referencia de 360° entre juegos.']],
-    polling: 'Polling Rate', pollingHint: 'Comprueba la frecuencia de actualización recibida del ratón.', pollingAction: 'Probar polling rate', input: 'Diagnóstico de entrada', inputHint: 'Analiza estabilidad, botones e interrupciones del input.', inputAction: 'Abrir diagnóstico', daysToday: 'hoy', daysAgo: 'hace {days} días',
+    heroKicker: 'RENDIMIENTO, CON PROPÓSITO',
+    heroTitleOne: 'Entrena mejor.',
+    heroTitleTwo: 'Juega diferente.',
+    heroDescription: 'Herramientas, entrenamientos y análisis para entender tu control, mejorar tu mira y sacar más de tu rendimiento.',
+    primaryCta: 'Empezar ahora',
+    secondaryCta: 'Probar mi setup',
+    benefits: ['Gratis para empezar', 'Sin compromiso', 'Hecho para jugadores reales'],
+    arenaStatus: 'DEMO ACTIVA',
+    arenaCallout: 'MÁS CONTROL. MÁS RESULTADOS.',
+    arenaChain: 'SECUENCIA DEMO',
+    pathKicker: 'ELIGE TU CAMINO',
+    pathTitle: 'Dos focos. Una evolución.',
+    trainingTitle: 'Entrenamiento y Rendimiento',
+    trainingDescription: 'Construye consistencia con sesiones cortas, calibra sensibilidad y revisa qué está mejorando.',
+    trainingItems: ['Entrenar', 'Calibrar', 'Convertir', 'Análisis'],
+    trainingCta: 'Explorar entrenos',
+    setupTitle: 'Diagnóstico del Setup',
+    setupDescription: 'Revisa mouse, teclado, pantalla y control antes de jugar. Menos duda, más confianza.',
+    setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift del Control'],
+    setupCta: 'Explorar herramientas',
+    progressKicker: 'CONTINÚA DONDE PARASTE',
+    progressTitle: 'Tu panel rápido',
+    lastTraining: 'ÚLTIMO ENTRENO',
+    lastTrainingEmpty: 'Completa un entrenamiento para continuar desde aquí.',
+    preset: 'PRESET ACTIVO',
+    presetEmpty: 'Añade un preset al perfil para ver tu referencia principal.',
+    routine: 'RUTINA GUARDADA',
+    routineEmpty: 'Guarda una rutina para retomar tu playlist con un clic.',
+    resumeTraining: 'Retomar entreno',
+    viewPresets: 'Ver presets',
+    viewRoutine: 'Ver rutina completa',
+    noDate: 'Fecha no guardada',
+    today: 'hoy',
+    daysAgo: 'hace {days} días',
+    accuracy: 'Precisión',
+    reaction: 'Reacción',
+    duration: 'Duración',
+    dpi: 'DPI',
+    sens: 'Sensi',
+    edpi: 'eDPI',
+    exercises: 'ejercicios',
+    ecosystemKicker: 'ECOSISTEMA XENSI',
+    ecosystemTitle: 'Más que herramientas. Un ecosistema.',
+    ecosystemDescription: 'XENSI conecta entrenamiento, calibración, conversión, análisis y diagnóstico para convertir datos sueltos en mejores decisiones antes de jugar.',
+    ecosystemCta: 'Conoce XENSI',
+    pillars: [
+      ['Evolución real', 'Métricas que muestran precisión, control y consistencia.'],
+      ['Interfaz limpia', 'Flujos directos para entrenar, medir y decidir rápido.'],
+      ['Para todos los niveles', 'Útil para quien empieza y para quien compite.'],
+      ['Siempre en desarrollo', 'El producto crece con nuevas rutinas, diagnósticos y análisis.'],
+    ],
+    footerLine: 'Hecho por jugadores, para jugadores.',
+    footerLinks: ['Sobre', 'Privacidad', 'Términos', 'Contacto'],
   },
 } as const
 
 type CalibrationWithGame = CalibrationSessionSummary & { game: GameConfig }
-type HomeSummary = { warmups: WarmupSessionSummary[]; latestCalibration: CalibrationWithGame | null; calibrationCount: number }
+type LastTraining = WarmupSessionSummary & { exercise: WarmupExercise }
+type HomeSummary = {
+  latestTraining: LastTraining | null
+  latestCalibration: CalibrationWithGame | null
+  activePreset: SensitivityPreset | null
+  savedRoutine: CustomRoutine | null
+}
+
+function getTimestamp(value?: string) {
+  return value ? new Date(value).getTime() || 0 : 0
+}
 
 function readHomeSummary(storage: Storage): HomeSummary {
   const warmups = WARMUP_EXERCISES.flatMap((exercise) => {
     const session = readWarmupSession(storage, exercise)
-    return session ? [session] : []
-  })
+    return session ? [{ ...session, exercise }] : []
+  }).sort((left, right) => getTimestamp(right.completedAt) - getTimestamp(left.completedAt))
   const calibrations = GAMES.flatMap((game) => readCalibrationHistory(storage, game.id).map((session) => ({ ...session, game })))
     .sort((left, right) => right.completedAt.localeCompare(left.completedAt))
-  return { warmups, latestCalibration: calibrations[0] ?? null, calibrationCount: calibrations.length }
+  const profile = readPlayerProfile(storage)
+  const activePreset = profile.presets.find((preset) => preset.isPrimary) ?? profile.presets[0] ?? null
+  const savedRoutine = readRoutineLibrary(storage, activePreset?.gameId ?? 'cs2')[0] ?? null
+  return {
+    latestTraining: warmups[0] ?? null,
+    latestCalibration: calibrations[0] ?? null,
+    activePreset,
+    savedRoutine,
+  }
 }
 
-function average(values: number[]) {
-  return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null
-}
-
-function relativeCalibrationDate(value: string, locale: Locale) {
-  const copy = productText[locale]
+function relativeDate(value: string | undefined, locale: Locale) {
+  const current = copy[locale]
+  if (!value) return current.noDate
   const days = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000))
-  return days === 0 ? copy.daysToday : copy.daysAgo.replace('{days}', String(days))
+  return days === 0 ? current.today : current.daysAgo.replace('{days}', String(days))
 }
 
-function ArenaPreview({ activeTarget, chain, onHit }: { activeTarget: number; chain: number; onHit: (target: number) => void }) {
-  const { t, locale } = useI18n()
-  const copy = productText[locale]
+function formatPercent(value: number | undefined) {
+  return Number.isFinite(value) ? `${Math.round(value ?? 0)}%` : '—'
+}
+
+function formatMs(value: number | undefined) {
+  return Number.isFinite(value) && (value ?? 0) > 0 ? `${Math.round(value ?? 0)}ms` : '—'
+}
+
+function formatSensitivity(value: number) {
+  return value >= 10 ? value.toFixed(2) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function IconBadge({ icon: Icon }: { icon: LucideIcon }) {
+  return <span className="xensi-home-v3-icon"><Icon size={20} /></span>
+}
+
+function DemoArena({ activeTarget, chain, onHit }: { activeTarget: number; chain: number; onHit: (target: number) => void }) {
+  const { locale, t } = useI18n()
+  const current = copy[locale]
   const targets = [
     { id: 0, point: 'top', label: t('home.demoTargetOne') },
     { id: 1, point: 'right', label: t('home.demoTargetThree') },
     { id: 2, point: 'left', label: t('home.demoTargetTwo') },
   ]
 
-  return <section className="xensi-reference-arena xensi-arena-training" aria-label={t('home.demoGridshot')} data-testid="home-training-demo">
-    <div className="xensi-reference-arena-bar"><span><b>ARENA_01</b> · <em>{copy.live}</em></span><span>00:27 &nbsp; ⛶</span></div>
-    <div className="xensi-reference-room" aria-hidden="true"><i /><i /><i /></div>
-    {targets.map((target) => <button key={target.id} type="button" className={`xensi-reference-target xensi-reference-target-${target.point} ${target.id === activeTarget ? 'is-active' : ''}`} onClick={() => onHit(target.id)} aria-label={target.label}><i /></button>)}
-    <div className="xensi-arena-demo-status" aria-hidden="true"><span>{copy.chain}</span><b>+{chain}</b></div>
+  return <section className="xensi-reference-arena xensi-home-v3-arena" aria-label={t('home.demoGridshot')} data-testid="home-training-demo">
+    <div className="xensi-home-v3-arena-bar">
+      <span><b>ARENA_01</b> · <em>{current.arenaStatus}</em></span>
+      <span>00:27</span>
+    </div>
+    <div className="xensi-home-v3-room" aria-hidden="true"><i /><i /><i /></div>
+    {targets.map((target) => (
+      <button
+        key={target.id}
+        type="button"
+        className={`xensi-reference-target xensi-home-v3-target xensi-home-v3-target-${target.point} ${target.id === activeTarget ? 'is-active' : ''}`}
+        onClick={() => onHit(target.id)}
+        aria-label={target.label}
+      >
+        <i />
+      </button>
+    ))}
+    <div className="xensi-home-v3-arena-callout">
+      <span>{current.arenaCallout}</span>
+      <strong>{current.arenaChain} +{chain}</strong>
+    </div>
+    <div className="xensi-home-v3-arena-mark" aria-hidden="true">XENSI</div>
   </section>
 }
 
-export function Home({ onNavigate }: Props) {
-  const { t, locale } = useI18n()
-  const copy = productText[locale]
-  const heroLineOne = t('home.aimLineOne').replace(/\.$/, '')
-  const heroLineTwo = t('home.aimLineTwo').replace(/\.$/, '')
+function HomeHero({ onNavigate }: Props) {
+  const { locale } = useI18n()
+  const current = copy[locale]
   const [activeTarget, setActiveTarget] = useState(0)
-  const [chain, setChain] = useState(3)
+  const [chain, setChain] = useState(8)
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (!document.hidden) {
+        setActiveTarget((target) => (target + 1) % 3)
+        setChain((value) => value + 1)
+      }
+    }, 1700)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const hitTarget = (target: number) => {
+    if (target !== activeTarget) return
+    setChain((value) => value + 1)
+    setActiveTarget((currentTarget) => (currentTarget + 1) % 3)
+  }
+
+  return <section className="xensi-reference-hero xensi-home-v3-hero" aria-labelledby="home-title">
+    <div className="xensi-reference-copy xensi-home-v3-hero-copy">
+      <span className="xensi-home-v3-kicker">{current.heroKicker}</span>
+      <h1 id="home-title"><span>{current.heroTitleOne}</span><span>{current.heroTitleTwo}</span></h1>
+      <p>{current.heroDescription}</p>
+      <div className="xensi-home-v3-actions">
+        <button type="button" className="xensi-home-v3-primary" onClick={() => onNavigate('warmup')}>{current.primaryCta}<ArrowRight size={18} /></button>
+        <button type="button" className="xensi-home-v3-secondary" onClick={() => onNavigate('buttons')}>{current.secondaryCta}<Mouse size={17} /></button>
+      </div>
+      <ul className="xensi-home-v3-benefits" aria-label="Benefícios">
+        {current.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={14} />{benefit}</li>)}
+      </ul>
+    </div>
+    <DemoArena activeTarget={activeTarget} chain={chain} onHit={hitTarget} />
+  </section>
+}
+
+function PathCard({
+  title,
+  description,
+  items,
+  cta,
+  icon: Icon,
+  onClick,
+  accent,
+}: {
+  title: string
+  description: string
+  items: readonly string[]
+  cta: string
+  icon: LucideIcon
+  onClick: () => void
+  accent: 'coral' | 'mint'
+}) {
+  return <article className={`xensi-home-v3-path-card is-${accent}`}>
+    <IconBadge icon={Icon} />
+    <div>
+      <h3>{title}</h3>
+      <p>{description}</p>
+    </div>
+    <ul>
+      {items.map((item) => <li key={item}>{item}</li>)}
+    </ul>
+    <button type="button" onClick={onClick}>{cta}<ArrowRight size={16} /></button>
+  </article>
+}
+
+function HomePathways({ onNavigate }: Props) {
+  const { locale } = useI18n()
+  const current = copy[locale]
+  return <section className="xensi-home-v3-section xensi-home-v3-pathways" aria-labelledby="home-path-title">
+    <div className="xensi-home-v3-section-head">
+      <span>{current.pathKicker}</span>
+      <h2 id="home-path-title">{current.pathTitle}</h2>
+    </div>
+    <div className="xensi-home-v3-path-grid">
+      <PathCard title={current.trainingTitle} description={current.trainingDescription} items={current.trainingItems} cta={current.trainingCta} icon={Crosshair} accent="coral" onClick={() => onNavigate('warmup')} />
+      <PathCard title={current.setupTitle} description={current.setupDescription} items={current.setupItems} cta={current.setupCta} icon={Radar} accent="mint" onClick={() => onNavigate('polling')} />
+    </div>
+  </section>
+}
+
+function ProgressCard({
+  label,
+  title,
+  description,
+  rows,
+  cta,
+  icon,
+  onClick,
+  empty,
+}: {
+  label: string
+  title: string
+  description: string
+  rows: Array<[string, string]>
+  cta: string
+  icon: LucideIcon
+  onClick: () => void
+  empty?: boolean
+}) {
+  return <article className={`xensi-home-v3-progress-card ${empty ? 'is-empty' : ''}`}>
+    <header><IconBadge icon={icon} /><span>{label}</span></header>
+    <h3>{title}</h3>
+    <p>{description}</p>
+    {rows.length > 0 && <dl>
+      {rows.map(([term, value]) => <div key={term}><dt>{term}</dt><dd>{value}</dd></div>)}
+    </dl>}
+    <button type="button" onClick={onClick}>{cta}<ArrowRight size={15} /></button>
+  </article>
+}
+
+function buildTrainingRows(training: LastTraining | null, locale: Locale): Array<[string, string]> {
+  if (!training) return []
+  return [
+    [copy[locale].accuracy, formatPercent(training.accuracy)],
+    [copy[locale].reaction, formatMs(training.reactionTimeMs)],
+    ['Score', String(training.score)],
+  ]
+}
+
+function buildPresetRows(preset: SensitivityPreset | null, locale: Locale): Array<[string, string]> {
+  if (!preset) return []
+  return [
+    [copy[locale].dpi, String(preset.dpi)],
+    [copy[locale].sens, formatSensitivity(preset.sensitivity)],
+    [copy[locale].edpi, String(Math.round(preset.dpi * preset.sensitivity))],
+  ]
+}
+
+function buildRoutineRows(routine: CustomRoutine | null, locale: Locale): Array<[string, string]> {
+  if (!routine) return []
+  return [
+    [copy[locale].duration, formatRoutineDuration(getRoutineTotalSeconds(routine.items))],
+    [copy[locale].exercises, String(routine.items.length)],
+  ]
+}
+
+function HomeProgress({ summary, onNavigate }: { summary: HomeSummary; onNavigate: Props['onNavigate'] }) {
+  const { locale } = useI18n()
+  const current = copy[locale]
+  const presetGame = summary.activePreset ? GAME_SENSITIVITY_PROFILE_BY_ID[summary.activePreset.gameId] : null
+  const cm360 = summary.activePreset ? calculatePresetCm360(summary.activePreset) : null
+
+  return <section className="xensi-home-v3-section xensi-home-v3-progress" aria-labelledby="home-progress-title">
+    <div className="xensi-home-v3-section-head">
+      <span>{current.progressKicker}</span>
+      <h2 id="home-progress-title">{current.progressTitle}</h2>
+    </div>
+    <div className="xensi-home-v3-progress-grid">
+      <ProgressCard
+        label={current.lastTraining}
+        title={summary.latestTraining ? exerciseNames[summary.latestTraining.exercise] : '—'}
+        description={summary.latestTraining ? relativeDate(summary.latestTraining.completedAt, locale) : current.lastTrainingEmpty}
+        rows={buildTrainingRows(summary.latestTraining, locale)}
+        cta={current.resumeTraining}
+        icon={Play}
+        empty={!summary.latestTraining}
+        onClick={() => onNavigate('warmup')}
+      />
+      <ProgressCard
+        label={current.preset}
+        title={summary.activePreset ? (summary.activePreset.name || presetGame?.shortName || presetGame?.name || 'Preset') : '—'}
+        description={summary.activePreset ? `${presetGame?.name ?? summary.activePreset.gameId}${cm360 ? ` · ${cm360.toFixed(1)} cm/360` : ''}` : current.presetEmpty}
+        rows={buildPresetRows(summary.activePreset, locale)}
+        cta={current.viewPresets}
+        icon={Target}
+        empty={!summary.activePreset}
+        onClick={() => onNavigate('profile')}
+      />
+      <ProgressCard
+        label={current.routine}
+        title={summary.savedRoutine?.name ?? '—'}
+        description={summary.savedRoutine ? summary.savedRoutine.items.map((item) => exerciseNames[item.modeId]).slice(0, 3).join(' · ') : current.routineEmpty}
+        rows={buildRoutineRows(summary.savedRoutine, locale)}
+        cta={current.viewRoutine}
+        icon={History}
+        empty={!summary.savedRoutine}
+        onClick={() => onNavigate('routine')}
+      />
+    </div>
+  </section>
+}
+
+function HomeEcosystem({ onNavigate }: Props) {
+  const { locale } = useI18n()
+  const current = copy[locale]
+  const icons: Array<ComponentType<{ size?: number }>> = [BarChart3, Sparkles, Gamepad2, Zap]
+  return <section className="xensi-home-v3-section xensi-home-v3-ecosystem" id="ecossistema" aria-labelledby="home-ecosystem-title">
+    <div className="xensi-home-v3-ecosystem-copy">
+      <span>{current.ecosystemKicker}</span>
+      <h2 id="home-ecosystem-title">{current.ecosystemTitle}</h2>
+      <p>{current.ecosystemDescription}</p>
+      <button type="button" onClick={() => onNavigate('analysis')}>{current.ecosystemCta}<ArrowRight size={16} /></button>
+    </div>
+    <div className="xensi-home-v3-pillars">
+      {current.pillars.map(([title, description], index) => {
+        const Icon = icons[index]
+        return <article key={title} style={{ '--item-index': index } as CSSProperties}>
+          <Icon size={19} />
+          <h3>{title}</h3>
+          <p>{description}</p>
+        </article>
+      })}
+    </div>
+  </section>
+}
+
+function HomeFooter() {
+  const { locale } = useI18n()
+  const current = copy[locale]
+  return <footer className="xensi-home-v3-footer" id="home-footer">
+    <strong><span>X</span>ENSI</strong>
+    <p>{current.footerLine}</p>
+    <nav aria-label="XENSI footer">
+      {current.footerLinks.map((link) => <a key={link} href="#ecossistema">{link}</a>)}
+    </nav>
+  </footer>
+}
+
+export function Home({ onNavigate }: Props) {
   const [summary, setSummary] = useState<HomeSummary>(() => readHomeSummary(window.localStorage))
 
   useEffect(() => {
     const refresh = () => setSummary(readHomeSummary(window.localStorage))
     window.addEventListener('storage', refresh)
-    const id = window.setInterval(() => {
-      if (!document.hidden) setActiveTarget((target) => (target + 1) % 3)
-    }, 1900)
+    window.addEventListener('xensi-profile-updated', refresh)
     return () => {
-      window.clearInterval(id)
       window.removeEventListener('storage', refresh)
+      window.removeEventListener('xensi-profile-updated', refresh)
     }
   }, [])
 
-  const metrics = useMemo(() => {
-    const accuracy = average(summary.warmups.map((session) => session.accuracy)) ?? summary.latestCalibration?.accuracy ?? null
-    const tracking = average((['switch', 'tracking'] as WarmupExercise[]).flatMap((exercise) => {
-      const session = readWarmupSession(window.localStorage, exercise)
-      return session ? [session.accuracy] : []
-    }))
-    const reaction = average(summary.warmups.map((session) => session.reactionTimeMs).filter((value) => value > 0))
-    return { accuracy, tracking, reaction }
-  }, [summary])
+  const stableSummary = useMemo(() => summary, [summary])
 
-  const latest = summary.latestCalibration
-  const consistency = latest && Number.isFinite(latest.playerConsistencyScore) ? Math.round(latest.playerConsistencyScore) : null
-  const hasHistory = summary.warmups.length > 0 || Boolean(latest)
-  const sessionCount = summary.warmups.length + summary.calibrationCount
-  const controlMetrics = [
-    [copy.accuracy, metrics.accuracy === null ? '—' : `${Math.round(metrics.accuracy)}%`],
-    [copy.tracking, metrics.tracking === null ? '—' : `${Math.round(metrics.tracking)}%`],
-    [copy.reaction, metrics.reaction === null ? '—' : `${Math.round(metrics.reaction)}ms`],
-    [copy.sensitivity, latest ? `${latest.game.shortLabel} ${latest.sensitivity.toFixed(3)}` : '—'],
-  ]
-  const quickActions = [
-    { title: copy.actions[0][0], description: copy.actions[0][1], destination: 'warmup' as const, icon: Target },
-    { title: copy.actions[1][0], description: copy.actions[1][1], destination: 'calibration' as const, icon: Crosshair },
-    { title: copy.actions[2][0], description: copy.actions[2][1], destination: 'converter' as const, icon: ArrowLeftRight },
-  ]
-
-  const hitTarget = (target: number) => {
-    if (target !== activeTarget) return
-    setChain((current) => current + 1)
-    setActiveTarget((current) => (current + 1) % 3)
-  }
-
-  return <main className="xensi-home xensi-reference xensi-product xensi-home-compact">
-    <div className="xensi-reference-shell">
-      <section className="xensi-reference-hero" aria-labelledby="home-title">
-        <div className="xensi-reference-copy">
-          <h1 id="home-title"><span>{heroLineOne}</span><span>{heroLineTwo}</span></h1>
-          <p>{copy.subtitle}</p>
-          <button type="button" className="xensi-reference-cta" onClick={() => onNavigate('warmup')}>{copy.start} <ArrowRight size={20} /></button>
-        </div>
-        <ArenaPreview activeTarget={activeTarget} chain={chain} onHit={hitTarget} />
-      </section>
-
-      <section className={`xensi-home-control ${hasHistory ? '' : 'is-empty'}`} aria-labelledby="home-control-title">
-        <header><Activity size={15} /><h2 id="home-control-title">{copy.control}</h2></header>
-        {hasHistory ? <>
-          <div className="xensi-home-control-metrics">{controlMetrics.map(([label, value]) => <article key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>
-          <footer><p>{sessionCount} {copy.sessions}{consistency !== null ? <> · {consistency}% {copy.consistency}</> : ''}{latest ? <> · {copy.calibrated} {relativeCalibrationDate(latest.completedAt, locale)}</> : ''}</p><button type="button" onClick={() => onNavigate('analysis')}>{copy.analysis}<ArrowRight size={15} /></button></footer>
-        </> : <div className="xensi-home-empty"><span><strong>{copy.noSessions}</strong>{copy.noSessionsHint}</span><button type="button" onClick={() => onNavigate('warmup')}>{copy.start}<ArrowRight size={15} /></button></div>}
-      </section>
-
-      <section className="xensi-home-section" aria-labelledby="home-quick-title">
-        <div className="xensi-home-section-heading"><span><h2 id="home-quick-title">{copy.quick}</h2><p>{copy.quickHint}</p></span></div>
-        <div className="xensi-home-quick-grid">{quickActions.map((item) => { const Icon = item.icon; return <button key={item.title} type="button" onClick={() => onNavigate(item.destination)}><Icon size={20} /><span><strong>{item.title}</strong><small>{item.description}</small></span><ArrowRight size={16} /></button> })}</div>
-      </section>
-
-      <section className="xensi-home-section" aria-labelledby="home-setup-title">
-        <div className="xensi-home-section-heading"><span><h2 id="home-setup-title">{copy.setup}</h2><p>{copy.setupHint}</p></span></div>
-        <div className="xensi-home-setup-grid">
-          <article><Gauge size={23} /><span><h3>{copy.polling}</h3><p>{copy.pollingHint}</p></span><button type="button" onClick={() => onNavigate('polling')}>{copy.pollingAction}<ArrowRight size={15} /></button></article>
-          <article><Mouse size={23} /><span><h3>{copy.input}</h3><p>{copy.inputHint}</p></span><button type="button" onClick={() => onNavigate('buttons')}>{copy.inputAction}<ArrowRight size={15} /></button></article>
-        </div>
-      </section>
+  return <main className="xensi-home xensi-reference xensi-home-v3">
+    <div className="xensi-home-v3-shell">
+      <HomeHero onNavigate={onNavigate} />
+      <HomePathways onNavigate={onNavigate} />
+      <HomeProgress summary={stableSummary} onNavigate={onNavigate} />
+      <HomeEcosystem onNavigate={onNavigate} />
+      <HomeFooter />
     </div>
   </main>
 }

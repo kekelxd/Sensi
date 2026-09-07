@@ -7,7 +7,7 @@ test.describe('Training catalog categories', () => {
   })
 
   test('filters registry modes and cleans up previews without changing card size', async ({ page }, info) => {
-    await page.locator('.xensi-reference-hero').getByRole('button', { name: 'Começar treino', exact: true }).click()
+    await page.locator('.xensi-reference-hero').getByRole('button', { name: 'Começar agora', exact: true }).click()
     await expect(page.getByText('Aquecimento FPS', { exact: true })).toHaveCount(0)
     const filters = page.getByRole('group', { name: 'Filtrar por habilidade' })
     const cards = page.locator('.warmup-exercises > button')
@@ -59,10 +59,10 @@ test.describe('Training catalog categories', () => {
 
   test('supports two tablet columns and translated filters', async ({ page }) => {
     await page.setViewportSize({ width: 820, height: 1180 })
-    await page.locator('.xensi-reference-hero').getByRole('button', { name: 'Começar treino', exact: true }).click()
+    await page.locator('.xensi-reference-hero').getByRole('button', { name: 'Começar agora', exact: true }).click()
     expect(await page.locator('.warmup-exercises').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(2)
     await page.screenshot({ path: `test-results/catalog-tablet-${test.info().project.name}.png` })
-    for (const [locale, start, category] of [['en', 'Start training', 'Precision'], ['es', 'Empezar entrenamiento', 'Precisión']]) {
+    for (const [locale, start, category] of [['en', 'Start now', 'Precision'], ['es', 'Empezar ahora', 'Precisión']]) {
       await page.evaluate(value => localStorage.setItem('sensi-locale', value), locale)
       await page.reload()
       await page.locator('.xensi-reference-hero').getByRole('button', { name: start, exact: true }).click()
