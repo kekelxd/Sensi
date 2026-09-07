@@ -8243,6 +8243,9 @@ body:has(.home-reboot) {
   gap: 22px;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   min-height: 280px;
   padding: 28px;
   border-radius: 9px;
@@ -8251,26 +8254,58 @@ body:has(.home-reboot) {
     rgba(8, 17, 21, .80);
 }
 .xensi-home-v3 .xensi-home-v3-progress-card header {
-  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  margin-bottom: 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
-.xensi-home-v3 .xensi-home-v3-progress-card header > span {
+.xensi-home-v3 .xensi-home-v3-progress-card header > span:not(.xensi-home-v3-icon) {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #f0f4f4;
   font-family: Manrope, sans-serif;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0;
+  line-height: 1.05;
+  max-width: 132px;
+  white-space: normal;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card h3 {
+  min-height: 29px;
+  margin: 0;
+  overflow: hidden;
+  font-family: Manrope, sans-serif;
   font-size: 19px;
+  font-weight: 850;
+  line-height: 1.18;
+  letter-spacing: -.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card p {
   min-height: 42px;
+  margin-top: 14px;
   font-size: 12px;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
   margin-top: 22px;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card dl div {
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -8281,12 +8316,13 @@ body:has(.home-reboot) {
   text-transform: none;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card dd {
+  overflow-wrap: anywhere;
   font-size: 23px;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card button {
   width: 100%;
   min-height: 44px;
-  margin-top: 26px;
+  margin-top: auto;
   border: 1px solid rgba(185,207,214,.30);
   border-radius: 7px;
   color: #f0f5f5;
