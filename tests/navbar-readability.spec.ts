@@ -82,4 +82,38 @@ test.describe('Readable XENSI navigation', () => {
       await expect(items.nth(1)).toHaveAccessibleName(names[1])
     }
   })
+
+  test('translates the Calibrate documentation item', async ({ page }) => {
+    for (const [locale, trigger, documentationName] of [
+      ['pt', 'CALIBRAR', 'Como funciona Entenda o método de calibração.'],
+      ['en', 'CALIBRATE', 'How it works Understand the calibration method.'],
+      ['es', 'CALIBRAR', 'Cómo funciona Entiende el método de calibración.'],
+    ] as const) {
+      await page.evaluate(value => localStorage.setItem('sensi-locale', value), locale)
+      await page.reload()
+      await page.getByRole('button', { name: trigger, exact: true }).click()
+      await expect(page.getByRole('menu', { name: trigger, exact: true }).getByRole('menuitem').nth(2)).toHaveAccessibleName(documentationName)
+    }
+  })
+
+  test('keeps the Calibrate dropdown hierarchy clear', async ({ page }, info) => {
+    await page.getByRole('button', { name: 'CALIBRAR', exact: true }).click()
+    const menu = page.getByRole('menu', { name: 'CALIBRAR' })
+    await expect(menu).toBeVisible()
+    const items = menu.getByRole('menuitem')
+    await expect(items).toHaveCount(3)
+    await expect(items.nth(0)).toHaveAccessibleName('Calibrar sensibilidade Encontre uma região de sensibilidade para testar.')
+    await expect(items.nth(1)).toHaveAccessibleName('Histórico Consulte calibrações anteriores.')
+    await expect(items.nth(2)).toHaveAccessibleName('Como funciona Entenda o método de calibração.')
+    await expect(menu.locator('.xensi-nav-dropdown-divider')).toHaveCount(1)
+
+    await items.nth(2).click()
+    await expect(page.getByRole('heading', { name: 'Como o XENSI mede' })).toBeVisible()
+    await page.getByRole('button', { name: 'CALIBRAR', exact: true }).click()
+    const documentationItem = page.getByRole('menuitem', { name: /Como funciona/ })
+    await expect(documentationItem).toHaveAttribute('aria-current', 'page')
+    await expect(documentationItem).toHaveCSS('box-shadow', 'none')
+    await expect(documentationItem).not.toHaveCSS('background-color', 'rgb(255, 70, 87)')
+    await page.screenshot({ path: `test-results/calibrate-dropdown-${info.project.name}.png`, animations: 'disabled' })
+  })
 })

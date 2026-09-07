@@ -81,7 +81,7 @@ test.describe('Training catalog categories', () => {
     await expect(page.locator('.analysis-metric-strip')).toBeVisible()
     await page.screenshot({ path: `test-results/analysis-heading-${info.project.name}.png` })
     await page.getByRole('navigation', { name: 'XENSI' }).getByRole('button', { name: 'CALIBRAR', exact: true }).click()
-    await page.getByRole('button', { name: 'Metodologia', exact: true }).click()
+    await page.getByRole('menuitem', { name: /Como funciona/ }).click()
     await expect(page.getByRole('heading', { name: 'Como o XENSI mede' })).toBeVisible()
     await expect(page.locator('.analysis-method-grid > article')).toHaveCount(3)
     await expect(page.getByText('LEITURA DE DESEMPENHO', { exact: true })).toHaveCount(0)

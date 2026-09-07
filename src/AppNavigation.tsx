@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { BarChart3, ChevronDown, Crosshair, Gamepad2, Gauge, Languages, MonitorUp, Mouse, Settings2, SlidersHorizontal, UserRound } from 'lucide-react'
+import { BarChart3, ChevronDown, Crosshair, Gamepad2, Gauge, Info, Languages, MonitorUp, Mouse, Settings2, SlidersHorizontal, UserRound } from 'lucide-react'
 import type { Locale } from './i18n'
 import type { WarmupExercise } from './warmupConfig'
 import { AvatarArtwork } from './AvatarArtwork'
@@ -11,6 +11,7 @@ export type AnalysisSection = 'overview' | 'calibration-history' | 'methodology'
 
 type Props = {
   view: NavigationView
+  analysisSection: AnalysisSection
   locale: Locale
   disabled: boolean
   onLocaleChange: (locale: Locale) => void
@@ -20,9 +21,9 @@ type Props = {
 }
 
 const labels = {
-  pt: { home: 'INÍCIO', train: 'TREINAR', calibrate: 'CALIBRAR', convert: 'CONVERTER', diagnostic: 'DIAGNÓSTICO', analysis: 'ANÁLISE', minigames: 'Minigames', minigamesDescription: 'Exercícios individuais', routinesDescription: 'Sequências de treino', routines: 'Rotinas', calibration: 'Calibrar sensibilidade', history: 'Histórico', method: 'Metodologia', polling: 'Teste de Polling Rate', pollingDescription: 'Meça a frequência observada do mouse.', input: 'Diagnóstico de Entrada', inputDescription: 'Analise estabilidade e comportamento do input.', refresh: 'Refresh Rate', refreshDescription: 'Meça a frequência de atualização observada no navegador.', drift: 'Drift do Controle', driftDescription: 'Analise o desvio dos analógicos em repouso.', profile: 'Meu perfil', preferences: 'Preferências', settings: 'Configurações', logout: 'Sair', unavailable: 'Disponível quando o login for ativado' },
-  en: { home: 'HOME', train: 'TRAIN', calibrate: 'CALIBRATE', convert: 'CONVERT', diagnostic: 'DIAGNOSTICS', analysis: 'ANALYSIS', minigames: 'Minigames', minigamesDescription: 'Individual exercises', routinesDescription: 'Training sequences', routines: 'Routines', calibration: 'Calibrate sensitivity', history: 'History', method: 'Methodology', polling: 'Polling Rate Test', pollingDescription: 'Measure the mouse rate observed by the browser.', input: 'Input Diagnostics', inputDescription: 'Analyze input stability and behavior.', refresh: 'Refresh Rate', refreshDescription: 'Estimate the refresh rate observed by the browser.', drift: 'Controller Drift', driftDescription: 'Measure resting analog stick offset.', profile: 'My profile', preferences: 'Preferences', settings: 'Settings', logout: 'Sign out', unavailable: 'Available when sign-in is enabled' },
-  es: { home: 'INICIO', train: 'ENTRENAR', calibrate: 'CALIBRAR', convert: 'CONVERTIR', diagnostic: 'DIAGNÓSTICO', analysis: 'ANÁLISIS', minigames: 'Minijuegos', minigamesDescription: 'Ejercicios individuales', routinesDescription: 'Secuencias de entrenamiento', routines: 'Rutinas', calibration: 'Calibrar sensibilidad', history: 'Historial', method: 'Metodología', polling: 'Prueba de Polling Rate', pollingDescription: 'Mide la frecuencia del ratón observada por el navegador.', input: 'Diagnóstico de Entrada', inputDescription: 'Analiza la estabilidad y el comportamiento de la entrada.', refresh: 'Refresh Rate', refreshDescription: 'Estima la actualización observada por el navegador.', drift: 'Drift del Control', driftDescription: 'Mide el desvío de los sticks en reposo.', profile: 'Mi perfil', preferences: 'Preferencias', settings: 'Configuración', logout: 'Salir', unavailable: 'Disponible cuando se active el acceso' },
+  pt: { home: 'INÍCIO', train: 'TREINAR', calibrate: 'CALIBRAR', convert: 'CONVERTER', diagnostic: 'DIAGNÓSTICO', analysis: 'ANÁLISE', minigames: 'Minigames', minigamesDescription: 'Exercícios individuais', routinesDescription: 'Sequências de treino', routines: 'Rotinas', calibration: 'Calibrar sensibilidade', calibrationDescription: 'Encontre uma região de sensibilidade para testar.', history: 'Histórico', historyDescription: 'Consulte calibrações anteriores.', method: 'Como funciona', methodDescription: 'Entenda o método de calibração.', polling: 'Teste de Polling Rate', pollingDescription: 'Meça a frequência observada do mouse.', input: 'Diagnóstico de Entrada', inputDescription: 'Analise estabilidade e comportamento do input.', refresh: 'Refresh Rate', refreshDescription: 'Meça a frequência de atualização observada no navegador.', drift: 'Drift do Controle', driftDescription: 'Analise o desvio dos analógicos em repouso.', profile: 'Meu perfil', preferences: 'Preferências', settings: 'Configurações', logout: 'Sair', unavailable: 'Disponível quando o login for ativado' },
+  en: { home: 'HOME', train: 'TRAIN', calibrate: 'CALIBRATE', convert: 'CONVERT', diagnostic: 'DIAGNOSTICS', analysis: 'ANALYSIS', minigames: 'Minigames', minigamesDescription: 'Individual exercises', routinesDescription: 'Training sequences', routines: 'Routines', calibration: 'Calibrate sensitivity', calibrationDescription: 'Find a sensitivity range to test.', history: 'History', historyDescription: 'Review previous calibrations.', method: 'How it works', methodDescription: 'Understand the calibration method.', polling: 'Polling Rate Test', pollingDescription: 'Measure the mouse rate observed by the browser.', input: 'Input Diagnostics', inputDescription: 'Analyze input stability and behavior.', refresh: 'Refresh Rate', refreshDescription: 'Estimate the refresh rate observed by the browser.', drift: 'Controller Drift', driftDescription: 'Measure resting analog stick offset.', profile: 'My profile', preferences: 'Preferences', settings: 'Settings', logout: 'Sign out', unavailable: 'Available when sign-in is enabled' },
+  es: { home: 'INICIO', train: 'ENTRENAR', calibrate: 'CALIBRAR', convert: 'CONVERTIR', diagnostic: 'DIAGNÓSTICO', analysis: 'ANÁLISIS', minigames: 'Minijuegos', minigamesDescription: 'Ejercicios individuales', routinesDescription: 'Secuencias de entrenamiento', routines: 'Rutinas', calibration: 'Calibrar sensibilidad', calibrationDescription: 'Encuentra una región de sensibilidad para probar.', history: 'Historial', historyDescription: 'Consulta calibraciones anteriores.', method: 'Cómo funciona', methodDescription: 'Entiende el método de calibración.', polling: 'Prueba de Polling Rate', pollingDescription: 'Mide la frecuencia del ratón observada por el navegador.', input: 'Diagnóstico de Entrada', inputDescription: 'Analiza la estabilidad y el comportamiento de la entrada.', refresh: 'Refresh Rate', refreshDescription: 'Estima la actualización observada por el navegador.', drift: 'Drift del Control', driftDescription: 'Mide el desvío de los sticks en reposo.', profile: 'Mi perfil', preferences: 'Preferencias', settings: 'Configuración', logout: 'Salir', unavailable: 'Disponible cuando se active el acceso' },
 } as const
 
 type OpenMenu = 'train' | 'calibrate' | 'diagnostic' | 'profile' | null
@@ -37,7 +38,7 @@ function readNavProfile() {
   }
 }
 
-export function AppNavigation({ view, locale, disabled, onLocaleChange, onNavigate, onAnalysisSection }: Props) {
+export function AppNavigation({ view, analysisSection, locale, disabled, onLocaleChange, onNavigate, onAnalysisSection }: Props) {
   const text = labels[locale]
   const shellRef = useRef<HTMLDivElement>(null)
   const menuTriggerRefs = useRef<Partial<Record<MenuName, HTMLButtonElement | null>>>({})
@@ -128,12 +129,13 @@ export function AppNavigation({ view, locale, disabled, onLocaleChange, onNaviga
         </div>}
       </div>
       <div className="xensi-nav-menu-group">
-        <button ref={(node) => { menuTriggerRefs.current.calibrate = node }} type="button" className={view === 'calibration' ? 'active' : ''} onClick={() => toggle('calibrate')} disabled={disabled} aria-haspopup="menu" aria-expanded={openMenu === 'calibrate'}>{text.calibrate}<ChevronDown size={13} /></button>
-        {openMenu === 'calibrate' && <div className="xensi-nav-dropdown" data-menu="calibrate">
+        <button ref={(node) => { menuTriggerRefs.current.calibrate = node }} type="button" className={view === 'calibration' ? 'active' : ''} onClick={() => toggle('calibrate')} onKeyDown={(event) => openFromKeyboard('calibrate', event)} disabled={disabled} aria-haspopup="menu" aria-expanded={openMenu === 'calibrate'}>{text.calibrate}<ChevronDown size={13} /></button>
+        {openMenu === 'calibrate' && <div className="xensi-nav-dropdown xensi-calibrate-dropdown" data-menu="calibrate" role="menu" aria-label={text.calibrate} onKeyDown={navigateMenuWithKeyboard}>
           <span className="xensi-nav-dropdown-label">{text.calibrate}</span>
-          <button type="button" onClick={() => navigate('calibration')}><Crosshair size={15} /><span><b>{text.calibration}</b></span></button>
-          <button type="button" onClick={() => selectAnalysis('calibration-history')}><BarChart3 size={15} /><span><b>{text.history}</b></span></button>
-          <button type="button" onClick={() => selectAnalysis('methodology')}><SlidersHorizontal size={15} /><span><b>{text.method}</b></span></button>
+          <button type="button" role="menuitem" className="is-primary" onClick={() => navigate('calibration')}><Crosshair size={15} /><span><b>{text.calibration}</b><small>{text.calibrationDescription}</small></span></button>
+          <button type="button" role="menuitem" className={view === 'analysis' && analysisSection === 'calibration-history' ? 'active is-secondary' : 'is-secondary'} aria-current={view === 'analysis' && analysisSection === 'calibration-history' ? 'page' : undefined} onClick={() => selectAnalysis('calibration-history')}><BarChart3 size={15} /><span><b>{text.history}</b><small>{text.historyDescription}</small></span></button>
+          <i className="xensi-nav-dropdown-divider" aria-hidden="true" />
+          <button type="button" role="menuitem" className={view === 'analysis' && analysisSection === 'methodology' ? 'active is-documentation' : 'is-documentation'} aria-current={view === 'analysis' && analysisSection === 'methodology' ? 'page' : undefined} onClick={() => selectAnalysis('methodology')}><Info size={15} /><span><b>{text.method}</b><small>{text.methodDescription}</small></span></button>
         </div>}
       </div>
       <button type="button" className={view === 'converter' ? 'active' : ''} onClick={() => navigate('converter')} disabled={disabled}>{text.convert}</button>

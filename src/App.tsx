@@ -408,6 +408,7 @@ function App() {
       <header className="app-header">
         <AppNavigation
           view={view}
+          analysisSection={analysisSection}
           locale={locale}
           disabled={active}
           onLocaleChange={setLocale}

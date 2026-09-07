@@ -7253,6 +7253,23 @@ body:has(.home-reboot) {
 @keyframes xensiMenuIn { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: translateY(0); } }
 .xensi-diagnostic-dropdown { left: 50%; min-width: 330px; transform: translateX(-50%); }
 .xensi-training-dropdown { width: 350px; }
+.xensi-calibrate-dropdown { min-width: 318px; }
+.xensi-calibrate-dropdown > button.is-primary { min-height: 66px; color: #f4f0e8; background: linear-gradient(90deg, rgba(255,70,87,.075), transparent 70%); }
+.xensi-calibrate-dropdown > button.is-primary b { color: #fffaf3; font-weight: 700; }
+.xensi-calibrate-dropdown > button.is-secondary { min-height: 62px; }
+.xensi-calibrate-dropdown > .xensi-nav-dropdown-divider { margin: 8px 9px 7px; background: linear-gradient(90deg, rgba(255,70,87,.34), rgba(255,255,255,.08) 38%, transparent); }
+.xensi-calibrate-dropdown > button.is-documentation { min-height: 52px; position: relative; color: #9ca5a8; background: transparent; }
+.xensi-calibrate-dropdown > button.is-documentation::before { content: ''; width: 3px; height: 3px; border-radius: 999px; background: #ff4657; box-shadow: 0 0 10px rgba(255,70,87,.58); opacity: .72; }
+.xensi-calibrate-dropdown > button.is-documentation svg { color: #ff7480; opacity: .78; }
+.xensi-calibrate-dropdown > button.is-documentation b { color: #d8dad3; font-weight: 600; }
+.xensi-calibrate-dropdown > button.is-documentation small { color: #7f898d; }
+.xensi-calibrate-dropdown > button.is-documentation:hover,
+.xensi-calibrate-dropdown > button.is-documentation:focus-visible,
+.xensi-calibrate-dropdown > button.is-documentation.active { color: #f0f3ee; background: rgba(255,70,87,.045); box-shadow: none; }
+.xensi-calibrate-dropdown > button.is-documentation.active { border-left: 0; }
+.xensi-calibrate-dropdown > button.is-documentation.active::before { width: 5px; height: 5px; opacity: 1; }
+.xensi-calibrate-dropdown > button.is-documentation.active b { color: #fffaf3; }
+.xensi-calibrate-dropdown > button.is-documentation.active small { color: #8e989b; }
 .xensi-nav-dropdown > button > span { min-width: 0; }
 .xensi-navigation button:focus-visible, .xensi-profile-dropdown select:focus-visible { outline: 2px solid var(--mint); outline-offset: -2px; }
 .personal-best-feedback { display: grid; gap: 10px; margin: 18px 0 20px; padding: 16px 18px; border: 1px solid rgba(255,89,102,.58); border-radius: 10px; background: linear-gradient(115deg, rgba(255,89,102,.11), rgba(15,20,25,.94) 58%); box-shadow: 0 0 26px rgba(255,70,87,.1); animation: personalBestIn .24s ease both; }
