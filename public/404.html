@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090b10" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/Sensi/branding/xensi-x.png" />
+    <title>X</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var base = '/Sensi/';
+        var path = window.location.pathname;
+        var route = path.indexOf(base) === 0 ? path.slice(base.length) : path.replace(/^\/+/, '');
+        var query = route ? '?xensi-route=' + encodeURIComponent(route.replace(/\/+$/, '')) : '';
+        window.location.replace(base + query + window.location.hash);
+      })();
+    </script>
+  </body>
+</html>

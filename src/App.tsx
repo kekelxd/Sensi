@@ -34,11 +34,20 @@ type CalibrationSetupStep = 1 | 2 | 3
 const AUTH_ROUTES: AuthMode[] = ['login', 'register', 'forgot-password']
 const APP_BASE_PATH = '/Sensi/'
 
+const normalizeAuthRoute = (route: string | null): AuthMode | null => {
+  const cleanRoute = route?.replace(/^\/+/, '').replace(/\/+$/, '') ?? ''
+  return AUTH_ROUTES.includes(cleanRoute as AuthMode) ? cleanRoute as AuthMode : null
+}
+
 const getAuthRouteFromLocation = (): AuthMode | null => {
+  const redirectedRoute = normalizeAuthRoute(new URLSearchParams(window.location.search).get('xensi-route'))
+  if (redirectedRoute) {
+    window.history.replaceState({}, '', authRoutePath(redirectedRoute))
+    return redirectedRoute
+  }
   const pathname = window.location.pathname
   const relative = pathname.startsWith(APP_BASE_PATH) ? pathname.slice(APP_BASE_PATH.length) : pathname.replace(/^\//, '')
-  const route = relative.replace(/\/+$/, '')
-  return AUTH_ROUTES.includes(route as AuthMode) ? route as AuthMode : null
+  return normalizeAuthRoute(relative)
 }
 
 const authRoutePath = (route: AuthMode) => `${APP_BASE_PATH}${route}`

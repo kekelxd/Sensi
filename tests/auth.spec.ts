@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('XENSI auth routes', () => {
+  test('restores login from the GitHub Pages SPA fallback query', async ({ page }) => {
+    await page.goto('./?xensi-route=login')
+
+    await expect(page).toHaveURL(/\/Sensi\/login$/)
+    await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
+  })
+
   test('renders login, handles unavailable auth, and keeps the desktop viewport contained', async ({ page }, testInfo) => {
     await page.goto('./login')
 
