@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useState } from 'react'
-import { ArrowRight, BarChart3, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw, ShieldCheck } from 'lucide-react'
+import { ArrowRight, BarChart3, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw } from 'lucide-react'
 import { XensiLogo } from './AppNavigation'
 import { AuthMode, AuthStatus, registerWithEmail, requestPasswordReset, signInWithEmail } from './authService'
 
@@ -126,7 +126,6 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
         </button>
 
         {mode === 'login' ? <p className="xensi-auth-switch">Ainda não tem uma conta? <button type="button" onClick={() => onNavigate('register')}>Criar conta</button></p> : <p className="xensi-auth-switch">Já tem uma conta? <button type="button" onClick={() => onNavigate('login')}>Entrar</button></p>}
-        <small className="xensi-auth-note"><ShieldCheck size={13} /> Seus dados de treino continuam no ambiente do XENSI.</small>
       </form>
     </section>
   </main>
