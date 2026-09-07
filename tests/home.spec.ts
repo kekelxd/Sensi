@@ -17,7 +17,7 @@ test.describe('XENSI home v3', () => {
     await expect(page.getByText('Dois focos. Uma evolução.')).toBeVisible()
     await expect(page.getByText('Treino e Performance')).toBeVisible()
     await expect(page.getByText('Diagnóstico do Setup')).toBeVisible()
-    await expect(page.getByText('Seu painel rápido')).toBeVisible()
+    await expect(page.getByText('Continue de onde parou.')).toBeVisible()
     await expect(page.getByText('Mais que ferramentas. Um ecossistema.')).toBeVisible()
     await expect(page.getByText('Feito por jogadores, para jogadores.')).toBeVisible()
 
@@ -90,18 +90,16 @@ test.describe('XENSI home v3', () => {
     await expect(progress.getByText('5 min')).toBeVisible()
   })
 
-  test('keeps the demo arena animated and free from real trainer overlays', async ({ page }) => {
-    const demo = page.getByTestId('home-training-demo')
-    await expect(demo).toBeVisible()
-    await expect(demo.getByText('ARENA_01')).toBeVisible()
-    await expect(demo.getByText('DEMONSTRAÇÃO ATIVA')).toBeVisible()
-    await expect(demo.getByText('00:27')).toBeVisible()
-    await expect(demo.getByText('SEQUÊNCIA DEMO')).toBeVisible()
-    await expect(demo.locator('.xensi-reference-target')).toHaveCount(3)
-    await expect(demo.locator('.xensi-reference-target.is-active')).toHaveCount(1)
-    await expect(demo.locator('.xensi-reference-crosshair')).toHaveCount(0)
-    await expect(demo.locator('.xensi-reference-trace')).toHaveCount(0)
-    await expect(demo.locator('.xensi-reference-target.is-active')).toHaveCSS('animation-name', 'xensiReferenceTarget')
+  test('uses the supplied photographic hero without the old demo arena', async ({ page }) => {
+    const hero = page.locator('.xensi-home-v3-hero')
+    await expect(hero).toBeVisible()
+    await expect(hero).toHaveCSS('background-image', /xensi-home-hero-bg/)
+    await expect(hero.getByText('DISCIPLINA', { exact: true })).toBeVisible()
+    await expect(hero.getByText('DADOS', { exact: true })).toBeVisible()
+    await expect(hero.getByText('EVOLUÇÃO', { exact: true })).toBeVisible()
+    await expect(page.getByText('MAIS CONTROLE. MAIS RESULTADOS.')).toBeVisible()
+    await expect(page.getByTestId('home-training-demo')).toHaveCount(0)
+    await expect(page.locator('.xensi-reference-target')).toHaveCount(0)
   })
 
   test('opens home destinations and preserves the navigation background', async ({ page }) => {

@@ -6,9 +6,12 @@ import {
   Crosshair,
   Gamepad2,
   History,
+  Monitor,
   Mouse,
   Play,
   Radar,
+  RefreshCw,
+  SlidersHorizontal,
   Sparkles,
   Target,
   Zap,
@@ -61,16 +64,19 @@ const copy = {
     arenaChain: 'SEQUÊNCIA DEMO',
     pathKicker: 'ESCOLHA SEU CAMINHO',
     pathTitle: 'Dois focos. Uma evolução.',
+    pathAside: 'Treine sua mira ou valide seu setup. O XENSI te dá o controle em todas as frentes.',
     trainingTitle: 'Treino e Performance',
     trainingDescription: 'Construa consistência com sessões curtas, calibre sua sensibilidade e acompanhe o que está melhorando.',
     trainingItems: ['Treinar', 'Calibrar', 'Converter', 'Análise'],
+    trainingItemDescriptions: ['Minigames focados', 'Ajuste sua sensibilidade', 'Conversões precisas', 'Acompanhe seu progresso'],
     trainingCta: 'Explorar treinos',
     setupTitle: 'Diagnóstico do Setup',
     setupDescription: 'Cheque mouse, teclado, tela e controle antes de entrar em partida. Menos dúvida, mais confiança.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift do Controle'],
+    setupItemDescriptions: ['Teste em tempo real', 'Analise seu controle', 'Verifique seu monitor', 'Identifique inconsistências'],
     setupCta: 'Explorar ferramentas',
-    progressKicker: 'CONTINUE DE ONDE PAROU',
-    progressTitle: 'Seu painel rápido',
+    progressKicker: 'SEU PROGRESSO',
+    progressTitle: 'Continue de onde parou.',
     lastTraining: 'ÚLTIMO TREINO',
     lastTrainingEmpty: 'Complete um treino para continuar daqui.',
     preset: 'PRESET ATIVO',
@@ -90,7 +96,7 @@ const copy = {
     sens: 'Sensi',
     edpi: 'eDPI',
     exercises: 'exercícios',
-    ecosystemKicker: 'ECOSSISTEMA XENSI',
+    ecosystemKicker: 'FEITO PARA SUA EVOLUÇÃO',
     ecosystemTitle: 'Mais que ferramentas. Um ecossistema.',
     ecosystemDescription: 'O XENSI conecta treino, calibração, conversão, análise e diagnóstico para transformar dados soltos em decisões melhores antes de jogar.',
     ecosystemCta: 'Conheça o XENSI',
@@ -116,16 +122,19 @@ const copy = {
     arenaChain: 'DEMO CHAIN',
     pathKicker: 'CHOOSE YOUR PATH',
     pathTitle: 'Two focuses. One evolution.',
+    pathAside: 'Train your aim or validate your setup. XENSI gives you control across every front.',
     trainingTitle: 'Training and Performance',
     trainingDescription: 'Build consistency with short sessions, calibrate sensitivity, and track what is improving.',
     trainingItems: ['Train', 'Calibrate', 'Convert', 'Analysis'],
+    trainingItemDescriptions: ['Focused minigames', 'Tune your sensitivity', 'Precise conversions', 'Track your progress'],
     trainingCta: 'Explore training',
     setupTitle: 'Setup Diagnostics',
     setupDescription: 'Check mouse, keyboard, display, and controller before queueing. Less doubt, more confidence.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Controller Drift'],
+    setupItemDescriptions: ['Real-time test', 'Analyze your control', 'Check your display', 'Identify inconsistencies'],
     setupCta: 'Explore tools',
-    progressKicker: 'CONTINUE WHERE YOU LEFT OFF',
-    progressTitle: 'Your quick panel',
+    progressKicker: 'YOUR PROGRESS',
+    progressTitle: 'Continue where you left off.',
     lastTraining: 'LAST TRAINING',
     lastTrainingEmpty: 'Finish a training session to continue from here.',
     preset: 'ACTIVE PRESET',
@@ -145,7 +154,7 @@ const copy = {
     sens: 'Sens',
     edpi: 'eDPI',
     exercises: 'exercises',
-    ecosystemKicker: 'XENSI ECOSYSTEM',
+    ecosystemKicker: 'MADE FOR YOUR PROGRESS',
     ecosystemTitle: 'More than tools. An ecosystem.',
     ecosystemDescription: 'XENSI connects training, calibration, conversion, analysis, and diagnostics to turn scattered data into better decisions before playing.',
     ecosystemCta: 'Meet XENSI',
@@ -171,16 +180,19 @@ const copy = {
     arenaChain: 'SECUENCIA DEMO',
     pathKicker: 'ELIGE TU CAMINO',
     pathTitle: 'Dos focos. Una evolución.',
+    pathAside: 'Entrena tu mira o valida tu setup. XENSI te da control en todos los frentes.',
     trainingTitle: 'Entrenamiento y Rendimiento',
     trainingDescription: 'Construye consistencia con sesiones cortas, calibra sensibilidad y revisa qué está mejorando.',
     trainingItems: ['Entrenar', 'Calibrar', 'Convertir', 'Análisis'],
+    trainingItemDescriptions: ['Minijuegos enfocados', 'Ajusta tu sensibilidad', 'Conversiones precisas', 'Sigue tu progreso'],
     trainingCta: 'Explorar entrenos',
     setupTitle: 'Diagnóstico del Setup',
     setupDescription: 'Revisa mouse, teclado, pantalla y control antes de jugar. Menos duda, más confianza.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift del Control'],
+    setupItemDescriptions: ['Prueba en tiempo real', 'Analiza tu control', 'Verifica tu monitor', 'Identifica inconsistencias'],
     setupCta: 'Explorar herramientas',
-    progressKicker: 'CONTINÚA DONDE PARASTE',
-    progressTitle: 'Tu panel rápido',
+    progressKicker: 'TU PROGRESO',
+    progressTitle: 'Continúa donde paraste.',
     lastTraining: 'ÚLTIMO ENTRENO',
     lastTrainingEmpty: 'Completa un entrenamiento para continuar desde aquí.',
     preset: 'PRESET ACTIVO',
@@ -200,7 +212,7 @@ const copy = {
     sens: 'Sensi',
     edpi: 'eDPI',
     exercises: 'ejercicios',
-    ecosystemKicker: 'ECOSISTEMA XENSI',
+    ecosystemKicker: 'HECHO PARA TU EVOLUCIÓN',
     ecosystemTitle: 'Más que herramientas. Un ecosistema.',
     ecosystemDescription: 'XENSI conecta entrenamiento, calibración, conversión, análisis y diagnóstico para convertir datos sueltos en mejores decisiones antes de jugar.',
     ecosystemCta: 'Conoce XENSI',
@@ -269,61 +281,9 @@ function IconBadge({ icon: Icon }: { icon: LucideIcon }) {
   return <span className="xensi-home-v3-icon"><Icon size={20} /></span>
 }
 
-function DemoArena({ activeTarget, chain, onHit }: { activeTarget: number; chain: number; onHit: (target: number) => void }) {
-  const { locale, t } = useI18n()
-  const current = copy[locale]
-  const targets = [
-    { id: 0, point: 'top', label: t('home.demoTargetOne') },
-    { id: 1, point: 'right', label: t('home.demoTargetThree') },
-    { id: 2, point: 'left', label: t('home.demoTargetTwo') },
-  ]
-
-  return <section className="xensi-reference-arena xensi-home-v3-arena" aria-label={t('home.demoGridshot')} data-testid="home-training-demo">
-    <div className="xensi-home-v3-arena-bar">
-      <span><b>ARENA_01</b> · <em>{current.arenaStatus}</em></span>
-      <span>00:27</span>
-    </div>
-    <div className="xensi-home-v3-room" aria-hidden="true"><i /><i /><i /></div>
-    {targets.map((target) => (
-      <button
-        key={target.id}
-        type="button"
-        className={`xensi-reference-target xensi-home-v3-target xensi-home-v3-target-${target.point} ${target.id === activeTarget ? 'is-active' : ''}`}
-        onClick={() => onHit(target.id)}
-        aria-label={target.label}
-      >
-        <i />
-      </button>
-    ))}
-    <div className="xensi-home-v3-arena-callout">
-      <span>{current.arenaCallout}</span>
-      <strong>{current.arenaChain} +{chain}</strong>
-    </div>
-    <div className="xensi-home-v3-arena-mark" aria-hidden="true">XENSI</div>
-  </section>
-}
-
 function HomeHero({ onNavigate }: Props) {
   const { locale } = useI18n()
   const current = copy[locale]
-  const [activeTarget, setActiveTarget] = useState(0)
-  const [chain, setChain] = useState(8)
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      if (!document.hidden) {
-        setActiveTarget((target) => (target + 1) % 3)
-        setChain((value) => value + 1)
-      }
-    }, 1700)
-    return () => window.clearInterval(id)
-  }, [])
-
-  const hitTarget = (target: number) => {
-    if (target !== activeTarget) return
-    setChain((value) => value + 1)
-    setActiveTarget((currentTarget) => (currentTarget + 1) % 3)
-  }
 
   return <section className="xensi-reference-hero xensi-home-v3-hero" aria-labelledby="home-title">
     <div className="xensi-reference-copy xensi-home-v3-hero-copy">
@@ -338,7 +298,16 @@ function HomeHero({ onNavigate }: Props) {
         {current.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={14} />{benefit}</li>)}
       </ul>
     </div>
-    <DemoArena activeTarget={activeTarget} chain={chain} onHit={hitTarget} />
+    <div className="xensi-home-v3-hero-discipline" aria-hidden="true">
+      <span>DISCIPLINA</span>
+      <span>DADOS</span>
+      <span>EVOLUÇÃO</span>
+      <i />
+    </div>
+    <div className="xensi-home-v3-hero-callout" aria-hidden="true">
+      <span>{current.arenaCallout}</span>
+      <i />
+    </div>
   </section>
 }
 
@@ -346,6 +315,7 @@ function PathCard({
   title,
   description,
   items,
+  itemDescriptions,
   cta,
   icon: Icon,
   onClick,
@@ -354,21 +324,32 @@ function PathCard({
   title: string
   description: string
   items: readonly string[]
+  itemDescriptions: readonly string[]
   cta: string
   icon: LucideIcon
   onClick: () => void
   accent: 'coral' | 'mint'
 }) {
+  const featureIcons = accent === 'coral'
+    ? [Target, SlidersHorizontal, RefreshCw, BarChart3]
+    : [Mouse, Crosshair, Monitor, Gamepad2]
   return <article className={`xensi-home-v3-path-card is-${accent}`}>
-    <IconBadge icon={Icon} />
-    <div>
+    <div className="xensi-home-v3-path-main">
+      <IconBadge icon={Icon} />
       <h3>{title}</h3>
       <p>{description}</p>
+      <button type="button" onClick={onClick}>{cta}<ArrowRight size={16} /></button>
     </div>
-    <ul>
-      {items.map((item) => <li key={item}>{item}</li>)}
+    <ul className="xensi-home-v3-path-list">
+      {items.map((item, index) => {
+        const ItemIcon = featureIcons[index]
+        return <li key={item}>
+          <span>{ItemIcon ? <ItemIcon size={18} /> : null}</span>
+          <b>{item}</b>
+          <small>{itemDescriptions[index]}</small>
+        </li>
+      })}
     </ul>
-    <button type="button" onClick={onClick}>{cta}<ArrowRight size={16} /></button>
   </article>
 }
 
@@ -376,13 +357,16 @@ function HomePathways({ onNavigate }: Props) {
   const { locale } = useI18n()
   const current = copy[locale]
   return <section className="xensi-home-v3-section xensi-home-v3-pathways" aria-labelledby="home-path-title">
-    <div className="xensi-home-v3-section-head">
-      <span>{current.pathKicker}</span>
-      <h2 id="home-path-title">{current.pathTitle}</h2>
+    <div className="xensi-home-v3-section-head xensi-home-v3-split-head">
+      <div>
+        <span>{current.pathKicker}</span>
+        <h2 id="home-path-title">{current.pathTitle}</h2>
+      </div>
+      <p>{current.pathAside}</p>
     </div>
     <div className="xensi-home-v3-path-grid">
-      <PathCard title={current.trainingTitle} description={current.trainingDescription} items={current.trainingItems} cta={current.trainingCta} icon={Crosshair} accent="coral" onClick={() => onNavigate('warmup')} />
-      <PathCard title={current.setupTitle} description={current.setupDescription} items={current.setupItems} cta={current.setupCta} icon={Radar} accent="mint" onClick={() => onNavigate('polling')} />
+      <PathCard title={current.trainingTitle} description={current.trainingDescription} items={current.trainingItems} itemDescriptions={current.trainingItemDescriptions} cta={current.trainingCta} icon={Crosshair} accent="coral" onClick={() => onNavigate('warmup')} />
+      <PathCard title={current.setupTitle} description={current.setupDescription} items={current.setupItems} itemDescriptions={current.setupItemDescriptions} cta={current.setupCta} icon={Radar} accent="mint" onClick={() => onNavigate('polling')} />
     </div>
   </section>
 }
