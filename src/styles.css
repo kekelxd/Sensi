@@ -8160,10 +8160,17 @@ body:has(.home-reboot) {
   justify-items: start;
 }
 .xensi-home-v3 .xensi-home-v3-icon {
+  display: grid;
+  place-items: center;
   width: 56px;
   height: 56px;
   border-radius: 10px;
   background: rgba(255,64,84,.10);
+}
+.xensi-home-v3 .xensi-home-v3-icon svg {
+  display: block;
+  justify-self: center;
+  align-self: center;
 }
 .xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-icon {
   color: #b6eff4;
