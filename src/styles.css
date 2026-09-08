@@ -8254,14 +8254,16 @@ body:has(.home-reboot) {
     rgba(8, 17, 21, .80);
 }
 .xensi-home-v3 .xensi-home-v3-progress-card header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  align-content: center;
   justify-content: center;
-  gap: 14px;
+  gap: 11px;
   width: 100%;
-  max-width: 250px;
-  min-height: 56px;
-  margin: 0 auto 12px;
+  max-width: none;
+  min-height: 82px;
+  margin: 0 auto 14px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -8270,6 +8272,7 @@ body:has(.home-reboot) {
 .xensi-home-v3 .xensi-home-v3-progress-card header > span:not(.xensi-home-v3-icon) {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   width: auto;
   height: auto;
   padding: 0;
@@ -8281,7 +8284,8 @@ body:has(.home-reboot) {
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.05;
-  max-width: 132px;
+  max-width: 180px;
+  text-align: center;
   white-space: normal;
 }
 .xensi-home-v3 .xensi-home-v3-progress-card h3 {
@@ -8909,6 +8913,10 @@ body:has(.profile-v1-workspace),
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .profile-v1-active-card footer button {
   display: inline-flex;
@@ -9264,6 +9272,9 @@ body:has(.profile-v1-workspace),
   min-height: 56px;
   padding: 0;
   border-top: 1px solid rgba(255,255,255,.09);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 .profile-preset-card > footer button {
   display: inline-flex;
