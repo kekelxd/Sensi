@@ -3,7 +3,40 @@ import { join } from 'node:path'
 
 const distDir = join(process.cwd(), 'dist')
 const indexFile = join(distDir, 'index.html')
-const spaRoutes = ['login', 'register', 'forgot-password', 'diagnostico', 'polling-rate', 'input-diagnostics', 'refresh-rate', 'drift-controle']
+const spaRoutes = [
+  'login',
+  'register',
+  'forgot-password',
+  'train',
+  'train/target-switch',
+  'train/tracking',
+  'train/target-shooting',
+  'train/reaction',
+  'train/gridshot',
+  'train/strafetrack',
+  'train/sniper',
+  'train/routines',
+  'calibrate',
+  'convert',
+  'analysis',
+  'analysis/history',
+  'methodology',
+  'diagnostics',
+  'diagnostics/polling-rate',
+  'diagnostics/input',
+  'diagnostics/refresh-rate',
+  'diagnostics/controller-drift',
+  'profile',
+  'diagnostico',
+  'polling-rate',
+  'input-diagnostics',
+  'refresh-rate',
+  'drift-controle',
+  'warmup',
+  'routine',
+  'calibration',
+  'converter',
+]
 
 if (!existsSync(indexFile)) {
   throw new Error('dist/index.html was not found. Run this script after vite build.')

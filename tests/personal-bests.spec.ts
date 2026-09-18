@@ -12,7 +12,7 @@ test.describe('Personal best feedback', () => {
       Math.random = () => .5
     })
     await page.goto('./')
-    await page.getByRole('button', { name: 'Começar treino' }).first().click()
+    await page.getByRole('button', { name: 'Começar agora' }).first().click()
   })
 
   test('establishes, improves and preserves a record across real sessions', async ({ page }) => {

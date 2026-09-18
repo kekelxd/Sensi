@@ -324,10 +324,12 @@ function detectLocale(): Locale {
   if (saved === 'pt' || saved === 'en' || saved === 'es') return saved
   const languages = navigator.languages?.length ? navigator.languages : [navigator.language]
   for (const language of languages) {
-    const code = language.toLowerCase().split('-')[0]
-    if (code === 'pt' || code === 'en' || code === 'es') return code
+    const normalized = language.toLowerCase()
+    if (normalized === 'pt-br' || normalized.startsWith('pt-') || normalized === 'pt') return 'pt'
+    if (normalized.startsWith('es')) return 'es'
+    if (normalized.startsWith('en')) return 'en'
   }
-  return 'pt'
+  return 'en'
 }
 
 type I18nValue = {
@@ -350,7 +352,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     localeTag: localeTags[locale],
     setLocale: (next) => { localStorage.setItem('sensi-locale', next); setLocaleState(next) },
     t: (key, params) => {
-      let text = dictionaries[locale][key] ?? pt[key] ?? key
+      let text = dictionaries[locale][key] ?? en[key] ?? key
       for (const [name, replacement] of Object.entries(params ?? {})) text = text.replaceAll(`{${name}}`, String(replacement))
       return text
     },

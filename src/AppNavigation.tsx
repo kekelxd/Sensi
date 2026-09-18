@@ -5,9 +5,10 @@ import type { WarmupExercise } from './warmupConfig'
 import { AvatarArtwork } from './AvatarArtwork'
 import { DEFAULT_AVATAR, isAvatarId } from './avatars'
 import { isDiagnosticView } from './navigationState'
+import type { AnalysisSection, AppView } from './routes'
 
-export type NavigationView = 'home' | 'analysis' | 'profile' | 'routine' | 'warmup' | 'calibration' | 'converter' | 'diagnostics' | 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift'
-export type AnalysisSection = 'overview' | 'calibration-history' | 'methodology'
+export type NavigationView = AppView
+export type { AnalysisSection }
 
 type Props = {
   view: NavigationView

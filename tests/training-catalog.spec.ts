@@ -64,7 +64,7 @@ test.describe('Training catalog categories', () => {
     await page.screenshot({ path: `test-results/catalog-tablet-${test.info().project.name}.png` })
     for (const [locale, start, category] of [['en', 'Start now', 'Precision'], ['es', 'Empezar ahora', 'Precisión']]) {
       await page.evaluate(value => localStorage.setItem('sensi-locale', value), locale)
-      await page.reload()
+      await page.goto('./')
       await page.locator('.xensi-reference-hero').getByRole('button', { name: start, exact: true }).click()
       await page.locator('.warmup-category-filters').getByRole('button', { name: new RegExp(category) }).click()
       await expect(page.locator('.warmup-exercises > button')).toHaveCount(3)

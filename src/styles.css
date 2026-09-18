@@ -8463,6 +8463,18 @@ body:has(.home-reboot) {
   .xensi-home-v3 .xensi-home-v3-path-card h3 { font-size: 30px; }
   .xensi-home-v3 .xensi-home-v3-progress-card { min-height: 250px; }
 }
+@media (max-width: 760px) {
+  .xensi-home-v3 .xensi-home-v3-path-card {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .xensi-home-v3 .xensi-home-v3-path-main {
+    align-content: start;
+  }
+  .xensi-home-v3 .xensi-home-v3-path-list {
+    align-content: start;
+  }
+}
 
 /* Browser and controller diagnostics */
 .diagnostic-tool-workspace { min-height: calc(100dvh - 74px); overflow-y: auto; padding: clamp(34px, 5vw, 66px) clamp(18px, 5vw, 72px) 72px; color: #f1eee7; background-image: radial-gradient(circle at 18% 4%, rgba(255,70,87,.11), transparent 30%), radial-gradient(circle at 88% 25%, rgba(141,251,211,.045), transparent 24%), linear-gradient(rgba(255,70,87,.026) 1px, transparent 1px), linear-gradient(90deg, rgba(255,70,87,.022) 1px, transparent 1px); background-color: #090b0f; background-size: auto, auto, 48px 48px, 48px 48px; }

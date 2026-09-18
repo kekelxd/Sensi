@@ -663,7 +663,13 @@ export const WarmupArena = forwardRef<ArenaHandle, ArenaProps>(function WarmupAr
   )
 })
 
-export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExercise | null }) {
+export function Warmup({
+  initialExercise = null,
+  onExerciseChange,
+}: {
+  initialExercise?: WarmupExercise | null
+  onExerciseChange?: (exercise: WarmupExercise | null) => void
+}) {
   const { t } = useI18n()
   const arenaRef = useRef<ArenaHandle>(null)
   const [phase, setPhase] = useState<WarmupPhase>(initialExercise ? 'setup' : 'hub')
@@ -724,6 +730,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
     setPreviewExercise(null)
     setSniperFocused(false)
     setExercise(nextExercise)
+    onExerciseChange?.(nextExercise)
     setSetupStep(1)
     setStepDirection(1)
     setPhase('setup')
@@ -783,6 +790,7 @@ export function Warmup({ initialExercise = null }: { initialExercise?: WarmupExe
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
     setInputReady(false)
     setCountdown(3)
+    onExerciseChange?.(null)
     setPhase('hub')
   }
 

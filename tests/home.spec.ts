@@ -117,8 +117,8 @@ test.describe('XENSI home v3', () => {
     await assertHeader()
     await page.getByRole('button', { name: /XENSI home/i }).click()
 
-    await page.getByRole('button', { name: /Explorar ferramentas/ }).click()
-    await expect(page.getByRole('heading', { name: /Teste de polling rate/i })).toBeVisible()
+    await page.getByRole('button', { name: /Explorar diagnósticos/ }).click()
+    await expect(page.getByRole('heading', { name: /Quatro checagens/i })).toBeVisible()
     await assertHeader()
     await page.getByRole('button', { name: /XENSI home/i }).click()
 

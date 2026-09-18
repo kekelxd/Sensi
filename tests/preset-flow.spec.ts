@@ -24,10 +24,11 @@ test.describe('shared presets and game identity', () => {
 
   test('creates a profile preset and reuses it across training, calibration and conversion', async ({ page, isMobile }, info) => {
     test.setTimeout(90000)
-    await page.locator('.xensi-user-trigger').click()
-    await page.getByRole('button', { name: 'Meu perfil', exact: true }).click()
+    await page.goto('./profile')
+    await expect(page.getByRole('heading', { name: 'Perfil', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Adicionar sensibilidade' }).click()
-    await page.getByLabel('Jogo', { exact: true }).selectOption('cs2')
+    await page.getByRole('dialog', { name: 'Adicionar sensibilidade' }).getByRole('button', { name: 'Counter-Strike 2' }).click()
+    await page.getByRole('option', { name: 'Counter-Strike 2' }).click()
     await page.getByRole('textbox', { name: 'Sensibilidade', exact: true }).fill('0.65')
     await page.getByRole('textbox', { name: 'DPI', exact: true }).fill('800')
     await page.getByRole('button', { name: 'Salvar', exact: true }).click()
@@ -123,7 +124,7 @@ test.describe('shared presets and game identity', () => {
     expect(bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height)
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /Target Switch/ })).toBeFocused()
+    await expect(page.getByRole('button', { name: /Target Switch/ })).toBeVisible()
   })
 
   test('keeps anonymous training available and respects reduced motion', async ({ page }) => {

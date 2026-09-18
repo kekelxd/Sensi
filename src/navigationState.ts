@@ -1,5 +1,5 @@
-import type { NavigationView } from './AppNavigation'
+import type { AppView } from './routes'
 
-export function isDiagnosticView(view: NavigationView) {
+export function isDiagnosticView(view: AppView) {
   return view === 'diagnostics' || view === 'polling' || view === 'buttons' || view === 'refresh-rate' || view === 'controller-drift'
 }

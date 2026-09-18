@@ -23,63 +23,22 @@ import { DiagnosticLanding } from './DiagnosticLanding'
 import { PlayerProfile, type ProfilePresetLaunch } from './PlayerProfile'
 import { useI18n, type TranslationKey } from './i18n'
 import { Analysis } from './Analysis'
-import { AppNavigation, type AnalysisSection, type NavigationView } from './AppNavigation'
+import { AppNavigation } from './AppNavigation'
 import type { WarmupExercise } from './warmupConfig'
 import { AuthScreen } from './AuthPages'
 import type { AuthMode } from './authService'
+import {
+  APP_BASE_PATH,
+  authRoutePath,
+  readRouteStateFromLocation,
+  viewRoutePath,
+  type AnalysisSection,
+  type AppRouteState,
+  type AppView,
+} from './routes'
 
 type RoundPhase = 'idle' | 'countdown' | 'warmup' | 'running'
-type AppView = NavigationView
 type CalibrationSetupStep = 1 | 2 | 3
-
-const AUTH_ROUTES: AuthMode[] = ['login', 'register', 'forgot-password']
-const APP_BASE_PATH = '/Sensi/'
-const VIEW_ROUTES: Partial<Record<AppView, string>> = {
-  diagnostics: 'diagnostico',
-  polling: 'polling-rate',
-  buttons: 'input-diagnostics',
-  'refresh-rate': 'refresh-rate',
-  'controller-drift': 'drift-controle',
-}
-const ROUTE_VIEWS = new Map(Object.entries(VIEW_ROUTES).map(([view, route]) => [route, view as AppView]))
-
-const normalizeAuthRoute = (route: string | null): AuthMode | null => {
-  const cleanRoute = route?.replace(/^\/+/, '').replace(/\/+$/, '') ?? ''
-  return AUTH_ROUTES.includes(cleanRoute as AuthMode) ? cleanRoute as AuthMode : null
-}
-
-const getAuthRouteFromLocation = (): AuthMode | null => {
-  const redirectedRoute = normalizeAuthRoute(new URLSearchParams(window.location.search).get('xensi-route'))
-  if (redirectedRoute) {
-    window.history.replaceState({}, '', authRoutePath(redirectedRoute))
-    return redirectedRoute
-  }
-  const pathname = window.location.pathname
-  const relative = pathname.startsWith(APP_BASE_PATH) ? pathname.slice(APP_BASE_PATH.length) : pathname.replace(/^\//, '')
-  return normalizeAuthRoute(relative)
-}
-
-const authRoutePath = (route: AuthMode) => `${APP_BASE_PATH}${route}`
-const viewRoutePath = (view: AppView) => {
-  const route = VIEW_ROUTES[view]
-  return route ? `${APP_BASE_PATH}${route}` : APP_BASE_PATH
-}
-
-const getRouteSegmentFromLocation = () => {
-  const pathname = window.location.pathname
-  return pathname.startsWith(APP_BASE_PATH) ? pathname.slice(APP_BASE_PATH.length) : pathname.replace(/^\//, '')
-}
-
-const getViewRouteFromLocation = (): AppView | null => {
-  const redirectedRoute = new URLSearchParams(window.location.search).get('xensi-route')?.replace(/^\/+/, '').replace(/\/+$/, '') ?? ''
-  const redirectedView = ROUTE_VIEWS.get(redirectedRoute)
-  if (redirectedView) {
-    window.history.replaceState({}, '', viewRoutePath(redirectedView))
-    return redirectedView
-  }
-  const cleanRoute = getRouteSegmentFromLocation().replace(/\/+$/, '')
-  return ROUTE_VIEWS.get(cleanRoute) ?? null
-}
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', description: 'crosshair.classicDescription', icon: Crosshair },
@@ -116,10 +75,10 @@ function App() {
   const { locale, setLocale, t } = useI18n()
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
-  const [view, setView] = useState<AppView>(() => getViewRouteFromLocation() ?? 'home')
-  const [authRoute, setAuthRoute] = useState<AuthMode | null>(() => getAuthRouteFromLocation())
-  const [analysisSection, setAnalysisSection] = useState<AnalysisSection>('overview')
-  const [warmupEntry, setWarmupEntry] = useState<WarmupExercise | null>(null)
+  const [view, setView] = useState<AppView>(() => readRouteStateFromLocation().view)
+  const [authRoute, setAuthRoute] = useState<AuthMode | null>(() => readRouteStateFromLocation().authRoute)
+  const [analysisSection, setAnalysisSection] = useState<AnalysisSection>(() => readRouteStateFromLocation().analysisSection)
+  const [warmupEntry, setWarmupEntry] = useState<WarmupExercise | null>(() => readRouteStateFromLocation().warmupEntry)
   const [round, setRound] = useState(0)
   const [results, setResults] = useState<RoundResult[]>([])
   const [plan, setPlan] = useState<CalibrationPlan | null>(null)
@@ -151,14 +110,22 @@ function App() {
   const [converterPreset, setConverterPreset] = useState<ProfilePresetLaunch | null>(null)
   const [finderPreset, setFinderPreset] = useState<ProfilePresetLaunch | null>(null)
 
+  const applyRouteState = (routeState: AppRouteState) => {
+    setAuthRoute(routeState.authRoute)
+    setView(routeState.view)
+    setAnalysisSection(routeState.analysisSection)
+    setWarmupEntry(routeState.warmupEntry)
+  }
+
   useEffect(() => {
-    const syncAuthRoute = () => {
-      const nextAuthRoute = getAuthRouteFromLocation()
-      setAuthRoute(nextAuthRoute)
-      if (!nextAuthRoute) setView(getViewRouteFromLocation() ?? 'home')
+    const syncRouteFromLocation = () => {
+      const routeState = readRouteStateFromLocation()
+      if (routeState.shouldReplace) window.history.replaceState({}, '', routeState.canonicalPath)
+      applyRouteState(routeState)
     }
-    window.addEventListener('popstate', syncAuthRoute)
-    return () => window.removeEventListener('popstate', syncAuthRoute)
+    syncRouteFromLocation()
+    window.addEventListener('popstate', syncRouteFromLocation)
+    return () => window.removeEventListener('popstate', syncRouteFromLocation)
   }, [])
 
   const active = phase !== 'idle'
@@ -468,21 +435,22 @@ function App() {
 
   const navigateAuth = (route: AuthMode) => {
     window.history.pushState({}, '', authRoutePath(route))
-    setAuthRoute(route)
+    applyRouteState(readRouteStateFromLocation())
   }
 
-  const navigateView = (next: AppView) => {
-    if (next === 'warmup') setWarmupEntry(null)
-    if (next === 'converter') setConverterPreset(null)
-    if (next === 'calibration') setFinderPreset(null)
-    window.history.pushState({}, '', viewRoutePath(next))
-    setView(next)
+  const navigateView = (
+    next: AppView,
+    options: { warmupEntry?: WarmupExercise | null; analysisSection?: AnalysisSection; preserveLaunchPreset?: boolean } = {},
+  ) => {
+    if (next === 'converter' && !options.preserveLaunchPreset) setConverterPreset(null)
+    if (next === 'calibration' && !options.preserveLaunchPreset) setFinderPreset(null)
+    window.history.pushState({}, '', viewRoutePath(next, options))
+    applyRouteState(readRouteStateFromLocation())
   }
 
   const completeAuth = () => {
     window.history.pushState({}, '', APP_BASE_PATH)
-    setAuthRoute(null)
-    setView('home')
+    applyRouteState(readRouteStateFromLocation())
   }
 
   if (authRoute) {
@@ -499,8 +467,8 @@ function App() {
           disabled={active}
           onLocaleChange={setLocale}
           onNavigate={navigateView}
-          onExercise={(exercise) => { setWarmupEntry(exercise); window.history.pushState({}, '', viewRoutePath('warmup')); setView('warmup') }}
-          onAnalysisSection={(section) => { setAnalysisSection(section); window.history.pushState({}, '', viewRoutePath('analysis')); setView('analysis') }}
+          onExercise={(exercise) => navigateView('warmup', { warmupEntry: exercise })}
+          onAnalysisSection={(section) => navigateView('analysis', { analysisSection: section })}
         />
         {view === 'calibration' && calibrationStarted && (
           <div className="header-context">
@@ -512,7 +480,7 @@ function App() {
         )}
       </header>
 
-      {view === 'home' ? <Home onNavigate={navigateView} /> : view === 'analysis' ? <Analysis section={analysisSection} onStartTraining={() => navigateView('warmup')} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); navigateView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); navigateView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : view === 'diagnostics' ? <DiagnosticLanding onNavigate={navigateView} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
+      {view === 'home' ? <Home onNavigate={navigateView} /> : view === 'analysis' ? <Analysis section={analysisSection} onStartTraining={() => navigateView('warmup')} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); navigateView('converter', { preserveLaunchPreset: true }) }} onCalibrate={(preset) => { setFinderPreset(preset); navigateView('calibration', { preserveLaunchPreset: true }) }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} onExerciseChange={(exercise) => navigateView('warmup', { warmupEntry: exercise })} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : view === 'diagnostics' ? <DiagnosticLanding onNavigate={navigateView} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />

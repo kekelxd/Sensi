@@ -1,8 +1,8 @@
 import { ArrowRight, Gamepad2, Gauge, MonitorUp, Mouse, Radar } from 'lucide-react'
 import { useI18n } from './i18n'
-import type { NavigationView } from './AppNavigation'
+import type { AppView } from './routes'
 
-type DiagnosticDestination = Extract<NavigationView, 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift'>
+type DiagnosticDestination = Extract<AppView, 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift'>
 
 type Props = {
   onNavigate: (view: DiagnosticDestination) => void

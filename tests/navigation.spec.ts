@@ -24,14 +24,14 @@ test.describe('Diagnostics navigation', () => {
     await menu.getByRole('menuitem', { name: /Teste de Polling Rate/ }).click()
     await expect(page.getByRole('heading', { name: /Teste de polling rate/i })).toBeVisible()
     await expect(trigger).toHaveAttribute('aria-current', 'page')
-    await expect(page).toHaveURL(/\/Sensi\/$/)
+    await expect(page).toHaveURL(/\/Sensi\/diagnostics\/polling-rate$/)
 
     await trigger.click()
     await expect(page.getByRole('menuitem', { name: /Teste de Polling Rate/ })).toHaveAttribute('aria-current', 'page')
     await page.getByRole('menuitem', { name: /Diagnóstico de Entrada/ }).click()
     await expect(page.getByRole('heading', { name: 'Diagnóstico de entrada', exact: true })).toBeVisible()
     await expect(trigger).toHaveAttribute('aria-current', 'page')
-    await expect(page).toHaveURL(/\/Sensi\/$/)
+    await expect(page).toHaveURL(/\/Sensi\/diagnostics\/input$/)
 
     await trigger.click()
     await page.getByRole('menuitem', { name: /Refresh Rate/ }).click()
@@ -53,7 +53,7 @@ test.describe('Diagnostics navigation', () => {
 
   test('closes when the user clicks outside', async ({ page }) => {
     await page.getByRole('button', diagnostics()).click()
-    await page.getByRole('heading', { name: 'SEU CONTROLE', exact: true }).click()
+    await page.locator('.xensi-home-v3-section-head').first().click()
     await expect(page.getByRole('menu', { name: 'DIAGNÓSTICO' })).toBeHidden()
   })
 

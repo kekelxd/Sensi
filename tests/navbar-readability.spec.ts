@@ -28,7 +28,7 @@ test.describe('Readable XENSI navigation', () => {
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
     await expect(trigger).toBeFocused()
-    await expect(page).toHaveURL(/\/Sensi\/$/)
+    await expect(page).toHaveURL(/\/Sensi\/train\/routines$/)
   })
 
   test('renders readable menus, aligned user controls and contained dropdowns', async ({ page }, info) => {

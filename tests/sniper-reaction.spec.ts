@@ -4,7 +4,7 @@ test.describe('Sniper Reaction training', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { if (!localStorage.getItem('sensi-locale')) localStorage.setItem('sensi-locale', 'pt'); Math.random = () => .5 })
     await page.goto('./')
-    await page.getByRole('button', { name: 'Começar treino' }).first().click()
+    await page.getByRole('button', { name: 'Começar agora' }).first().click()
   })
 
   test('previews on hover and focus without saving a session', async ({ page }, info) => {
@@ -70,11 +70,11 @@ test.describe('Sniper Reaction training', () => {
     await card.focus()
     await expect(card.locator('.sniper-preview-opening > span')).toHaveCSS('animation-name', 'none')
     for (const [locale, description, start] of [
-      ['en', 'Test your reaction', 'Start training'],
-      ['es', 'Pon a prueba tu reacción', 'Empezar entrenamiento'],
+      ['en', 'Test your reaction', 'Start now'],
+      ['es', 'Pon a prueba tu reacción', 'Empezar ahora'],
     ]) {
       await page.evaluate(value => localStorage.setItem('sensi-locale', value), locale)
-      await page.reload()
+      await page.goto('./')
       const homeCta = page.getByRole('button', { name: start, exact: true }).first()
       await homeCta.click()
       await expect(page.getByRole('button', { name: /Sniper Reaction/ })).toContainText(description)
