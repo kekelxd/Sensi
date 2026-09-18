@@ -8224,6 +8224,32 @@ body:has(.home-reboot) {
   border: 0;
   background: transparent;
 }
+.xensi-home-v3 .xensi-home-v3-path-list li:has(.xensi-home-v3-path-item-button) {
+  display: block;
+}
+.xensi-home-v3 .xensi-home-v3-path-card .xensi-home-v3-path-item-button {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  grid-template-rows: auto auto;
+  gap: 5px 16px;
+  grid-column: auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  text-transform: none;
+  transition: transform .18s ease;
+}
+.xensi-home-v3 .xensi-home-v3-path-card .xensi-home-v3-path-item-button:hover,
+.xensi-home-v3 .xensi-home-v3-path-card .xensi-home-v3-path-item-button:focus-visible {
+  outline: 0;
+  transform: translateX(4px);
+}
 .xensi-home-v3 .xensi-home-v3-path-list li > span {
   grid-row: 1 / 3;
   display: grid;
@@ -8234,9 +8260,26 @@ body:has(.home-reboot) {
   color: #ff4054;
   background: rgba(255,255,255,.055);
 }
-.xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-path-list li > span {
+.xensi-home-v3 .xensi-home-v3-path-card .xensi-home-v3-path-item-button > span {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  color: #ff4054;
+  background: rgba(255,255,255,.055);
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-path-list li > span,
+.xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-path-item-button > span {
   color: #d6eef1;
   background: rgba(255,255,255,.06);
+}
+.xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-path-item-button:hover > span,
+.xensi-home-v3 .xensi-home-v3-path-card.is-mint .xensi-home-v3-path-item-button:focus-visible > span {
+  color: #8dfbd3;
+  background: rgba(141,251,211,.11);
 }
 .xensi-home-v3 .xensi-home-v3-path-list b {
   color: #eef3f3;
@@ -8441,6 +8484,20 @@ body:has(.home-reboot) {
 .diagnostic-details summary { display: flex; align-items: center; gap: 8px; padding: 14px 17px; color: #b9bfbd; font: 600 11px Manrope, sans-serif; cursor: pointer; }
 .diagnostic-details > div { display: flex; justify-content: space-between; gap: 20px; padding: 10px 17px; border-top: 1px solid rgba(255,255,255,.07); color: #858e91; font: 500 10px 'DM Mono', monospace; }
 .diagnostic-details b { color: #dcded9; font-weight: 500; }
+.diagnostic-hub-workspace { display: block; }
+.diagnostic-hub-heading { margin-bottom: 32px; }
+.diagnostic-hub-grid { width: min(1180px, 100%); margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.diagnostic-hub-card { position: relative; min-height: 290px; display: grid; grid-template-rows: auto 1fr auto; gap: 22px; padding: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(145deg, rgba(255,70,87,.10), rgba(141,251,211,.035) 44%, rgba(8,11,15,.88)); transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.diagnostic-hub-card::after { position: absolute; inset: auto 0 0; height: 2px; opacity: .64; background: linear-gradient(90deg, #ff4657, #8dfbd3); content: ''; transform: scaleX(.3); transform-origin: left; transition: transform .18s ease, opacity .18s ease; }
+.diagnostic-hub-card:hover { border-color: rgba(141,251,211,.28); background: linear-gradient(145deg, rgba(255,70,87,.13), rgba(141,251,211,.055) 44%, rgba(10,14,18,.92)); transform: translateY(-3px); }
+.diagnostic-hub-card:hover::after { opacity: 1; transform: scaleX(1); }
+.diagnostic-hub-icon { display: grid; place-items: center; width: 48px; aspect-ratio: 1; border: 1px solid rgba(141,251,211,.25); border-radius: 8px; color: #8dfbd3; background: rgba(141,251,211,.06); }
+.diagnostic-hub-card h2 { margin: 0; color: #f2efe8; font: 700 24px/1.02 'Space Grotesk', sans-serif; letter-spacing: -.035em; }
+.diagnostic-hub-card p { margin: 12px 0 0; color: #9ea7aa; font: 500 13px/1.58 Manrope, sans-serif; }
+.diagnostic-hub-card button { display: inline-flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; min-height: 44px; padding: 0 13px 0 15px; border: 1px solid rgba(255,255,255,.12); color: #f0f5f5; background: rgba(255,255,255,.035); font: 800 11px/1 Manrope, sans-serif; text-transform: uppercase; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.diagnostic-hub-card button:hover, .diagnostic-hub-card button:focus-visible { border-color: rgba(141,251,211,.34); background: rgba(141,251,211,.08); outline: 0; transform: translateY(-1px); }
+.diagnostic-hub-card button svg { transition: transform .18s ease; }
+.diagnostic-hub-card button:hover svg, .diagnostic-hub-card button:focus-visible svg { transform: translateX(3px); }
 .refresh-stage { position: relative; isolation: isolate; width: min(1180px, 100%); min-height: 280px; margin: 0 auto; display: grid; place-content: center; justify-items: center; gap: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,.13); background: radial-gradient(circle at 50% 48%, rgba(255,70,87,.1), transparent 28%), rgba(8,11,15,.84); text-align: center; }
 .refresh-stage > span { color: #ff6570; font: 500 9px 'DM Mono', monospace; letter-spacing: .14em; text-transform: uppercase; }
 .refresh-stage > strong { color: #f2efe8; font: 600 clamp(54px, 8vw, 92px)/.9 'Space Grotesk', sans-serif; letter-spacing: -.065em; }

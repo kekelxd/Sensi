@@ -35,7 +35,7 @@ import {
 import { readWarmupSession, type WarmupSessionSummary } from './warmupTelemetry'
 import type { WarmupExercise } from './warmupConfig'
 
-export type HomeDestination = 'analysis' | 'calibration' | 'converter' | 'warmup' | 'polling' | 'buttons' | 'routine' | 'profile'
+export type HomeDestination = 'analysis' | 'calibration' | 'converter' | 'warmup' | 'diagnostics' | 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift' | 'routine' | 'profile'
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
 const WARMUP_EXERCISES: WarmupExercise[] = ['switch', 'tracking', 'flick', 'reflex', 'gridshot', 'strafetrack', 'sniper-reaction']
@@ -74,7 +74,7 @@ const copy = {
     setupDescription: 'Cheque mouse, teclado, tela e controle antes de entrar em partida. Menos dúvida, mais confiança.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift do Controle'],
     setupItemDescriptions: ['Teste em tempo real', 'Analise seu controle', 'Verifique seu monitor', 'Identifique inconsistências'],
-    setupCta: 'Explorar ferramentas',
+    setupCta: 'Explorar diagnósticos',
     progressKicker: 'SEU PROGRESSO',
     progressTitle: 'Continue de onde parou.',
     lastTraining: 'ÚLTIMO TREINO',
@@ -132,7 +132,7 @@ const copy = {
     setupDescription: 'Check mouse, keyboard, display, and controller before queueing. Less doubt, more confidence.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Controller Drift'],
     setupItemDescriptions: ['Real-time test', 'Analyze your control', 'Check your display', 'Identify inconsistencies'],
-    setupCta: 'Explore tools',
+    setupCta: 'Explore diagnostics',
     progressKicker: 'YOUR PROGRESS',
     progressTitle: 'Continue where you left off.',
     lastTraining: 'LAST TRAINING',
@@ -190,7 +190,7 @@ const copy = {
     setupDescription: 'Revisa mouse, teclado, pantalla y control antes de jugar. Menos duda, más confianza.',
     setupItems: ['Polling Rate', 'Input Diagnostics', 'Refresh Rate', 'Drift del Control'],
     setupItemDescriptions: ['Prueba en tiempo real', 'Analiza tu control', 'Verifica tu monitor', 'Identifica inconsistencias'],
-    setupCta: 'Explorar herramientas',
+    setupCta: 'Explorar diagnósticos',
     progressKicker: 'TU PROGRESO',
     progressTitle: 'Continúa donde paraste.',
     lastTraining: 'ÚLTIMO ENTRENO',
@@ -319,6 +319,8 @@ function PathCard({
   cta,
   icon: Icon,
   onClick,
+  itemDestinations,
+  onItemClick,
   accent,
 }: {
   title: string
@@ -328,6 +330,8 @@ function PathCard({
   cta: string
   icon: LucideIcon
   onClick: () => void
+  itemDestinations?: readonly HomeDestination[]
+  onItemClick?: (destination: HomeDestination) => void
   accent: 'coral' | 'mint'
 }) {
   const featureIcons = accent === 'coral'
@@ -343,10 +347,18 @@ function PathCard({
     <ul className="xensi-home-v3-path-list">
       {items.map((item, index) => {
         const ItemIcon = featureIcons[index]
-        return <li key={item}>
+        const content = <>
           <span>{ItemIcon ? <ItemIcon size={18} /> : null}</span>
           <b>{item}</b>
           <small>{itemDescriptions[index]}</small>
+        </>
+        const destination = itemDestinations?.[index]
+        return <li key={item}>
+          {destination
+            ? <button type="button" className="xensi-home-v3-path-item-button" onClick={() => onItemClick?.(destination)} data-destination={destination} aria-label={item}>
+              {content}
+            </button>
+            : content}
         </li>
       })}
     </ul>
@@ -366,7 +378,18 @@ function HomePathways({ onNavigate }: Props) {
     </div>
     <div className="xensi-home-v3-path-grid">
       <PathCard title={current.trainingTitle} description={current.trainingDescription} items={current.trainingItems} itemDescriptions={current.trainingItemDescriptions} cta={current.trainingCta} icon={Crosshair} accent="coral" onClick={() => onNavigate('warmup')} />
-      <PathCard title={current.setupTitle} description={current.setupDescription} items={current.setupItems} itemDescriptions={current.setupItemDescriptions} cta={current.setupCta} icon={Radar} accent="mint" onClick={() => onNavigate('polling')} />
+      <PathCard
+        title={current.setupTitle}
+        description={current.setupDescription}
+        items={current.setupItems}
+        itemDescriptions={current.setupItemDescriptions}
+        cta={current.setupCta}
+        icon={Radar}
+        accent="mint"
+        onClick={() => onNavigate('diagnostics')}
+        itemDestinations={['polling', 'buttons', 'refresh-rate', 'controller-drift']}
+        onItemClick={onNavigate}
+      />
     </div>
   </section>
 }

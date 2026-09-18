@@ -19,6 +19,7 @@ import { Routine } from './Routine'
 import { CalibrationLanding } from './CalibrationLanding'
 import { CalibrationReportView } from './CalibrationReport'
 import { Home } from './Home'
+import { DiagnosticLanding } from './DiagnosticLanding'
 import { PlayerProfile, type ProfilePresetLaunch } from './PlayerProfile'
 import { useI18n, type TranslationKey } from './i18n'
 import { Analysis } from './Analysis'
@@ -33,6 +34,14 @@ type CalibrationSetupStep = 1 | 2 | 3
 
 const AUTH_ROUTES: AuthMode[] = ['login', 'register', 'forgot-password']
 const APP_BASE_PATH = '/Sensi/'
+const VIEW_ROUTES: Partial<Record<AppView, string>> = {
+  diagnostics: 'diagnostico',
+  polling: 'polling-rate',
+  buttons: 'input-diagnostics',
+  'refresh-rate': 'refresh-rate',
+  'controller-drift': 'drift-controle',
+}
+const ROUTE_VIEWS = new Map(Object.entries(VIEW_ROUTES).map(([view, route]) => [route, view as AppView]))
 
 const normalizeAuthRoute = (route: string | null): AuthMode | null => {
   const cleanRoute = route?.replace(/^\/+/, '').replace(/\/+$/, '') ?? ''
@@ -51,6 +60,26 @@ const getAuthRouteFromLocation = (): AuthMode | null => {
 }
 
 const authRoutePath = (route: AuthMode) => `${APP_BASE_PATH}${route}`
+const viewRoutePath = (view: AppView) => {
+  const route = VIEW_ROUTES[view]
+  return route ? `${APP_BASE_PATH}${route}` : APP_BASE_PATH
+}
+
+const getRouteSegmentFromLocation = () => {
+  const pathname = window.location.pathname
+  return pathname.startsWith(APP_BASE_PATH) ? pathname.slice(APP_BASE_PATH.length) : pathname.replace(/^\//, '')
+}
+
+const getViewRouteFromLocation = (): AppView | null => {
+  const redirectedRoute = new URLSearchParams(window.location.search).get('xensi-route')?.replace(/^\/+/, '').replace(/\/+$/, '') ?? ''
+  const redirectedView = ROUTE_VIEWS.get(redirectedRoute)
+  if (redirectedView) {
+    window.history.replaceState({}, '', viewRoutePath(redirectedView))
+    return redirectedView
+  }
+  const cleanRoute = getRouteSegmentFromLocation().replace(/\/+$/, '')
+  return ROUTE_VIEWS.get(cleanRoute) ?? null
+}
 
 const CROSSHAIRS: Array<{ id: CrosshairStyle, label: TranslationKey, description: TranslationKey, icon: LucideIcon }> = [
   { id: 'classic', label: 'crosshair.classic', description: 'crosshair.classicDescription', icon: Crosshair },
@@ -87,7 +116,7 @@ function App() {
   const { locale, setLocale, t } = useI18n()
   const arenaRef = useRef<TrackingArenaHandle>(null)
   const phaseRemainingMsRef = useRef(3000)
-  const [view, setView] = useState<AppView>('home')
+  const [view, setView] = useState<AppView>(() => getViewRouteFromLocation() ?? 'home')
   const [authRoute, setAuthRoute] = useState<AuthMode | null>(() => getAuthRouteFromLocation())
   const [analysisSection, setAnalysisSection] = useState<AnalysisSection>('overview')
   const [warmupEntry, setWarmupEntry] = useState<WarmupExercise | null>(null)
@@ -123,7 +152,11 @@ function App() {
   const [finderPreset, setFinderPreset] = useState<ProfilePresetLaunch | null>(null)
 
   useEffect(() => {
-    const syncAuthRoute = () => setAuthRoute(getAuthRouteFromLocation())
+    const syncAuthRoute = () => {
+      const nextAuthRoute = getAuthRouteFromLocation()
+      setAuthRoute(nextAuthRoute)
+      if (!nextAuthRoute) setView(getViewRouteFromLocation() ?? 'home')
+    }
     window.addEventListener('popstate', syncAuthRoute)
     return () => window.removeEventListener('popstate', syncAuthRoute)
   }, [])
@@ -438,6 +471,14 @@ function App() {
     setAuthRoute(route)
   }
 
+  const navigateView = (next: AppView) => {
+    if (next === 'warmup') setWarmupEntry(null)
+    if (next === 'converter') setConverterPreset(null)
+    if (next === 'calibration') setFinderPreset(null)
+    window.history.pushState({}, '', viewRoutePath(next))
+    setView(next)
+  }
+
   const completeAuth = () => {
     window.history.pushState({}, '', APP_BASE_PATH)
     setAuthRoute(null)
@@ -457,9 +498,9 @@ function App() {
           locale={locale}
           disabled={active}
           onLocaleChange={setLocale}
-          onNavigate={(next) => { if (next === 'warmup') setWarmupEntry(null); if (next === 'converter') setConverterPreset(null); if (next === 'calibration') setFinderPreset(null); setView(next) }}
-          onExercise={(exercise) => { setWarmupEntry(exercise); setView('warmup') }}
-          onAnalysisSection={(section) => { setAnalysisSection(section); setView('analysis') }}
+          onNavigate={navigateView}
+          onExercise={(exercise) => { setWarmupEntry(exercise); window.history.pushState({}, '', viewRoutePath('warmup')); setView('warmup') }}
+          onAnalysisSection={(section) => { setAnalysisSection(section); window.history.pushState({}, '', viewRoutePath('analysis')); setView('analysis') }}
         />
         {view === 'calibration' && calibrationStarted && (
           <div className="header-context">
@@ -471,7 +512,7 @@ function App() {
         )}
       </header>
 
-      {view === 'home' ? <Home onNavigate={(next) => { if (next === 'converter') setConverterPreset(null); if (next === 'calibration') setFinderPreset(null); setView(next) }} /> : view === 'analysis' ? <Analysis section={analysisSection} onStartTraining={() => { setWarmupEntry(null); setView('warmup') }} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); setView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); setView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
+      {view === 'home' ? <Home onNavigate={navigateView} /> : view === 'analysis' ? <Analysis section={analysisSection} onStartTraining={() => navigateView('warmup')} /> : view === 'profile' ? <PlayerProfile onConvert={(preset) => { setConverterPreset(preset); navigateView('converter') }} onCalibrate={(preset) => { setFinderPreset(preset); navigateView('calibration') }} /> : view === 'routine' ? <Routine /> : view === 'warmup' ? <Warmup key={warmupEntry ?? 'hub'} initialExercise={warmupEntry} /> : view === 'calibration' ? <SensitivityFinderModal initialPreset={finderPreset ? { ...finderPreset, gameId: finderPreset.gameId as GameId } : null} /> : view === 'diagnostics' ? <DiagnosticLanding onNavigate={navigateView} /> : showLegacyCalibration ? calibrationStarted ? <><section className="workspace">
         <aside className="metrics-rail">
           <div className="rail-heading"><Activity size={15} /> {t('calibration.live')}</div>
           <Metric label={t('common.accuracy')} value={format(metrics.accuracy)} suffix="%" tone="#8dfbd3" />

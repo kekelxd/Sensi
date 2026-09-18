@@ -6,7 +6,7 @@ import { AvatarArtwork } from './AvatarArtwork'
 import { DEFAULT_AVATAR, isAvatarId } from './avatars'
 import { isDiagnosticView } from './navigationState'
 
-export type NavigationView = 'home' | 'analysis' | 'profile' | 'routine' | 'warmup' | 'calibration' | 'converter' | 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift'
+export type NavigationView = 'home' | 'analysis' | 'profile' | 'routine' | 'warmup' | 'calibration' | 'converter' | 'diagnostics' | 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift'
 export type AnalysisSection = 'overview' | 'calibration-history' | 'methodology'
 
 type Props = {
