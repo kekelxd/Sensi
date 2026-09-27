@@ -31,8 +31,10 @@ test('empty profile, avatar picker and navbar share normalized assets', async ({
 
   const profileAvatar = page.locator('.profile-v1-person .xensi-avatar img')
   const navbarAvatar = page.locator('.xensi-user-trigger .xensi-avatar img')
-  await expect(profileAvatar).toHaveAttribute('src', /dog-happy\.png$/)
-  await expect(navbarAvatar).toHaveAttribute('src', /dog-happy\.png$/)
+  await expect(profileAvatar).toHaveAttribute('src', /\/Sensi\/avatars\/individual\/dog-happy\.png$/)
+  await expect(navbarAvatar).toHaveAttribute('src', /\/Sensi\/avatars\/individual\/dog-happy\.png$/)
+  await expect.poll(async () => profileAvatar.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+  await expect.poll(async () => navbarAvatar.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   await expect(profileAvatar).toHaveCSS('object-fit', 'contain')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('profile-avatar.png'), fullPage: true })

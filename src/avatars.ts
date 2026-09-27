@@ -24,11 +24,13 @@ export const XENSI_AVATARS = [
 
 export type AvatarId = typeof XENSI_AVATARS[number]['id']
 export const DEFAULT_AVATAR: AvatarId = 'cat-headset'
+type ImportMetaWithBaseUrl = ImportMeta & { readonly env?: { readonly BASE_URL?: string } }
 
 export function isAvatarId(value: unknown): value is AvatarId {
   return typeof value === 'string' && XENSI_AVATARS.some((avatar) => avatar.id === value)
 }
 
 export function avatarSource(avatarId: AvatarId) {
-  return `./avatars/individual/${avatarId}.png`
+  const baseUrl = (import.meta as ImportMetaWithBaseUrl).env?.BASE_URL ?? '/Sensi/'
+  return `${baseUrl}avatars/individual/${avatarId}.png`
 }
