@@ -1,7 +1,7 @@
 import type { AuthMode } from './authService'
 import type { WarmupExercise } from './warmupConfig'
 
-export const APP_BASE_PATH = '/Sensi/'
+export const APP_BASE_PATH = '/'
 
 export type AppView =
   | 'home'

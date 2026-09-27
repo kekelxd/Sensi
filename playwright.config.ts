@@ -19,7 +19,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:5174/Sensi/',
+    baseURL: 'http://127.0.0.1:5174/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -43,7 +43,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 5174',
-    url: 'http://127.0.0.1:5174/Sensi/',
+    url: 'http://127.0.0.1:5174/',
     reuseExistingServer: !process.env.CI,
   },
 });

@@ -24,14 +24,14 @@ test.describe('Diagnostics navigation', () => {
     await menu.getByRole('menuitem', { name: /Teste de Polling Rate/ }).click()
     await expect(page.getByRole('heading', { name: /Teste de polling rate/i })).toBeVisible()
     await expect(trigger).toHaveAttribute('aria-current', 'page')
-    await expect(page).toHaveURL(/\/Sensi\/diagnostics\/polling-rate$/)
+    await expect(page).toHaveURL(/\/diagnostics\/polling-rate$/)
 
     await trigger.click()
     await expect(page.getByRole('menuitem', { name: /Teste de Polling Rate/ })).toHaveAttribute('aria-current', 'page')
     await page.getByRole('menuitem', { name: /Diagnóstico de Entrada/ }).click()
     await expect(page.getByRole('heading', { name: 'Diagnóstico de entrada', exact: true })).toBeVisible()
     await expect(trigger).toHaveAttribute('aria-current', 'page')
-    await expect(page).toHaveURL(/\/Sensi\/diagnostics\/input$/)
+    await expect(page).toHaveURL(/\/diagnostics\/input$/)
 
     await trigger.click()
     await page.getByRole('menuitem', { name: /Refresh Rate/ }).click()

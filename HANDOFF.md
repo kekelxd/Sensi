@@ -4,7 +4,7 @@
 
 - Branch: `main`, sincronizada com `origin/main` antes desta mudanca.
 - O workspace tinha itens nao rastreados preexistentes (`.playwright-cli/`, `agent.md`, pastas de skills/design, etc.). Eles nao foram alterados.
-- Implementacao validada em desktop com Vite local em `http://127.0.0.1:5173/Sensi/`.
+- Implementacao validada em desktop com Vite local em `http://127.0.0.1:5173/`.
 
 ## Arquitetura de navegacao
 
@@ -12,37 +12,37 @@
 - O contrato de URLs fica centralizado em `src/routes.ts`.
 - `src/App.tsx` le a URL inicial, sincroniza `popstate`, normaliza deep links/redirects legados e renderiza a view correspondente.
 - Rotas canonicas em ingles:
-  - `/Sensi/`
-  - `/Sensi/train`
-  - `/Sensi/train/target-switch`
-  - `/Sensi/train/tracking`
-  - `/Sensi/train/target-shooting`
-  - `/Sensi/train/reaction`
-  - `/Sensi/train/gridshot`
-  - `/Sensi/train/strafetrack`
-  - `/Sensi/train/sniper`
-  - `/Sensi/train/routines`
-  - `/Sensi/calibrate`
-  - `/Sensi/convert`
-  - `/Sensi/analysis`
-  - `/Sensi/analysis/history`
-  - `/Sensi/methodology`
-  - `/Sensi/diagnostics`
-  - `/Sensi/diagnostics/polling-rate`
-  - `/Sensi/diagnostics/input`
-  - `/Sensi/diagnostics/refresh-rate`
-  - `/Sensi/diagnostics/controller-drift`
-  - `/Sensi/profile`
-  - `/Sensi/login`, `/Sensi/register`, `/Sensi/forgot-password`
+  - `/`
+  - `/train`
+  - `/train/target-switch`
+  - `/train/tracking`
+  - `/train/target-shooting`
+  - `/train/reaction`
+  - `/train/gridshot`
+  - `/train/strafetrack`
+  - `/train/sniper`
+  - `/train/routines`
+  - `/calibrate`
+  - `/convert`
+  - `/analysis`
+  - `/analysis/history`
+  - `/methodology`
+  - `/diagnostics`
+  - `/diagnostics/polling-rate`
+  - `/diagnostics/input`
+  - `/diagnostics/refresh-rate`
+  - `/diagnostics/controller-drift`
+  - `/profile`
+  - `/login`, `/register`, `/forgot-password`
 - Rotas antigas continuam aceitas e sao normalizadas:
-  - `/Sensi/diagnostico` -> `/Sensi/diagnostics`
-  - `/Sensi/polling-rate` -> `/Sensi/diagnostics/polling-rate`
-  - `/Sensi/input-diagnostics` -> `/Sensi/diagnostics/input`
-  - `/Sensi/drift-controle` -> `/Sensi/diagnostics/controller-drift`
-  - `/Sensi/warmup` -> `/Sensi/train`
-  - `/Sensi/routine` -> `/Sensi/train/routines`
-  - `/Sensi/calibration` -> `/Sensi/calibrate`
-  - `/Sensi/converter` -> `/Sensi/convert`
+  - `/diagnostico` -> `/diagnostics`
+  - `/polling-rate` -> `/diagnostics/polling-rate`
+  - `/input-diagnostics` -> `/diagnostics/input`
+  - `/drift-controle` -> `/diagnostics/controller-drift`
+  - `/warmup` -> `/train`
+  - `/routine` -> `/train/routines`
+  - `/calibration` -> `/calibrate`
+  - `/converter` -> `/convert`
 
 ## Mudancas principais
 
@@ -63,12 +63,12 @@
 - `npm run build`: passou. O Vite manteve apenas o aviso de chunk acima de 500 kB.
 - `npm run test:e2e`: passou, 147 testes aprovados e 9 skipped condicionais.
 - Playwright manual via script:
-  - CTA "Explorar diagnosticos" abre `/Sensi/diagnostics`.
-  - Item direto "Polling Rate" da Home abre `/Sensi/diagnostics/polling-rate`.
-  - Item direto "Refresh Rate" da Home abre `/Sensi/diagnostics/refresh-rate`.
-  - Dropdown Diagnostico abre "Drift do Controle" em `/Sensi/diagnostics/controller-drift`.
-  - Deep link `/Sensi/methodology` carrega a metodologia.
-  - Deep link `/Sensi/train/reaction` abre o setup do exercicio de reacao.
+  - CTA "Explorar diagnosticos" abre `/diagnostics`.
+  - Item direto "Polling Rate" da Home abre `/diagnostics/polling-rate`.
+  - Item direto "Refresh Rate" da Home abre `/diagnostics/refresh-rate`.
+  - Dropdown Diagnostico abre "Drift do Controle" em `/diagnostics/controller-drift`.
+  - Deep link `/methodology` carrega a metodologia.
+  - Deep link `/train/reaction` abre o setup do exercicio de reacao.
   - Back do navegador retorna corretamente para a Home.
 
 ## Observacoes para proximas threads

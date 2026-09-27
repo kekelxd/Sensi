@@ -11,7 +11,7 @@ describe('alpha feedback payload', () => {
       language: 'pt',
       reproducibility: 'always',
     }, {
-      page: '/Sensi/',
+      page: '/',
       user_agent: 'Vitest',
       viewport: '1440x900 @1x',
       user_id: null,
@@ -23,7 +23,7 @@ describe('alpha feedback payload', () => {
       type: 'bug',
       title: 'Modal quebrou',
       message: 'Ao abrir o feedback, o estado duplicou.',
-      page: '/Sensi/',
+      page: '/',
       app_version: APP_VERSION,
       release_channel: RELEASE_CHANNEL,
       user_agent: 'Vitest',
@@ -48,7 +48,7 @@ describe('alpha feedback payload', () => {
       language: 'pt',
       reproducibility: 'once',
     }, {
-      page: '/Sensi/diagnostics',
+      page: '/diagnostics',
       user_agent: 'Vitest',
       viewport: '1920x1080 @1x',
       user_id: 'user-alpha-1',

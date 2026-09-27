@@ -3,35 +3,35 @@ import { routeStateFromPath, viewRoutePath } from './routes'
 
 describe('application route map', () => {
   it.each([
-    ['warmup', '/Sensi/train'],
-    ['routine', '/Sensi/train/routines'],
-    ['calibration', '/Sensi/calibrate'],
-    ['converter', '/Sensi/convert'],
-    ['analysis', '/Sensi/analysis'],
-    ['profile', '/Sensi/profile'],
-    ['diagnostics', '/Sensi/diagnostics'],
-    ['polling', '/Sensi/diagnostics/polling-rate'],
-    ['buttons', '/Sensi/diagnostics/input'],
-    ['refresh-rate', '/Sensi/diagnostics/refresh-rate'],
-    ['controller-drift', '/Sensi/diagnostics/controller-drift'],
+    ['warmup', '/train'],
+    ['routine', '/train/routines'],
+    ['calibration', '/calibrate'],
+    ['converter', '/convert'],
+    ['analysis', '/analysis'],
+    ['profile', '/profile'],
+    ['diagnostics', '/diagnostics'],
+    ['polling', '/diagnostics/polling-rate'],
+    ['buttons', '/diagnostics/input'],
+    ['refresh-rate', '/diagnostics/refresh-rate'],
+    ['controller-drift', '/diagnostics/controller-drift'],
   ] as const)('maps %s to %s', (view, path) => {
     expect(viewRoutePath(view)).toBe(path)
   })
 
   it.each([
-    ['switch', '/Sensi/train/target-switch'],
-    ['tracking', '/Sensi/train/tracking'],
-    ['flick', '/Sensi/train/target-shooting'],
-    ['reflex', '/Sensi/train/reaction'],
-    ['gridshot', '/Sensi/train/gridshot'],
-    ['strafetrack', '/Sensi/train/strafetrack'],
-    ['sniper-reaction', '/Sensi/train/sniper'],
+    ['switch', '/train/target-switch'],
+    ['tracking', '/train/tracking'],
+    ['flick', '/train/target-shooting'],
+    ['reflex', '/train/reaction'],
+    ['gridshot', '/train/gridshot'],
+    ['strafetrack', '/train/strafetrack'],
+    ['sniper-reaction', '/train/sniper'],
   ] as const)('maps warmup exercise %s to %s', (warmupEntry, path) => {
     expect(viewRoutePath('warmup', { warmupEntry })).toBe(path)
   })
 
   it('maps methodology to the standalone route', () => {
-    expect(viewRoutePath('analysis', { analysisSection: 'methodology' })).toBe('/Sensi/methodology')
+    expect(viewRoutePath('analysis', { analysisSection: 'methodology' })).toBe('/methodology')
     expect(routeStateFromPath('methodology')).toMatchObject({ view: 'analysis', analysisSection: 'methodology' })
   })
 

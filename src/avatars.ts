@@ -31,6 +31,6 @@ export function isAvatarId(value: unknown): value is AvatarId {
 }
 
 export function avatarSource(avatarId: AvatarId) {
-  const baseUrl = (import.meta as ImportMetaWithBaseUrl).env?.BASE_URL ?? '/Sensi/'
+  const baseUrl = (import.meta as ImportMetaWithBaseUrl).env?.BASE_URL ?? '/'
   return `${baseUrl}avatars/individual/${avatarId}.png`
 }
