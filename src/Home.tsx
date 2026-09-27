@@ -17,6 +17,8 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
+import { AlphaFeedbackModal } from './AlphaFeedbackModal'
+import { APP_RELEASE_LABEL } from './appRelease'
 import { readCalibrationHistory, type CalibrationSessionSummary } from './calibration'
 import { GAMES, type GameConfig } from './games'
 import { GAME_SENSITIVITY_PROFILE_BY_ID } from './gameSensitivityProfiles'
@@ -59,9 +61,6 @@ const copy = {
     primaryCta: 'Começar agora',
     secondaryCta: 'Testar meu setup',
     benefits: ['Gratuito para começar', 'Sem compromisso', 'Feito para jogadores reais'],
-    arenaStatus: 'DEMONSTRAÇÃO ATIVA',
-    arenaCallout: 'MAIS CONTROLE. MAIS RESULTADOS.',
-    arenaChain: 'SEQUÊNCIA DEMO',
     pathKicker: 'ESCOLHA SEU CAMINHO',
     pathTitle: 'Dois focos. Uma evolução.',
     pathAside: 'Treine sua mira ou valide seu setup. O XENSI te dá o controle em todas as frentes.',
@@ -107,6 +106,7 @@ const copy = {
       ['Sempre em desenvolvimento', 'O produto cresce com novas rotinas, diagnósticos e análises.'],
     ],
     footerLine: 'Feito por jogadores, para jogadores.',
+    feedbackCta: 'Enviar feedback',
     footerLinks: ['Sobre', 'Privacidade', 'Termos', 'Contato'],
   },
   en: {
@@ -117,9 +117,6 @@ const copy = {
     primaryCta: 'Start now',
     secondaryCta: 'Test my setup',
     benefits: ['Free to start', 'No commitment', 'Built for real players'],
-    arenaStatus: 'ACTIVE DEMO',
-    arenaCallout: 'MORE CONTROL. MORE RESULTS.',
-    arenaChain: 'DEMO CHAIN',
     pathKicker: 'CHOOSE YOUR PATH',
     pathTitle: 'Two focuses. One evolution.',
     pathAside: 'Train your aim or validate your setup. XENSI gives you control across every front.',
@@ -165,6 +162,7 @@ const copy = {
       ['Always evolving', 'The product grows with new routines, diagnostics, and analysis.'],
     ],
     footerLine: 'Made by players, for players.',
+    feedbackCta: 'Send feedback',
     footerLinks: ['About', 'Privacy', 'Terms', 'Contact'],
   },
   es: {
@@ -175,9 +173,6 @@ const copy = {
     primaryCta: 'Empezar ahora',
     secondaryCta: 'Probar mi setup',
     benefits: ['Gratis para empezar', 'Sin compromiso', 'Hecho para jugadores reales'],
-    arenaStatus: 'DEMO ACTIVA',
-    arenaCallout: 'MÁS CONTROL. MÁS RESULTADOS.',
-    arenaChain: 'SECUENCIA DEMO',
     pathKicker: 'ELIGE TU CAMINO',
     pathTitle: 'Dos focos. Una evolución.',
     pathAside: 'Entrena tu mira o valida tu setup. XENSI te da control en todos los frentes.',
@@ -223,6 +218,7 @@ const copy = {
       ['Siempre en desarrollo', 'El producto crece con nuevas rutinas, diagnósticos y análisis.'],
     ],
     footerLine: 'Hecho por jugadores, para jugadores.',
+    feedbackCta: 'Enviar feedback',
     footerLinks: ['Sobre', 'Privacidad', 'Términos', 'Contacto'],
   },
 } as const
@@ -302,10 +298,6 @@ function HomeHero({ onNavigate }: Props) {
       <span>DISCIPLINA</span>
       <span>DADOS</span>
       <span>EVOLUÇÃO</span>
-      <i />
-    </div>
-    <div className="xensi-home-v3-hero-callout" aria-hidden="true">
-      <span>{current.arenaCallout}</span>
       <i />
     </div>
   </section>
@@ -520,7 +512,7 @@ function HomeEcosystem({ onNavigate }: Props) {
   </section>
 }
 
-function HomeFooter() {
+function HomeFooter({ onFeedback }: { onFeedback: () => void }) {
   const { locale } = useI18n()
   const current = copy[locale]
   return <footer className="xensi-home-v3-footer" id="home-footer">
@@ -529,11 +521,16 @@ function HomeFooter() {
     <nav aria-label="XENSI footer">
       {current.footerLinks.map((link) => <a key={link} href="#ecossistema">{link}</a>)}
     </nav>
+    <div className="xensi-home-v3-footer-release">
+      <span>{APP_RELEASE_LABEL}</span>
+      <button type="button" onClick={onFeedback}>{current.feedbackCta}</button>
+    </div>
   </footer>
 }
 
 export function Home({ onNavigate }: Props) {
   const [summary, setSummary] = useState<HomeSummary>(() => readHomeSummary(window.localStorage))
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
 
   useEffect(() => {
     const refresh = () => setSummary(readHomeSummary(window.localStorage))
@@ -553,7 +550,8 @@ export function Home({ onNavigate }: Props) {
       <HomePathways onNavigate={onNavigate} />
       <HomeProgress summary={stableSummary} onNavigate={onNavigate} />
       <HomeEcosystem onNavigate={onNavigate} />
-      <HomeFooter />
+      <HomeFooter onFeedback={() => setFeedbackOpen(true)} />
     </div>
+    <AlphaFeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
   </main>
 }

@@ -5,7 +5,7 @@ export function useDialogFocus(ref: RefObject<HTMLElement | null>, open: boolean
     if (!open || !ref.current) return
     const dialog = ref.current
     const previous = document.activeElement as HTMLElement | null
-    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]')).filter(node => node.getClientRects().length > 0)
+    const focusable = () => Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')).filter(node => node.getClientRects().length > 0)
     focusable()[0]?.focus()
     const trap = (event: KeyboardEvent) => {
       if (event.key !== 'Tab') return

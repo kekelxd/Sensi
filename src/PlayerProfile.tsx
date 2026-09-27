@@ -43,13 +43,6 @@ const copy = {
     addSensitivity: 'Adicionar sensibilidade',
     activeConfig: 'Configuração ativa',
     inUseNow: 'Em uso agora',
-    level: 'Nível',
-    playerLevel: 'Jogador',
-    focus: 'Foco',
-    focusValue: 'FPS Competitivo',
-    status: 'Status',
-    active: 'Ativo',
-    memberSince: 'Membro desde abr. 2024',
     allGames: 'Todos os jogos',
     filterGame: 'Filtro de presets',
     searchPlaceholder: 'Buscar configurações...',
@@ -64,7 +57,6 @@ const copy = {
     unavailable: 'cm/360 indisponível',
     unavailableHint: 'Este perfil de jogo ainda não possui cálculo físico compatível.',
     edit: 'Editar',
-    editAvatar: 'Alterar avatar',
     calibrate: 'Calibrar',
     convert: 'Converter',
     remove: 'Remover',
@@ -96,13 +88,6 @@ const copy = {
     addSensitivity: 'Add sensitivity',
     activeConfig: 'Active configuration',
     inUseNow: 'In use now',
-    level: 'Level',
-    playerLevel: 'Player',
-    focus: 'Focus',
-    focusValue: 'Competitive FPS',
-    status: 'Status',
-    active: 'Active',
-    memberSince: 'Member since Apr. 2024',
     allGames: 'All games',
     filterGame: 'Preset filter',
     searchPlaceholder: 'Search configurations...',
@@ -117,7 +102,6 @@ const copy = {
     unavailable: 'cm/360 unavailable',
     unavailableHint: 'This game profile does not support a compatible physical calculation yet.',
     edit: 'Edit',
-    editAvatar: 'Edit avatar',
     calibrate: 'Calibrate',
     convert: 'Convert',
     remove: 'Remove',
@@ -149,13 +133,6 @@ const copy = {
     addSensitivity: 'Añadir sensibilidad',
     activeConfig: 'Configuración activa',
     inUseNow: 'En uso ahora',
-    level: 'Nivel',
-    playerLevel: 'Jugador',
-    focus: 'Foco',
-    focusValue: 'FPS competitivo',
-    status: 'Estado',
-    active: 'Activo',
-    memberSince: 'Miembro desde abr. 2024',
     allGames: 'Todos los juegos',
     filterGame: 'Filtro de presets',
     searchPlaceholder: 'Buscar configuraciones...',
@@ -170,7 +147,6 @@ const copy = {
     unavailable: 'cm/360 no disponible',
     unavailableHint: 'Este perfil de juego aún no admite un cálculo físico compatible.',
     edit: 'Editar',
-    editAvatar: 'Editar avatar',
     calibrate: 'Calibrar',
     convert: 'Convertir',
     remove: 'Eliminar',
@@ -303,14 +279,9 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
         <article className="profile-v1-identity">
           <span className="profile-v1-label">{text.identity}</span>
           <div className="profile-v1-person">
-            <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /><button type="button" onClick={openIdentity} aria-label={text.editAvatar} title={text.editAvatar}><Edit3 size={16} /></button></div>
-            <div><h2>{profile.nickname}</h2><p>{text.memberSince}</p><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
+            <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /></div>
+            <div><h2>{profile.nickname}</h2><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
           </div>
-          <dl className="profile-v1-identity-meta">
-            <div><dt>{text.level}</dt><dd>{text.playerLevel}</dd></div>
-            <div><dt>{text.focus}</dt><dd>{text.focusValue}</dd></div>
-            <div><dt>{text.status}</dt><dd><i /> {text.active}</dd></div>
-          </dl>
         </article>
 
         <article className="profile-v1-active-card">

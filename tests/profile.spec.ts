@@ -17,6 +17,10 @@ test.beforeEach(async ({ page }) => {
 test('empty profile, avatar picker and navbar share normalized assets', async ({ page }, testInfo) => {
   await openProfile(page)
   await expect(page.getByText('Nenhuma sensibilidade salva.')).toBeVisible()
+  await expect(page.getByText('Membro desde')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Alterar avatar/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Editar perfil' })).toHaveCount(1)
+  await expect(page.locator('.profile-v1-identity-meta')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Editar perfil' }).click()
   const avatarButtons = page.locator('.profile-avatar-picker > button')

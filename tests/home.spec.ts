@@ -97,7 +97,7 @@ test.describe('XENSI home v3', () => {
     await expect(hero.getByText('DISCIPLINA', { exact: true })).toBeVisible()
     await expect(hero.getByText('DADOS', { exact: true })).toBeVisible()
     await expect(hero.getByText('EVOLUÇÃO', { exact: true })).toBeVisible()
-    await expect(page.getByText('MAIS CONTROLE. MAIS RESULTADOS.')).toBeVisible()
+    await expect(page.getByText('MAIS CONTROLE. MAIS RESULTADOS.')).toHaveCount(0)
     await expect(page.getByTestId('home-training-demo')).toHaveCount(0)
     await expect(page.locator('.xensi-reference-target')).toHaveCount(0)
   })
