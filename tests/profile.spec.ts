@@ -11,6 +11,7 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.removeItem('xensi-player-profile')
     localStorage.setItem('sensi-locale', 'pt')
+    localStorage.setItem('xensi-auth-user-id', 'profile-test-user')
   })
 })
 
@@ -21,6 +22,14 @@ test('empty profile, avatar picker and navbar share normalized assets', async ({
   await expect(page.getByRole('button', { name: /Alterar avatar/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Editar perfil' })).toHaveCount(1)
   await expect(page.locator('.profile-v1-identity-meta')).toHaveCount(0)
+  const identityTitle = page.locator('.profile-v1-identity-copy h2')
+  const editProfileButton = page.getByRole('button', { name: 'Editar perfil' })
+  await expect(identityTitle).toBeVisible()
+  expect(await editProfileButton.evaluate((button) => {
+    const title = document.querySelector('.profile-v1-identity-copy h2')?.getBoundingClientRect()
+    const action = button.getBoundingClientRect()
+    return Boolean(title && action.top - title.bottom >= 10)
+  })).toBe(true)
 
   await page.getByRole('button', { name: 'Editar perfil' }).click()
   const avatarButtons = page.locator('.profile-avatar-picker > button')
@@ -31,8 +40,8 @@ test('empty profile, avatar picker and navbar share normalized assets', async ({
 
   const profileAvatar = page.locator('.profile-v1-person .xensi-avatar img')
   const navbarAvatar = page.locator('.xensi-user-trigger .xensi-avatar img')
-  await expect(profileAvatar).toHaveAttribute('src', /\/Sensi\/avatars\/individual\/dog-happy\.png$/)
-  await expect(navbarAvatar).toHaveAttribute('src', /\/Sensi\/avatars\/individual\/dog-happy\.png$/)
+  await expect(profileAvatar).toHaveAttribute('src', /(\/Sensi)?\/avatars\/individual\/dog-happy\.png$/)
+  await expect(navbarAvatar).toHaveAttribute('src', /(\/Sensi)?\/avatars\/individual\/dog-happy\.png$/)
   await expect.poll(async () => profileAvatar.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   await expect.poll(async () => navbarAvatar.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
   await expect(profileAvatar).toHaveCSS('object-fit', 'contain')

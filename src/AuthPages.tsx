@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useState } from 'react'
 import { ArrowRight, BarChart3, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw } from 'lucide-react'
 import { XensiLogo } from './AppNavigation'
 import { AuthMode, AuthStatus, registerWithEmail, requestPasswordReset, signInWithEmail } from './authService'
+import { useI18n, type Locale } from './i18n'
 
 type AuthScreenProps = {
   mode: AuthMode
@@ -9,29 +10,171 @@ type AuthScreenProps = {
   onAuthenticated: () => void
 }
 
-const modeCopy = {
-  login: {
-    title: 'Bem-vindo de volta',
-    subtitle: 'Entre na sua conta para continuar sua evolução.',
-    action: 'Entrar',
-    loading: 'Entrando...',
-    complete: 'Entrada confirmada.',
+const authCopy: Record<Locale, {
+  brandTitle: string
+  brandHighlight: string
+  brandDescription: string
+  pillarsLabel: string
+  pillars: Array<{ title: string; text: string }>
+  emailLabel: string
+  emailPlaceholder: string
+  passwordLabel: string
+  passwordPlaceholder: string
+  showPassword: string
+  hidePassword: string
+  remember: string
+  forgot: string
+  loginSwitch: string
+  registerSwitch: string
+  createAccount: string
+  signIn: string
+  modes: Record<AuthMode, {
+    title: string
+    subtitle: string
+    action: string
+    loading: string
+    complete: string
+  }>
+}> = {
+  pt: {
+    brandTitle: 'TREINE. CALIBRE.',
+    brandHighlight: 'EVOLUA.',
+    brandDescription: 'Treine sua mira, calibre sua sensibilidade e acompanhe sua evolução.',
+    pillarsLabel: 'Pilares do XENSI',
+    pillars: [
+      { title: 'TREINE', text: 'Sessões focadas' },
+      { title: 'CALIBRE', text: 'Ajustes controlados' },
+      { title: 'ANALISE', text: 'Acompanhe sua evolução' },
+    ],
+    emailLabel: 'E-mail',
+    emailPlaceholder: 'seu@email.com',
+    passwordLabel: 'Senha',
+    passwordPlaceholder: 'sua senha',
+    showPassword: 'Mostrar senha',
+    hidePassword: 'Ocultar senha',
+    remember: 'Lembrar de mim',
+    forgot: 'Esqueceu a senha?',
+    loginSwitch: 'Ainda não tem uma conta?',
+    registerSwitch: 'Já tem uma conta?',
+    createAccount: 'Criar conta',
+    signIn: 'Entrar',
+    modes: {
+      login: {
+        title: 'Bem-vindo de volta',
+        subtitle: 'Entre na sua conta para continuar sua evolução.',
+        action: 'Entrar',
+        loading: 'Entrando...',
+        complete: 'Entrada confirmada.',
+      },
+      register: {
+        title: 'Criar conta',
+        subtitle: 'Crie seu acesso para salvar treinos, calibrações e evolução.',
+        action: 'Criar conta',
+        loading: 'Criando...',
+        complete: 'Conta criada.',
+      },
+      'forgot-password': {
+        title: 'Recuperar senha',
+        subtitle: 'Informe seu e-mail para receber as instruções de recuperação.',
+        action: 'Enviar instruções',
+        loading: 'Enviando...',
+        complete: 'Instruções enviadas.',
+      },
+    },
   },
-  register: {
-    title: 'Criar conta',
-    subtitle: 'Crie seu acesso para salvar treinos, calibrações e evolução.',
-    action: 'Criar conta',
-    loading: 'Criando...',
-    complete: 'Conta criada.',
+  en: {
+    brandTitle: 'TRAIN. CALIBRATE.',
+    brandHighlight: 'EVOLVE.',
+    brandDescription: 'Train your aim, calibrate your sensitivity, and track your progress.',
+    pillarsLabel: 'XENSI pillars',
+    pillars: [
+      { title: 'TRAIN', text: 'Focused sessions' },
+      { title: 'CALIBRATE', text: 'Controlled adjustments' },
+      { title: 'ANALYZE', text: 'Track your progress' },
+    ],
+    emailLabel: 'E-mail',
+    emailPlaceholder: 'you@email.com',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'your password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
+    remember: 'Remember me',
+    forgot: 'Forgot password?',
+    loginSwitch: 'Do not have an account yet?',
+    registerSwitch: 'Already have an account?',
+    createAccount: 'Create account',
+    signIn: 'Sign in',
+    modes: {
+      login: {
+        title: 'Welcome back',
+        subtitle: 'Sign in to continue your progress.',
+        action: 'Sign in',
+        loading: 'Signing in...',
+        complete: 'Signed in.',
+      },
+      register: {
+        title: 'Create account',
+        subtitle: 'Create access to save training, calibration, and progress.',
+        action: 'Create account',
+        loading: 'Creating...',
+        complete: 'Account created.',
+      },
+      'forgot-password': {
+        title: 'Recover password',
+        subtitle: 'Enter your email to receive recovery instructions.',
+        action: 'Send instructions',
+        loading: 'Sending...',
+        complete: 'Instructions sent.',
+      },
+    },
   },
-  'forgot-password': {
-    title: 'Recuperar senha',
-    subtitle: 'Informe seu e-mail para receber as instruções de recuperação.',
-    action: 'Enviar instruções',
-    loading: 'Enviando...',
-    complete: 'Instruções enviadas.',
+  es: {
+    brandTitle: 'ENTRENA. CALIBRA.',
+    brandHighlight: 'EVOLUCIONA.',
+    brandDescription: 'Entrena tu mira, calibra tu sensibilidad y sigue tu evolución.',
+    pillarsLabel: 'Pilares de XENSI',
+    pillars: [
+      { title: 'ENTRENA', text: 'Sesiones enfocadas' },
+      { title: 'CALIBRA', text: 'Ajustes controlados' },
+      { title: 'ANALIZA', text: 'Sigue tu evolución' },
+    ],
+    emailLabel: 'E-mail',
+    emailPlaceholder: 'tu@email.com',
+    passwordLabel: 'Contraseña',
+    passwordPlaceholder: 'tu contraseña',
+    showPassword: 'Mostrar contraseña',
+    hidePassword: 'Ocultar contraseña',
+    remember: 'Recordarme',
+    forgot: '¿Olvidaste tu contraseña?',
+    loginSwitch: '¿Aún no tienes una cuenta?',
+    registerSwitch: '¿Ya tienes una cuenta?',
+    createAccount: 'Crear cuenta',
+    signIn: 'Entrar',
+    modes: {
+      login: {
+        title: 'Bienvenido de vuelta',
+        subtitle: 'Entra en tu cuenta para continuar tu evolución.',
+        action: 'Entrar',
+        loading: 'Entrando...',
+        complete: 'Entrada confirmada.',
+      },
+      register: {
+        title: 'Crear cuenta',
+        subtitle: 'Crea tu acceso para guardar entrenamientos, calibraciones y evolución.',
+        action: 'Crear cuenta',
+        loading: 'Creando...',
+        complete: 'Cuenta creada.',
+      },
+      'forgot-password': {
+        title: 'Recuperar contraseña',
+        subtitle: 'Informa tu e-mail para recibir las instrucciones de recuperación.',
+        action: 'Enviar instrucciones',
+        loading: 'Enviando...',
+        complete: 'Instrucciones enviadas.',
+      },
+    },
   },
-} as const
+}
 
 function AuthField({ children, icon, id, label }: { children: ReactNode; icon: ReactNode; id: string; label: string }) {
   return <div className="xensi-auth-field">
@@ -49,7 +192,9 @@ function BrandPillar({ icon, title, text }: { icon: ReactNode; title: string; te
 }
 
 export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProps) {
-  const copy = modeCopy[mode]
+  const { locale } = useI18n()
+  const current = authCopy[locale]
+  const copy = current.modes[mode]
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
@@ -75,19 +220,21 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
     }
     setStatus('success')
     setMessage(copy.complete)
-    if (mode === 'login') onAuthenticated()
+    if (mode === 'login') {
+      onAuthenticated()
+    }
   }
 
   return <main className="xensi-auth-shell">
     <section className="xensi-auth-brand-panel" aria-labelledby="auth-brand-title">
       <div>
-        <h1 id="auth-brand-title">TREINE. CALIBRE. <span>EVOLUA.</span></h1>
-        <p>Treine sua mira, calibre sua sensibilidade e acompanhe sua evolução.</p>
+        <h1 id="auth-brand-title">{current.brandTitle} <span>{current.brandHighlight}</span></h1>
+        <p>{current.brandDescription}</p>
       </div>
-      <div className="xensi-auth-pillars" aria-label="Pilares do XENSI">
-        <BrandPillar icon={<Flame size={18} />} title="TREINE" text="Sessões focadas" />
-        <BrandPillar icon={<Crosshair size={18} />} title="CALIBRE" text="Ajustes controlados" />
-        <BrandPillar icon={<BarChart3 size={18} />} title="ANALISE" text="Acompanhe sua evolução" />
+      <div className="xensi-auth-pillars" aria-label={current.pillarsLabel}>
+        <BrandPillar icon={<Flame size={18} />} title={current.pillars[0].title} text={current.pillars[0].text} />
+        <BrandPillar icon={<Crosshair size={18} />} title={current.pillars[1].title} text={current.pillars[1].text} />
+        <BrandPillar icon={<BarChart3 size={18} />} title={current.pillars[2].title} text={current.pillars[2].text} />
       </div>
       <div className="xensi-auth-mark" aria-hidden="true"><span>X</span></div>
     </section>
@@ -100,22 +247,22 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           <p>{copy.subtitle}</p>
         </header>
 
-        <AuthField icon={<Mail size={15} />} id="auth-email" label="E-mail">
-          <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="seu@email.com" disabled={status === 'loading'} required />
+        <AuthField icon={<Mail size={15} />} id="auth-email" label={current.emailLabel}>
+          <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder={current.emailPlaceholder} disabled={status === 'loading'} required />
         </AuthField>
 
-        {needsPassword && <AuthField icon={<Lock size={15} />} id="auth-password" label="Senha">
+        {needsPassword && <AuthField icon={<Lock size={15} />} id="auth-password" label={current.passwordLabel}>
           <div className="xensi-auth-password">
-            <input id="auth-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="sua senha" disabled={status === 'loading'} required />
-            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'} disabled={status === 'loading'}>
+            <input id="auth-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder={current.passwordPlaceholder} disabled={status === 'loading'} required />
+            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? current.hidePassword : current.showPassword} disabled={status === 'loading'}>
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
           </div>
         </AuthField>}
 
         {mode === 'login' && <div className="xensi-auth-options">
-          <label><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> <span>Lembrar de mim</span></label>
-          <button type="button" onClick={() => onNavigate('forgot-password')}>Esqueceu a senha?</button>
+          <label><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> <span>{current.remember}</span></label>
+          <button type="button" onClick={() => onNavigate('forgot-password')}>{current.forgot}</button>
         </div>}
 
         {message && <p className={`xensi-auth-message ${status}`} role={status === 'error' ? 'alert' : 'status'} aria-live="polite">{message}</p>}
@@ -125,7 +272,9 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           {mode === 'forgot-password' ? <RotateCcw size={16} /> : <ArrowRight size={16} />}
         </button>
 
-        {mode === 'login' ? <p className="xensi-auth-switch">Ainda não tem uma conta? <button type="button" onClick={() => onNavigate('register')}>Criar conta</button></p> : <p className="xensi-auth-switch">Já tem uma conta? <button type="button" onClick={() => onNavigate('login')}>Entrar</button></p>}
+        {mode === 'login'
+          ? <p className="xensi-auth-switch">{current.loginSwitch} <button type="button" onClick={() => onNavigate('register')}>{current.createAccount}</button></p>
+          : <p className="xensi-auth-switch">{current.registerSwitch} <button type="button" onClick={() => onNavigate('login')}>{current.signIn}</button></p>}
       </form>
     </section>
   </main>

@@ -294,12 +294,6 @@ function HomeHero({ onNavigate }: Props) {
         {current.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={14} />{benefit}</li>)}
       </ul>
     </div>
-    <div className="xensi-home-v3-hero-discipline" aria-hidden="true">
-      <span>DISCIPLINA</span>
-      <span>DADOS</span>
-      <span>EVOLUÇÃO</span>
-      <i />
-    </div>
   </section>
 }
 

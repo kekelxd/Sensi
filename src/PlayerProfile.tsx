@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, ChevronRight, Crosshair, Edit3, Gauge, MoreVertical, Plus, RefreshCw, Search, Star, Trash2, UserRound, X } from 'lucide-react'
+import { Check, ChevronRight, Crosshair, Edit3, Gauge, MoreVertical, Plus, RefreshCw, Search, Star, Trash2, X } from 'lucide-react'
 import { AvatarArtwork } from './AvatarArtwork'
 import { XENSI_AVATARS, type AvatarId } from './avatars'
 import { GAME_SENSITIVITY_PROFILES, GAME_SENSITIVITY_PROFILE_BY_ID, type GameSensitivityProfileId } from './gameSensitivityProfiles'
@@ -28,7 +28,6 @@ type PresetDraft = {
 
 const copy = {
   pt: {
-    kicker: 'Configuração pessoal',
     title: 'Perfil',
     subtitle: 'Sua identidade e sensibilidades salvas.',
     identity: 'Identidade',
@@ -73,7 +72,6 @@ const copy = {
     invalid: 'Informe sensibilidade e DPI válidos.',
   },
   en: {
-    kicker: 'Personal settings',
     title: 'Profile',
     subtitle: 'Your identity and saved sensitivities.',
     identity: 'Identity',
@@ -118,7 +116,6 @@ const copy = {
     invalid: 'Enter a valid sensitivity and DPI.',
   },
   es: {
-    kicker: 'Configuración personal',
     title: 'Perfil',
     subtitle: 'Tu identidad y sensibilidades guardadas.',
     identity: 'Identidad',
@@ -267,11 +264,9 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
     <div className="profile-v1-shell">
       <header className="profile-v1-heading">
         <div>
-          <span><UserRound size={15} /> {text.kicker}</span>
           <h1>{text.title}</h1>
           <p>{text.subtitle}</p>
         </div>
-        <aside aria-hidden="true"><span>MAIS CONTROLE.</span><span>MAIS RESULTADOS.</span><i /></aside>
         {status && <small className="profile-v1-status"><Check size={14} /> {status}</small>}
       </header>
 
@@ -280,7 +275,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
           <span className="profile-v1-label">{text.identity}</span>
           <div className="profile-v1-person">
             <div className="profile-v1-avatar-frame"><AvatarArtwork avatarId={profile.avatarId} size="lg" /></div>
-            <div><h2>{profile.nickname}</h2><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
+            <div className="profile-v1-identity-copy"><h2>{profile.nickname}</h2><button type="button" onClick={openIdentity}><Edit3 size={15} /> {text.editProfile}</button></div>
           </div>
         </article>
 

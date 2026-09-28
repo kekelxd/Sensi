@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BarChart3, ChevronDown, Crosshair, Gamepad2, Gauge, Info, Languages, MonitorUp, Mouse, Settings2, SlidersHorizontal, UserRound } from 'lucide-react'
+import { ArrowRight, BarChart3, ChevronDown, Crosshair, Gamepad2, Gauge, Info, Languages, MonitorUp, Mouse, Settings2, SlidersHorizontal, UserRound } from 'lucide-react'
+import { readAuthSessionState, type AuthSessionState } from './authService'
 import type { Locale } from './i18n'
 import type { WarmupExercise } from './warmupConfig'
 import { AvatarArtwork } from './AvatarArtwork'
@@ -17,6 +18,7 @@ type Props = {
   disabled: boolean
   onLocaleChange: (locale: Locale) => void
   onNavigate: (view: NavigationView) => void
+  onLogin: () => void
   onExercise: (exercise: WarmupExercise) => void
   onAnalysisSection: (section: AnalysisSection) => void
 }
@@ -54,12 +56,13 @@ function readNavProfile() {
   }
 }
 
-export function AppNavigation({ view, analysisSection, locale, disabled, onLocaleChange, onNavigate, onAnalysisSection }: Props) {
+export function AppNavigation({ view, analysisSection, locale, disabled, onLocaleChange, onNavigate, onLogin, onAnalysisSection }: Props) {
   const text = labels[locale]
   const shellRef = useRef<HTMLDivElement>(null)
   const menuTriggerRefs = useRef<Partial<Record<MenuName, HTMLButtonElement | null>>>({})
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
   const [navProfile, setNavProfile] = useState(readNavProfile)
+  const [authState, setAuthState] = useState<AuthSessionState>({ status: 'loading', userId: null })
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -89,6 +92,18 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
     return () => {
       window.removeEventListener('xensi-profile-updated', update)
       window.removeEventListener('storage', update)
+    }
+  }, [])
+
+  useEffect(() => {
+    let frame = window.requestAnimationFrame(() => setAuthState(readAuthSessionState()))
+    const update = () => setAuthState(readAuthSessionState())
+    window.addEventListener('storage', update)
+    window.addEventListener('xensi-auth-updated', update)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('storage', update)
+      window.removeEventListener('xensi-auth-updated', update)
     }
   }, [])
 
@@ -131,6 +146,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
     items[next]?.focus()
   }
   const diagnosticActive = isDiagnosticView(view)
+  const profileMenuOpen = authState.status === 'authenticated' && openMenu === 'profile'
 
   return <div className="xensi-navigation" ref={shellRef}>
     <XensiLogo as="button" onClick={() => navigate('home')} disabled={disabled} />
@@ -169,9 +185,9 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
     </nav>
 
     <div className="xensi-nav-actions">
-      <div className="xensi-nav-menu-group">
+      {authState.status === 'loading' ? <div className="xensi-auth-skeleton" aria-label="Carregando sessão" /> : authState.status === 'authenticated' ? <div className="xensi-nav-menu-group">
         <button ref={(node) => { menuTriggerRefs.current.profile = node }} type="button" className={`xensi-user-trigger ${view === 'profile' ? 'active' : ''}`} onClick={() => toggle('profile')} disabled={disabled} aria-haspopup="menu" aria-expanded={openMenu === 'profile'}><AvatarArtwork avatarId={navProfile.avatarId} size="sm" /><b>{navProfile.nickname}</b><ChevronDown size={13} /></button>
-        {openMenu === 'profile' && <div className="xensi-nav-dropdown xensi-nav-dropdown-right xensi-profile-dropdown">
+        {profileMenuOpen && <div className="xensi-nav-dropdown xensi-nav-dropdown-right xensi-profile-dropdown">
           <button type="button" onClick={() => navigate('profile')}><UserRound size={15} /><span><b>{text.profile}</b></span></button>
           <button type="button" onClick={() => navigate('profile')}><SlidersHorizontal size={15} /><span><b>{text.preferences}</b></span></button>
           <button type="button" onClick={() => navigate('profile')}><Settings2 size={15} /><span><b>{text.settings}</b></span></button>
@@ -179,7 +195,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
           <i />
           <button type="button" disabled title={text.unavailable}><span><b>{text.logout}</b><small>{text.unavailable}</small></span></button>
         </div>}
-      </div>
+      </div> : <button type="button" className="xensi-login-trigger" onClick={onLogin} disabled={disabled} aria-label="Login"><UserRound size={17} /><span>LOGIN</span><ArrowRight size={16} /></button>}
     </div>
   </div>
 }

@@ -467,6 +467,7 @@ function App() {
           disabled={active}
           onLocaleChange={setLocale}
           onNavigate={navigateView}
+          onLogin={() => navigateAuth('login')}
           onExercise={(exercise) => navigateView('warmup', { warmupEntry: exercise })}
           onAnalysisSection={(section) => navigateView('analysis', { analysisSection: section })}
         />

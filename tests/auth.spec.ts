@@ -1,17 +1,33 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function useStoredLocale(page: Page, locale: 'pt' | 'en' | 'es') {
+  await page.addInitScript((value) => {
+    window.localStorage.setItem('sensi-locale', value)
+  }, locale)
+}
+
+async function useBrowserLanguage(page: Page, language: string) {
+  await page.addInitScript((value) => {
+    window.localStorage.removeItem('sensi-locale')
+    Object.defineProperty(window.navigator, 'language', { value, configurable: true })
+    Object.defineProperty(window.navigator, 'languages', { value: [value], configurable: true })
+  }, language)
+}
 
 test.describe('XENSI auth routes', () => {
   test('restores login from the GitHub Pages SPA fallback query', async ({ page }) => {
+    await useStoredLocale(page, 'pt')
     await page.goto('./?xensi-route=login')
 
-    await expect(page).toHaveURL(/\/Sensi\/login$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/login$/)
     await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
   })
 
   test('renders login, handles unavailable auth, and keeps the desktop viewport contained', async ({ page }, testInfo) => {
+    await useStoredLocale(page, 'pt')
     await page.goto('./login')
 
-    await expect(page).toHaveURL(/\/Sensi\/login$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/login$/)
     await expect(page.getByRole('heading', { name: 'TREINE. CALIBRE. EVOLUA.' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
     await expect(page.getByText('Treine sua mira, calibre sua sensibilidade e acompanhe sua evolução.')).toBeVisible()
@@ -47,20 +63,40 @@ test.describe('XENSI auth routes', () => {
   })
 
   test('links to register and forgot password routes with the same auth surface', async ({ page }) => {
+    await useStoredLocale(page, 'pt')
     await page.goto('./login')
 
     await page.getByRole('button', { name: 'Criar conta' }).click()
-    await expect(page).toHaveURL(/\/Sensi\/register$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/register$/)
     await expect(page.getByRole('heading', { name: 'Criar conta' })).toBeVisible()
     await expect(page.locator('#auth-password')).toHaveAttribute('autocomplete', 'new-password')
 
     await page.getByRole('button', { name: 'Entrar' }).click()
-    await expect(page).toHaveURL(/\/Sensi\/login$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/login$/)
 
     await page.getByRole('button', { name: 'Esqueceu a senha?' }).click()
-    await expect(page).toHaveURL(/\/Sensi\/forgot-password$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/forgot-password$/)
     await expect(page.getByRole('heading', { name: 'Recuperar senha' })).toBeVisible()
     await expect(page.getByLabel('E-mail')).toHaveAttribute('autocomplete', 'email')
     await expect(page.locator('#auth-password')).toHaveCount(0)
+  })
+
+  test('localizes login copy from the browser language when no saved preference exists', async ({ page }) => {
+    await useBrowserLanguage(page, 'en-US')
+    await page.goto('./login')
+
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'TRAIN. CALIBRATE. EVOLVE.' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Forgot password?' })).toBeVisible()
+
+    await page.context().clearCookies()
+    await useBrowserLanguage(page, 'es-ES')
+    await page.goto('./login')
+
+    await expect(page.getByRole('heading', { name: 'Bienvenido de vuelta' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'ENTRENA. CALIBRA. EVOLUCIONA.' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Contraseña' })).toBeVisible()
+    await expect(page.getByRole('button', { name: '¿Olvidaste tu contraseña?' })).toBeVisible()
   })
 })

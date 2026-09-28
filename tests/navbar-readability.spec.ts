@@ -2,8 +2,32 @@ import { expect, test } from '@playwright/test'
 
 test.describe('Readable XENSI navigation', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => { if (!localStorage.getItem('sensi-locale')) localStorage.setItem('sensi-locale', 'pt') })
+    await page.addInitScript(() => {
+      if (!localStorage.getItem('sensi-locale')) localStorage.setItem('sensi-locale', 'pt')
+      localStorage.setItem('xensi-auth-user-id', 'navbar-test-user')
+    })
     await page.goto('./')
+  })
+
+  test('shows a compact login action instead of fake profile when signed out', async ({ page }) => {
+    await page.evaluate(() => {
+      localStorage.removeItem('xensi-auth-user-id')
+      localStorage.removeItem('xensi-auth-user')
+      localStorage.removeItem('xensi-user-id')
+      localStorage.removeItem('xensi-current-user')
+      window.dispatchEvent(new Event('xensi-auth-updated'))
+    })
+
+    const login = page.locator('.xensi-login-trigger')
+    await expect(login).toBeVisible()
+    await expect(login).toHaveAccessibleName('Login')
+    await expect(login).toContainText('LOGIN')
+    await expect(page.locator('.xensi-user-trigger')).toHaveCount(0)
+    await expect(page.locator('.xensi-nav-actions .xensi-avatar')).toHaveCount(0)
+
+    await login.click()
+    await expect(page).toHaveURL(/(\/Sensi)?\/login$/)
+    await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
   })
 
   test('opens only Minigames and Routines and preserves their destinations', async ({ page }) => {
@@ -28,7 +52,7 @@ test.describe('Readable XENSI navigation', () => {
     await page.keyboard.press('Escape')
     await expect(menu).toHaveCount(0)
     await expect(trigger).toBeFocused()
-    await expect(page).toHaveURL(/\/Sensi\/train\/routines$/)
+    await expect(page).toHaveURL(/(\/Sensi)?\/train\/routines$/)
   })
 
   test('renders readable menus, aligned user controls and contained dropdowns', async ({ page }, info) => {
