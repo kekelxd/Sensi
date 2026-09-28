@@ -212,7 +212,7 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
     const nextIdentity = { nickname: identityDraft.nickname.trim() || 'xensi_dev', avatarId: identityDraft.avatarId }
     const result = await updateAuthenticatedProfile(nextIdentity)
     if (!result.ok) {
-      setError(result.message)
+      setError(result.message ?? text.invalid)
       return
     }
     persist({ ...profile, ...nextIdentity })

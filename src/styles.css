@@ -9750,6 +9750,12 @@ body:has(.profile-v1-workspace),
 .xensi-auth-options button:hover, .xensi-auth-switch button:hover { color: #fff1f2; }
 .xensi-auth-message { margin: -2px 0 0; padding: 11px 13px; border: 1px solid rgba(255,70,87,.34); border-radius: 12px; color: #ffadb3; background: rgba(255,70,87,.07); font: 600 12.5px/1.48 Manrope, sans-serif; }
 .xensi-auth-message.success { border-color: rgba(141,251,211,.28); color: #8dfbd3; background: rgba(141,251,211,.06); }
+.xensi-auth-inline { margin: -1px 0 0; color: #a7b0b5; font: 600 12px/1.42 Manrope, sans-serif; letter-spacing: 0; text-transform: none; }
+.xensi-auth-inline.available { color: #8dfbd3; }
+.xensi-auth-inline.unavailable, .xensi-auth-inline.error, .xensi-auth-inline.invalid { color: #ffadb3; }
+.xensi-auth-state-card { align-items: stretch; }
+.xensi-auth-state-card > svg { color: #ff4657; }
+.xensi-auth-confirm-copy { margin: -4px 0 0; color: #a4adb1; font: 600 13.5px/1.6 Manrope, sans-serif; }
 .xensi-auth-submit { height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #ff6973; border-radius: 13px; color: #19080c; background: #ff4657; font: 800 12px 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
 .xensi-auth-submit:hover, .xensi-auth-submit:focus-visible { transform: translateY(-1px); border-color: #ff8b92; background: #ff5a65; outline: 0; }
 .xensi-auth-submit:disabled { opacity: .7; cursor: wait; transform: none; }

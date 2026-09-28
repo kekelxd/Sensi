@@ -1,0 +1,19 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:32px 0;background:#07090D;color:#F4F4F5;font-family:Arial,Helvetica,sans-serif;">
+  <tr><td align="center"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#0D1117;border:1px solid #252A33;">
+    <tr><td style="padding:28px 28px 0;"><table role="presentation" width="100%"><tr><td style="font-size:20px;font-weight:700;letter-spacing:6px;"><span style="color:#FF4055;">X</span><span style="color:#F4F4F5;">ENSI</span></td><td align="right" style="color:#9CA3AF;font-size:11px;letter-spacing:2px;">ACCOUNT</td></tr></table></td></tr>
+    <tr><td style="padding:40px 28px 18px;">
+      {{ if eq .Data.locale "pt-BR" }}
+      <h1 style="margin:0 0 16px;color:#F4F4F5;font-size:28px;line-height:1.15;">Confirme o novo e-mail</h1>
+      <p style="margin:0 0 24px;color:#9CA3AF;font-size:15px;line-height:1.65;">Confirme este endereço para concluir a alteração de e-mail da sua conta XENSI.</p>
+      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#FF4055;color:#07090D;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:1px;padding:15px 22px;">CONFIRMAR ALTERAÇÃO</a>
+      <p style="margin:24px 0 0;color:#9CA3AF;font-size:12px;line-height:1.6;">Se você não pediu essa alteração, proteja sua conta imediatamente.</p>
+      {{ else }}
+      <h1 style="margin:0 0 16px;color:#F4F4F5;font-size:28px;line-height:1.15;">Confirm the new email</h1>
+      <p style="margin:0 0 24px;color:#9CA3AF;font-size:15px;line-height:1.65;">Confirm this address to complete the email change for your XENSI account.</p>
+      <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#FF4055;color:#07090D;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:1px;padding:15px 22px;">CONFIRM CHANGE</a>
+      <p style="margin:24px 0 0;color:#9CA3AF;font-size:12px;line-height:1.6;">If you did not request this change, secure your account immediately.</p>
+      {{ end }}
+    </td></tr>
+    <tr><td style="padding:26px 28px;border-top:1px solid #252A33;"><table role="presentation" width="100%"><tr><td style="color:#9CA3AF;font-size:12px;">xensi.app</td><td align="right" style="color:#9CA3AF;font-size:12px;">XENSI Alpha · 0.1</td></tr></table></td></tr>
+  </table></td></tr>
+</table>

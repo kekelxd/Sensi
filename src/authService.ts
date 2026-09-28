@@ -14,16 +14,28 @@ export type AuthSessionState =
   | { status: 'anonymous'; userId: null; profile: null }
   | { status: 'authenticated'; userId: string; profile: AuthProfile }
 
+export type AuthLocale = 'pt-BR' | 'en-US'
+export type AuthErrorCode =
+  | 'auth_unconfigured'
+  | 'missing_login_fields'
+  | 'missing_email'
+  | 'missing_signup_fields'
+  | 'missing_password'
+  | 'invalid_credentials'
+  | 'email_not_confirmed'
+  | 'email_already_registered'
+  | 'nickname_unavailable'
+  | 'nickname_check_failed'
+  | 'generic'
+
 export type AuthResult = {
   ok: true
-  message?: string
 } | {
   ok: false
-  message: string
+  code: AuthErrorCode
+  message?: string
 }
 
-const unconfiguredMessage = 'Autenticação ainda não configurada. Conecte o Supabase Auth para entrar com e-mail e senha.'
-const genericAuthErrorMessage = 'Não foi possível concluir a autenticação agora. Tente novamente em instantes.'
 const profileFallback: AuthProfile = { nickname: 'xensi_dev', avatarId: DEFAULT_AVATAR }
 const authStorageKeys = ['xensi-auth-user-id', 'xensi-user-id', 'xensi-auth-user', 'xensi-current-user']
 
@@ -141,44 +153,70 @@ export function readAuthSessionState(): AuthSessionState {
 }
 
 function authUnavailable(): AuthResult {
-  return { ok: false, message: unconfiguredMessage }
+  return { ok: false, code: 'auth_unconfigured' }
 }
 
-function authErrorMessage(error: { message?: string } | null) {
-  if (!error?.message) return genericAuthErrorMessage
-  if (/invalid login credentials/i.test(error.message)) return 'E-mail ou senha inválidos.'
-  if (/email not confirmed/i.test(error.message)) return 'Confirme seu e-mail antes de entrar.'
-  if (/user already registered/i.test(error.message)) return 'Este e-mail já está cadastrado.'
-  return error.message
+function authErrorCode(error: { message?: string } | null): AuthErrorCode {
+  if (!error?.message) return 'generic'
+  if (/invalid login credentials/i.test(error.message)) return 'invalid_credentials'
+  if (/email not confirmed/i.test(error.message)) return 'email_not_confirmed'
+  if (/user already registered/i.test(error.message)) return 'email_already_registered'
+  if (/database error saving new user|duplicate key|profiles_nickname_unique_ci_idx|nickname/i.test(error.message)) return 'nickname_unavailable'
+  return 'generic'
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   const cleanEmail = email.trim()
-  if (!cleanEmail || !password) return { ok: false, message: 'Informe e-mail e senha para continuar.' }
+  if (!cleanEmail || !password) return { ok: false, code: 'missing_login_fields' }
   const supabase = getSupabaseClient()
   if (!supabase) return authUnavailable()
 
   const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password })
-  if (error) return { ok: false, message: authErrorMessage(error) }
+  if (error) return { ok: false, code: authErrorCode(error), message: error.message }
   await refreshAuthState(data.session)
   return { ok: true }
 }
 
 export async function requestPasswordReset(email: string): Promise<AuthResult> {
   const cleanEmail = email.trim()
-  if (!cleanEmail) return { ok: false, message: 'Informe seu e-mail para receber as instruções.' }
+  if (!cleanEmail) return { ok: false, code: 'missing_email' }
   const supabase = getSupabaseClient()
   if (!supabase) return authUnavailable()
 
   const redirectTo = `${window.location.origin}/reset-password`
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, { redirectTo })
-  return error ? { ok: false, message: authErrorMessage(error) } : { ok: true }
+  return error ? { ok: false, code: authErrorCode(error), message: error.message } : { ok: true }
 }
 
-export async function registerWithEmail(email: string, password: string, nickname: string): Promise<AuthResult> {
+export async function checkNicknameAvailability(nickname: string): Promise<{ ok: true; available: boolean } | { ok: false; code: AuthErrorCode; message?: string }> {
+  const cleanNickname = nickname.trim()
+  if (cleanNickname.length < 3 || cleanNickname.length > 24) return { ok: true, available: false }
+  const supabase = getSupabaseClient()
+  if (!supabase) return { ok: false, code: 'auth_unconfigured' }
+
+  const { data, error } = await supabase.rpc('is_nickname_available', { candidate: cleanNickname })
+  if (error) return { ok: false, code: 'nickname_check_failed', message: error.message }
+  return { ok: true, available: data === true }
+}
+
+export async function resendSignupConfirmation(email: string): Promise<AuthResult> {
+  const cleanEmail = email.trim()
+  if (!cleanEmail) return { ok: false, code: 'missing_email' }
+  const supabase = getSupabaseClient()
+  if (!supabase) return authUnavailable()
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: cleanEmail,
+    options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+  })
+  return error ? { ok: false, code: authErrorCode(error), message: error.message } : { ok: true }
+}
+
+export async function registerWithEmail(email: string, password: string, nickname: string, locale: AuthLocale): Promise<AuthResult> {
   const cleanEmail = email.trim()
   const cleanNickname = nickname.trim()
-  if (!cleanEmail || !password || !cleanNickname) return { ok: false, message: 'Informe nickname, e-mail e senha para criar a conta.' }
+  if (!cleanEmail || !password || !cleanNickname) return { ok: false, code: 'missing_signup_fields' }
   const supabase = getSupabaseClient()
   if (!supabase) return authUnavailable()
 
@@ -186,21 +224,21 @@ export async function registerWithEmail(email: string, password: string, nicknam
     email: cleanEmail,
     password,
     options: {
-      data: { nickname: cleanNickname },
+      data: { nickname: cleanNickname, locale },
       emailRedirectTo: `${window.location.origin}/auth/callback`,
     },
   })
-  if (error) return { ok: false, message: authErrorMessage(error) }
+  if (error) return { ok: false, code: authErrorCode(error), message: error.message }
   if (data.session) await refreshAuthState(data.session)
-  return { ok: true, message: 'Conta criada. Verifique seu e-mail para confirmar o acesso.' }
+  return { ok: true }
 }
 
 export async function updatePassword(password: string): Promise<AuthResult> {
-  if (!password) return { ok: false, message: 'Informe a nova senha.' }
+  if (!password) return { ok: false, code: 'missing_password' }
   const supabase = getSupabaseClient()
   if (!supabase) return authUnavailable()
   const { error } = await supabase.auth.updateUser({ password })
-  if (error) return { ok: false, message: authErrorMessage(error) }
+  if (error) return { ok: false, code: authErrorCode(error), message: error.message }
   await refreshAuthState()
   return { ok: true }
 }
@@ -209,7 +247,7 @@ export async function signOut(): Promise<AuthResult> {
   const supabase = getSupabaseClient()
   if (!supabase) return authUnavailable()
   const { error } = await supabase.auth.signOut()
-  if (error) return { ok: false, message: authErrorMessage(error) }
+  if (error) return { ok: false, code: authErrorCode(error), message: error.message }
   cachedState = { status: 'anonymous', userId: null, profile: null }
   clearRuntimeUser()
   emitAuthUpdate()
@@ -224,7 +262,7 @@ export async function updateAuthenticatedProfile(profile: AuthProfile): Promise<
     .from('profiles')
     .update({ nickname: profile.nickname, avatar_id: profile.avatarId })
     .eq('id', state.userId)
-  if (error) return { ok: false, message: authErrorMessage(error) }
+  if (error) return { ok: false, code: authErrorCode(error), message: error.message }
   cachedState = { ...state, profile }
   syncProfileToGuestStore(profile)
   emitAuthUpdate()

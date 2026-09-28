@@ -1,0 +1,19 @@
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:32px 0;background:#07090D;color:#F4F4F5;font-family:Arial,Helvetica,sans-serif;">
+  <tr><td align="center"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#0D1117;border:1px solid #252A33;">
+    <tr><td style="padding:28px 28px 0;"><table role="presentation" width="100%"><tr><td style="font-size:20px;font-weight:700;letter-spacing:6px;"><span style="color:#FF4055;">X</span><span style="color:#F4F4F5;">ENSI</span></td><td align="right" style="color:#9CA3AF;font-size:11px;letter-spacing:2px;">SECURITY</td></tr></table></td></tr>
+    <tr><td style="padding:40px 28px 18px;">
+      {{ if eq .Data.locale "pt-BR" }}
+      <h1 style="margin:0 0 16px;color:#F4F4F5;font-size:28px;line-height:1.15;">Código de verificação</h1>
+      <p style="margin:0 0 20px;color:#9CA3AF;font-size:15px;line-height:1.65;">Use este código para confirmar uma ação sensível na sua conta XENSI.</p>
+      <p style="display:inline-block;margin:0;background:#07090D;border:1px solid #252A33;color:#FF4055;font-size:30px;font-weight:700;letter-spacing:8px;padding:14px 18px;">{{ .Token }}</p>
+      <p style="margin:24px 0 0;color:#9CA3AF;font-size:12px;line-height:1.6;">Se você não iniciou essa ação, revise sua conta.</p>
+      {{ else }}
+      <h1 style="margin:0 0 16px;color:#F4F4F5;font-size:28px;line-height:1.15;">Verification code</h1>
+      <p style="margin:0 0 20px;color:#9CA3AF;font-size:15px;line-height:1.65;">Use this code to confirm a sensitive action on your XENSI account.</p>
+      <p style="display:inline-block;margin:0;background:#07090D;border:1px solid #252A33;color:#FF4055;font-size:30px;font-weight:700;letter-spacing:8px;padding:14px 18px;">{{ .Token }}</p>
+      <p style="margin:24px 0 0;color:#9CA3AF;font-size:12px;line-height:1.6;">If you did not start this action, review your account.</p>
+      {{ end }}
+    </td></tr>
+    <tr><td style="padding:26px 28px;border-top:1px solid #252A33;"><table role="presentation" width="100%"><tr><td style="color:#9CA3AF;font-size:12px;">xensi.app</td><td align="right" style="color:#9CA3AF;font-size:12px;">XENSI Alpha · 0.1</td></tr></table></td></tr>
+  </table></td></tr>
+</table>
