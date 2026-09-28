@@ -10,7 +10,11 @@ test.describe('XENSI home v3', () => {
   })
 
   test('renders the new hero, CTAs, pathways, ecosystem and footer', async ({ page }, testInfo) => {
-    await expect(page.getByText('PERFORMANCE, COM PROPÓSITO')).toBeVisible()
+    await expect(page.getByText('PERFORMANCE, COM PROPÓSITO')).toHaveCount(0)
+    await expect(page.getByText('FEITO PARA SUA EVOLUÇÃO')).toHaveCount(0)
+    await expect(page.getByText('Gratuito para começar')).toHaveCount(0)
+    await expect(page.getByText('Sem compromisso')).toHaveCount(0)
+    await expect(page.getByText('Feito para jogadores reais')).toHaveCount(0)
     await expect(page.getByRole('heading', { name: /Treine melhor\. Jogue diferente\./ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Começar agora/ })).toBeVisible()
     await expect(page.getByRole('button', { name: /Testar meu setup/ })).toBeVisible()
@@ -20,6 +24,21 @@ test.describe('XENSI home v3', () => {
     await expect(page.getByText('Continue de onde parou.')).toBeVisible()
     await expect(page.getByText('Mais que ferramentas. Um ecossistema.')).toBeVisible()
     await expect(page.getByText('Feito por jogadores, para jogadores.')).toBeVisible()
+
+    const footer = page.locator('.xensi-home-v3-footer')
+    await footer.scrollIntoViewIfNeeded()
+    const footerLayout = await footer.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      return {
+        left: rect.left,
+        right: rect.right,
+        viewport: document.documentElement.clientWidth,
+        bottomGap: document.documentElement.scrollHeight - (window.scrollY + rect.bottom),
+      }
+    })
+    expect(Math.round(footerLayout.left)).toBe(0)
+    expect(Math.round(footerLayout.right)).toBe(footerLayout.viewport)
+    expect(Math.abs(footerLayout.bottomGap)).toBeLessThanOrEqual(1)
 
     await testInfo.attach(`home-v3-${testInfo.project.name}`, {
       body: await page.screenshot({ fullPage: false }),

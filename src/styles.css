@@ -134,11 +134,12 @@
 
 /* XENSI home: training-control entry point */
 .app-shell:has(.xensi-home) {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
-  grid-template-rows: 122px minmax(0, 1fr) 70px;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .xensi-home {
@@ -151,8 +152,8 @@
   --xh-red-warm: #ff6a52;
   --xh-mint: #75f4d0;
   position: relative;
-  height: 100%;
-  overflow: auto;
+  min-height: 100%;
+  overflow: visible;
   scrollbar-width: none;
   color: var(--xh-text);
   background: radial-gradient(circle at 15% 8%, rgba(255, 70, 90, .17), transparent 31%), radial-gradient(circle at 84% 14%, rgba(117, 244, 208, .09), transparent 29%), #08090d;
@@ -7446,12 +7447,23 @@ body:has(.home-reboot) {
 @media (max-width: 1080px) { .xensi-navigation { grid-template-columns: auto minmax(0, 1fr) auto; padding: 0 18px; }.xensi-primary-nav { gap: 15px; }.xensi-user-trigger b { display: none; }.analysis-metric-strip { grid-template-columns: repeat(2, 1fr); }.analysis-metric-strip article:nth-child(2) { border-right: 0; }.analysis-main-grid, .analysis-history-grid { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .tool-shell, .app-shell:has(.xensi-reference) { grid-template-rows: 64px minmax(0, 1fr); }.app-header { min-height: 64px; }.xensi-navigation { height: 64px; padding: 0 12px; column-gap: 8px; }.xensi-nav-brand { font-size: 18px; }.xensi-primary-nav { justify-content: flex-start; gap: 14px; margin: 0; overflow-x: auto; scrollbar-width: none; }.xensi-primary-nav::-webkit-scrollbar { display: none; }.xensi-primary-nav > button, .xensi-nav-menu-group > button { font-size: var(--nav-text); }.xensi-primary-nav > button > svg, .xensi-primary-nav > .xensi-nav-menu-group > button > svg { display: none; }.xensi-nav-actions { gap: 5px; }.xensi-nav-icon-button { width: 32px; height: 32px; }.xensi-user-trigger > span { width: 31px; height: 31px; }.xensi-user-trigger > svg { display: none; }.xensi-nav-dropdown { position: fixed; top: 63px; right: 12px; left: 12px; min-width: 0; }.xensi-diagnostic-dropdown, .xensi-diagnostic-dropdown[role='menu'] { transform: none; }.xensi-diagnostic-dropdown[role='menu'] { animation: xensiMenuIn .18s ease both; }.xensi-nav-dropdown-wide { grid-template-columns: 1fr 1fr; }.analysis-workspace { width: min(100% - 24px, 1380px); padding: 35px 0 56px; }.analysis-metric-strip { grid-template-columns: 1fr 1fr; }.analysis-metric-strip article { min-height: 110px; padding: 17px; }.analysis-main-grid, .analysis-history-grid, .analysis-method-grid { grid-template-columns: 1fr; }.analysis-method-grid article:nth-child(2) { margin-top: 0; } }
 
+.app-shell.tool-shell:has(.xensi-home-v3) {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* XENSI home v3: scoped redesign below the shared navigation. */
 .xensi-home-v3 {
   position: relative;
-  min-height: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
   color: #f4eee6;
   scrollbar-width: none;
   background:
@@ -7459,7 +7471,6 @@ body:has(.home-reboot) {
     radial-gradient(circle at 88% 19%, rgba(117, 244, 208, .08), transparent 30%),
     #07090c;
 }
-.xensi-home-v3::-webkit-scrollbar { display: none; }
 .xensi-home-v3::before {
   position: fixed;
   inset: 0;
@@ -7486,8 +7497,16 @@ body:has(.home-reboot) {
   position: relative;
   z-index: 1;
   width: min(1390px, calc(100% - 88px));
+  min-height: 100%;
   margin: 0 auto;
   padding: 52px 0 34px;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+.xensi-home-v3-content {
+  flex: 0 0 auto;
+  padding-bottom: clamp(48px, 6vw, 72px);
 }
 .xensi-home-v3-hero {
   display: grid;
@@ -7507,7 +7526,6 @@ body:has(.home-reboot) {
   padding: 0;
   animation: xensiHomeV3In .38s ease both;
 }
-.xensi-home-v3-kicker,
 .xensi-home-v3-section-head > span,
 .xensi-home-v3-progress-card header > span,
 .xensi-home-v3-ecosystem-copy > span {
@@ -7519,7 +7537,6 @@ body:has(.home-reboot) {
   letter-spacing: .18em;
   text-transform: uppercase;
 }
-.xensi-home-v3-kicker::before,
 .xensi-home-v3-section-head > span::before,
 .xensi-home-v3-ecosystem-copy > span::before {
   width: 6px;
@@ -7530,7 +7547,7 @@ body:has(.home-reboot) {
 }
 .xensi-home-v3 .xensi-reference-copy h1 {
   max-width: 660px;
-  margin: 28px 0 0;
+  margin: 0;
   color: #f4eee6;
   font: 750 clamp(4.05rem, 5.5vw, 6rem)/.92 'Space Grotesk', sans-serif;
   letter-spacing: -.07em;
@@ -7597,18 +7614,6 @@ body:has(.home-reboot) {
 .xensi-home-v3-primary:focus-visible { background: #ff655b; }
 .xensi-home-v3-secondary:hover,
 .xensi-home-v3-secondary:focus-visible { background: rgba(127,241,203,.06); }
-.xensi-home-v3-benefits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 18px;
-  margin: 22px 0 0;
-  padding: 0;
-  list-style: none;
-  color: #9ea5aa;
-  font: 700 12px Manrope, sans-serif;
-}
-.xensi-home-v3-benefits li { display: inline-flex; align-items: center; gap: 7px; }
-.xensi-home-v3-benefits svg { color: #7ff1cb; }
 .xensi-home-v3-arena {
   position: relative;
   min-height: 430px;
@@ -8065,6 +8070,9 @@ body:has(.home-reboot) {
   width: 100%;
   padding: 0 0 0;
 }
+.xensi-home-v3 .xensi-home-v3-content {
+  padding-bottom: clamp(52px, 6vw, 76px);
+}
 .xensi-home-v3 .xensi-home-v3-hero {
   position: relative;
   display: grid;
@@ -8099,7 +8107,6 @@ body:has(.home-reboot) {
   z-index: 1;
   max-width: 545px;
 }
-.xensi-home-v3 .xensi-home-v3-kicker,
 .xensi-home-v3 .xensi-home-v3-section-head > span,
 .xensi-home-v3 .xensi-home-v3-ecosystem-copy > span {
   color: #9ca5ab;
@@ -8107,14 +8114,13 @@ body:has(.home-reboot) {
   font-weight: 600;
   letter-spacing: .42em;
 }
-.xensi-home-v3 .xensi-home-v3-kicker::before,
 .xensi-home-v3 .xensi-home-v3-section-head > span::before,
 .xensi-home-v3 .xensi-home-v3-ecosystem-copy > span::before {
   display: none;
 }
 .xensi-home-v3 .xensi-reference-copy h1 {
   max-width: 620px;
-  margin: 22px 0 0;
+  margin: 0;
   font-size: clamp(3.5rem, 5vw, 5rem);
   line-height: .95;
   letter-spacing: -.058em;
@@ -8149,19 +8155,8 @@ body:has(.home-reboot) {
   border-color: rgba(166, 191, 200, .28);
   background: rgba(8, 18, 22, .72);
 }
-.xensi-home-v3 .xensi-home-v3-benefits {
-  gap: 28px;
-  margin-top: 28px;
-  color: #9ba4aa;
-  font-size: 12px;
-  font-weight: 500;
-}
-.xensi-home-v3 .xensi-home-v3-benefits svg {
-  color: #b8c2c7;
-  stroke-width: 1.6;
-}
 .xensi-home-v3 .xensi-home-v3-section,
-.xensi-home-v3 .xensi-home-v3-footer {
+.xensi-home-v3 .xensi-home-v3-content > .xensi-home-v3-section {
   width: min(1280px, calc(100% - 96px));
   margin-right: auto;
   margin-left: auto;
@@ -8489,7 +8484,7 @@ body:has(.home-reboot) {
 .xensi-home-v3 .xensi-home-v3-footer {
   width: 100%;
   min-height: 92px;
-  margin-top: 18px;
+  margin-top: auto;
   padding: 0 max(48px, calc((100vw - 1280px) / 2));
   border-right: 0;
   border-bottom: 0;
@@ -8667,8 +8662,8 @@ body:has(.home-reboot) {
     padding-right: 48px;
     padding-left: 48px;
   }
-  .xensi-home-v3 .xensi-home-v3-section,
-  .xensi-home-v3 .xensi-home-v3-footer { width: min(1250px, calc(100% - 96px)); }
+  .xensi-home-v3 .xensi-home-v3-section { width: min(1250px, calc(100% - 96px)); }
+  .xensi-home-v3 .xensi-home-v3-footer { width: 100%; }
 }
 @media (max-width: 1380px) {
   .xensi-home-v3 .xensi-home-v3-hero {
@@ -8693,6 +8688,128 @@ body:has(.home-reboot) {
   }
   .xensi-home-v3 .xensi-home-v3-path-list {
     align-content: start;
+  }
+}
+
+.app-shell.tool-shell:has(.content-page-workspace) {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.content-page-workspace {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #f2eee8;
+  background:
+    radial-gradient(circle at 10% 0, rgba(255,70,87,.09), transparent 28%),
+    linear-gradient(rgba(255,70,87,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,70,87,.018) 1px, transparent 1px),
+    #070b0f;
+  background-size: auto, 44px 44px, 44px 44px, auto;
+}
+.content-page-shell {
+  width: min(880px, calc(100% - 96px));
+  margin: 0 auto;
+  padding: clamp(54px, 7vw, 88px) 0 clamp(58px, 7vw, 88px);
+  flex: 1 0 auto;
+}
+.content-page {
+  display: grid;
+  gap: 34px;
+}
+.content-page > header {
+  display: block;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.11);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.content-page h1 {
+  margin: 0;
+  color: #f4f0e9;
+  font: 750 clamp(30px, 4vw, 36px)/1.08 'Space Grotesk', sans-serif;
+  letter-spacing: -.035em;
+}
+.content-page header p {
+  max-width: 760px;
+  margin: 15px 0 0;
+  color: #b5bdc1;
+  font: 600 16px/1.72 Manrope, sans-serif;
+}
+.content-page header small {
+  display: block;
+  margin-top: 15px;
+  color: #828c91;
+  font: 700 11px/1.4 'DM Mono', monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.content-page section {
+  display: grid;
+  gap: 12px;
+}
+.content-page h2 {
+  margin: 0;
+  color: #f0ece6;
+  font: 700 21px/1.25 'Space Grotesk', sans-serif;
+  letter-spacing: -.02em;
+}
+.content-page p,
+.content-page li {
+  margin: 0;
+  color: #b2bbc0;
+  font: 500 15px/1.75 Manrope, sans-serif;
+}
+.content-page ul {
+  display: grid;
+  gap: 9px;
+  margin: 2px 0 0;
+  padding-left: 20px;
+}
+.content-page li::marker {
+  color: #ff5967;
+}
+.content-page section > button {
+  justify-self: start;
+  min-height: 42px;
+  margin-top: 4px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,81,72,.34);
+  border-radius: 7px;
+  color: #f4f0e9;
+  background: rgba(255,81,72,.08);
+  font: 800 11px/1 Manrope, sans-serif;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.content-page section > button:hover,
+.content-page section > button:focus-visible {
+  border-color: rgba(255,81,72,.62);
+  background: rgba(255,81,72,.13);
+  outline: 0;
+  transform: translateY(-1px);
+}
+.content-page-workspace .xensi-home-v3-footer {
+  width: 100%;
+  margin-top: auto;
+}
+@media (max-width: 760px) {
+  .content-page-shell {
+    width: min(100% - 36px, 880px);
+    padding: 40px 0 54px;
+  }
+  .content-page {
+    gap: 28px;
+  }
+  .content-page p,
+  .content-page li {
+    font-size: 14px;
   }
 }
 
@@ -9700,32 +9817,20 @@ body:has(.profile-v1-workspace),
 }
 
 /* Auth */
-.xensi-auth-shell { position: relative; isolation: isolate; width: 100%; height: 100vh; min-height: 650px; overflow: hidden; display: grid; grid-template-columns: minmax(620px, 55fr) minmax(440px, 45fr); background:
-  radial-gradient(circle at 17% 24%, rgba(255,42,85,.2), transparent 31%),
-  radial-gradient(circle at 103% 54%, rgba(141,251,211,.08), transparent 32%),
-  linear-gradient(rgba(255,42,85,.035) 1px, transparent 1px),
-  linear-gradient(90deg, rgba(255,42,85,.03) 1px, transparent 1px),
-  #0b0b0e; background-size: auto, auto, 42px 42px, 42px 42px, auto; }
-.xensi-auth-shell::before { position: absolute; inset: 0; z-index: -1; content: ''; background:
-  radial-gradient(circle at 50% 50%, transparent 0 46%, rgba(0,0,0,.58) 100%),
-  linear-gradient(115deg, rgba(255,42,85,.1), transparent 38%, rgba(7,18,18,.2)); pointer-events: none; }
-.xensi-auth-brand-panel { position: relative; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: clamp(34px, 5vh, 58px); padding: clamp(54px, 7vh, 92px) clamp(64px, 8vw, 126px); animation: authBrandIn .32s ease both; }
+.xensi-auth-page { position: relative; isolation: isolate; width: 100%; min-height: 100dvh; overflow: hidden; display: grid; place-items: center; padding: clamp(20px, 3vw, 44px); background: #07090d; }
+.xensi-auth-page::before { position: absolute; inset: 0; z-index: -2; content: ''; background:
+  radial-gradient(circle at 32% 18%, rgba(255,42,85,.18), transparent 30%),
+  radial-gradient(circle at 76% 76%, rgba(141,251,211,.075), transparent 28%),
+  linear-gradient(rgba(255,42,85,.032) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(255,42,85,.026) 1px, transparent 1px),
+  #07090d; background-size: auto, auto, 42px 42px, 42px 42px, auto; }
+.xensi-auth-page::after { position: absolute; inset: 0; z-index: -1; content: ''; background:
+  radial-gradient(circle at 50% 48%, transparent 0 42%, rgba(0,0,0,.66) 100%),
+  linear-gradient(115deg, rgba(255,42,85,.08), transparent 38%, rgba(7,18,18,.16)); pointer-events: none; }
+.xensi-auth-shell { width: min(100%, 484px); animation: authCardIn .34s .04s ease both; }
 .xensi-auth-logo, .xensi-auth-card-logo { display: inline-flex; justify-content: flex-start; width: max-content; color: #f3f0e9; background: transparent; font: 700 25px/1 'Space Grotesk', sans-serif; letter-spacing: .3em; text-transform: uppercase; }
 .xensi-auth-logo span, .xensi-auth-card-logo span { color: #ff4657; text-shadow: 0 0 18px rgba(255,70,87,.5); }
-.xensi-auth-brand-panel h1 { max-width: 640px; margin: 0; color: #f3f0e9; font: 700 clamp(58px, 6.6vw, 104px)/.92 'Space Grotesk', sans-serif; letter-spacing: -.065em; text-transform: uppercase; }
-.xensi-auth-brand-panel h1 span { display: block; color: #ff4657; text-shadow: 0 0 22px rgba(255,70,87,.1); }
-.xensi-auth-brand-panel p { max-width: 490px; margin: 22px 0 0; color: #a6adb1; font: 600 clamp(15px, 1.16vw, 18px)/1.72 Manrope, sans-serif; }
-.xensi-auth-pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 150px)); gap: 12px; }
-.xensi-auth-pillars article { min-height: 104px; padding: 16px 16px 15px; border: 1px solid rgba(255,255,255,.075); border-radius: 14px; background: rgba(10,13,17,.36); transition: transform .18s ease, border-color .18s ease, background .18s ease; }
-.xensi-auth-pillars article:hover { transform: translateY(-1px); border-color: rgba(255,70,87,.2); background: rgba(13,16,22,.44); }
-.xensi-auth-pillars i { width: 26px; height: 26px; display: grid; place-items: center; color: rgba(255,101,112,.86); font-style: normal; }
-.xensi-auth-pillars b, .xensi-auth-pillars span { display: block; }
-.xensi-auth-pillars b { margin-top: 13px; color: #f0eee8; font: 600 11px 'DM Mono', monospace; letter-spacing: .11em; }
-.xensi-auth-pillars span { margin-top: 6px; color: #9aa3a5; font: 600 12.5px/1.38 Manrope, sans-serif; }
-.xensi-auth-mark { position: absolute; left: clamp(54px, 6vw, 94px); bottom: clamp(-36px, -2vh, -10px); z-index: -1; width: clamp(190px, 21vw, 300px); aspect-ratio: 1; display: grid; place-items: center; opacity: .24; filter: drop-shadow(0 0 20px rgba(255,42,85,.08)); }
-.xensi-auth-mark span { color: rgba(255,42,85,.1); font: 800 clamp(220px, 25vw, 360px)/.7 'Space Grotesk', sans-serif; transform: scaleX(1.08); -webkit-text-stroke: 1px rgba(255,86,98,.24); }
-.xensi-auth-card-wrap { min-width: 0; display: grid; place-items: center; padding: clamp(38px, 5.5vw, 80px); animation: authCardIn .34s .04s ease both; }
-.xensi-auth-card { width: min(100%, 484px); display: flex; flex-direction: column; gap: 21px; padding: 36px 38px; border: 1px solid rgba(188,202,207,.16); border-radius: 22px; background: linear-gradient(180deg, rgba(17,19,25,.94), rgba(9,11,15,.96)); box-shadow: 0 24px 58px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.035); }
+.xensi-auth-card { width: 100%; display: flex; flex-direction: column; gap: 19px; padding: 34px 38px; border: 1px solid rgba(188,202,207,.16); border-radius: 22px; background: linear-gradient(180deg, rgba(17,19,25,.95), rgba(9,11,15,.97)); box-shadow: 0 28px 70px rgba(0,0,0,.44), 0 0 0 1px rgba(255,255,255,.018) inset, inset 0 1px rgba(255,255,255,.04); }
 .xensi-auth-card-logo { margin-bottom: 10px; font-size: 20px; letter-spacing: .28em; }
 .xensi-auth-card header { display: block; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .xensi-auth-card header h2 { margin: 0; color: #f4f1ea; font: 700 30px/1.05 'Space Grotesk', sans-serif; letter-spacing: -.035em; }
@@ -9743,11 +9848,11 @@ body:has(.profile-v1-workspace),
 .xensi-auth-password input { padding-right: 52px; }
 .xensi-auth-password button { position: absolute; top: 50%; right: 7px; width: 36px; height: 36px; transform: translateY(-50%); display: grid; place-items: center; border: 0; border-radius: 9px; color: #9aa4aa; background: transparent; transition: color .16s ease, background .16s ease; }
 .xensi-auth-password button:hover, .xensi-auth-password button:focus-visible { color: #fff; background: rgba(255,255,255,.055); outline: 0; }
-.xensi-auth-options { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: -2px; }
-.xensi-auth-options label { display: flex; align-items: center; gap: 9px; color: #a8b0b3; font: 600 13.5px Manrope, sans-serif; }
-.xensi-auth-options input { width: 15px; height: 15px; accent-color: #ff4657; }
+.xensi-auth-options { display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: -3px; }
 .xensi-auth-options button, .xensi-auth-switch button { border: 0; padding: 0; color: #ff737c; background: transparent; font: inherit; transition: color .16s ease; }
 .xensi-auth-options button:hover, .xensi-auth-switch button:hover { color: #fff1f2; }
+.xensi-auth-options button { color: #a8b0b3; font: 600 13.5px Manrope, sans-serif; }
+.xensi-auth-options button:hover, .xensi-auth-options button:focus-visible { color: #ff737c; outline: 0; }
 .xensi-auth-message { margin: -2px 0 0; padding: 11px 13px; border: 1px solid rgba(255,70,87,.34); border-radius: 12px; color: #ffadb3; background: rgba(255,70,87,.07); font: 600 12.5px/1.48 Manrope, sans-serif; }
 .xensi-auth-message.success { border-color: rgba(141,251,211,.28); color: #8dfbd3; background: rgba(141,251,211,.06); }
 .xensi-auth-inline { margin: -1px 0 0; color: #a7b0b5; font: 600 12px/1.42 Manrope, sans-serif; letter-spacing: 0; text-transform: none; }
@@ -9759,20 +9864,24 @@ body:has(.profile-v1-workspace),
 .xensi-auth-submit { height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #ff6973; border-radius: 13px; color: #19080c; background: #ff4657; font: 800 12px 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; transition: transform .18s ease, background .18s ease, border-color .18s ease; }
 .xensi-auth-submit:hover, .xensi-auth-submit:focus-visible { transform: translateY(-1px); border-color: #ff8b92; background: #ff5a65; outline: 0; }
 .xensi-auth-submit:disabled { opacity: .7; cursor: wait; transform: none; }
+.xensi-auth-guest { margin-top: -6px; border: 0; padding: 0; color: #9ea7ab; background: transparent; font: 700 13px/1.4 Manrope, sans-serif; transition: color .16s ease, transform .16s ease; }
+.xensi-auth-guest:hover, .xensi-auth-guest:focus-visible { color: #f3f0e9; transform: translateY(-1px); outline: 0; }
 .xensi-auth-switch { margin: 0; color: #a0a9ad; font: 600 13.5px/1.5 Manrope, sans-serif; text-align: center; }
-@keyframes authBrandIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes authCardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) {
-  .xensi-auth-brand-panel, .xensi-auth-card-wrap { animation: none; }
-  .xensi-auth-pillars article, .xensi-auth-submit { transition: none; }
+  .xensi-auth-shell { animation: none; }
+  .xensi-auth-submit, .xensi-auth-guest { transition: none; }
 }
 @media (max-width: 1380px) {
-  .xensi-auth-shell { grid-template-columns: minmax(560px, 52fr) minmax(410px, 48fr); }
-  .xensi-auth-brand-panel { padding: 48px 74px; gap: 30px; }
-  .xensi-auth-brand-panel h1 { font-size: 64px; }
-  .xensi-auth-brand-panel p { font-size: 15px; }
-  .xensi-auth-pillars { grid-template-columns: repeat(3, minmax(0, 136px)); }
-  .xensi-auth-pillars article { min-height: 96px; padding: 13px; }
-  .xensi-auth-card-wrap { padding: 42px 54px; }
-  .xensi-auth-card { width: min(100%, 462px); padding: 30px 32px; gap: 16px; }
+  .xensi-auth-shell { width: min(100%, 462px); }
+  .xensi-auth-card { padding: 30px 32px; gap: 16px; }
+}
+@media (max-height: 780px) {
+  .xensi-auth-page { padding: 20px; }
+  .xensi-auth-card { gap: 14px; padding-top: 28px; padding-bottom: 28px; }
+  .xensi-auth-card-logo { margin-bottom: 4px; }
+  .xensi-auth-card header h2 { font-size: 28px; }
+  .xensi-auth-card header p { margin-top: 8px; line-height: 1.5; }
+  .xensi-auth-field input { height: 46px; }
+  .xensi-auth-submit { height: 48px; }
 }

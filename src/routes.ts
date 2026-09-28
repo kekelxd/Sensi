@@ -16,6 +16,10 @@ export type AppView =
   | 'buttons'
   | 'refresh-rate'
   | 'controller-drift'
+  | 'about'
+  | 'privacy'
+  | 'terms'
+  | 'contact'
 
 export type AnalysisSection = 'overview' | 'calibration-history' | 'methodology'
 
@@ -63,6 +67,10 @@ const VIEW_PATHS: Partial<Record<AppView, string>> = {
   buttons: 'diagnostics/input',
   'refresh-rate': 'diagnostics/refresh-rate',
   'controller-drift': 'diagnostics/controller-drift',
+  about: 'sobre',
+  privacy: 'privacidade',
+  terms: 'termos',
+  contact: 'contato',
 }
 
 const LEGACY_REDIRECTS: Record<string, string> = {
@@ -78,6 +86,10 @@ const LEGACY_REDIRECTS: Record<string, string> = {
   routine: 'train/routines',
   calibration: 'calibrate',
   converter: 'convert',
+  about: 'sobre',
+  privacy: 'privacidade',
+  terms: 'termos',
+  contact: 'contato',
 }
 
 const trimRoute = (route: string) => route.replace(/^\/+/, '').replace(/\/+$/, '')
@@ -127,6 +139,10 @@ export function routeStateFromPath(route: string): Omit<AppRouteState, 'canonica
   if (cleanRoute === 'analysis/history') return { authRoute: null, view: 'analysis', analysisSection: 'calibration-history', warmupEntry: null }
   if (cleanRoute === 'methodology') return { authRoute: null, view: 'analysis', analysisSection: 'methodology', warmupEntry: null }
   if (cleanRoute === 'profile') return { authRoute: null, view: 'profile', analysisSection: 'overview', warmupEntry: null }
+  if (cleanRoute === 'sobre' || cleanRoute === 'about') return { authRoute: null, view: 'about', analysisSection: 'overview', warmupEntry: null }
+  if (cleanRoute === 'privacidade' || cleanRoute === 'privacy') return { authRoute: null, view: 'privacy', analysisSection: 'overview', warmupEntry: null }
+  if (cleanRoute === 'termos' || cleanRoute === 'terms') return { authRoute: null, view: 'terms', analysisSection: 'overview', warmupEntry: null }
+  if (cleanRoute === 'contato' || cleanRoute === 'contact') return { authRoute: null, view: 'contact', analysisSection: 'overview', warmupEntry: null }
   if (cleanRoute === 'diagnostics') return { authRoute: null, view: 'diagnostics', analysisSection: 'overview', warmupEntry: null }
   if (cleanRoute === 'diagnostics/polling-rate') return { authRoute: null, view: 'polling', analysisSection: 'overview', warmupEntry: null }
   if (cleanRoute === 'diagnostics/input') return { authRoute: null, view: 'buttons', analysisSection: 'overview', warmupEntry: null }

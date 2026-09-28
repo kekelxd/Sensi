@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ComponentType, type CSSProperties } 
 import {
   ArrowRight,
   BarChart3,
-  CheckCircle2,
   Crosshair,
   Gamepad2,
   History,
@@ -18,7 +17,6 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { AlphaFeedbackModal } from './AlphaFeedbackModal'
-import { APP_RELEASE_LABEL } from './appRelease'
 import { readCalibrationHistory, type CalibrationSessionSummary } from './calibration'
 import { GAMES, type GameConfig } from './games'
 import { GAME_SENSITIVITY_PROFILE_BY_ID } from './gameSensitivityProfiles'
@@ -34,10 +32,12 @@ import {
   readPlayerProfile,
   type SensitivityPreset,
 } from './playerProfileStore'
+import { SiteFooter } from './SiteFooter'
 import { readWarmupSession, type WarmupSessionSummary } from './warmupTelemetry'
 import type { WarmupExercise } from './warmupConfig'
+import type { AppView } from './routes'
 
-export type HomeDestination = 'analysis' | 'calibration' | 'converter' | 'warmup' | 'diagnostics' | 'polling' | 'buttons' | 'refresh-rate' | 'controller-drift' | 'routine' | 'profile'
+export type HomeDestination = AppView
 type Props = { onNavigate: (destination: HomeDestination) => void }
 
 const WARMUP_EXERCISES: WarmupExercise[] = ['switch', 'tracking', 'flick', 'reflex', 'gridshot', 'strafetrack', 'sniper-reaction']
@@ -54,13 +54,11 @@ const exerciseNames: Record<WarmupExercise, string> = {
 
 const copy = {
   pt: {
-    heroKicker: 'PERFORMANCE, COM PROPÓSITO',
     heroTitleOne: 'Treine melhor.',
     heroTitleTwo: 'Jogue diferente.',
     heroDescription: 'Ferramentas, treinos e análises para você entender seu controle, evoluir sua mira e extrair o máximo da sua performance.',
     primaryCta: 'Começar agora',
     secondaryCta: 'Testar meu setup',
-    benefits: ['Gratuito para começar', 'Sem compromisso', 'Feito para jogadores reais'],
     pathKicker: 'ESCOLHA SEU CAMINHO',
     pathTitle: 'Dois focos. Uma evolução.',
     pathAside: 'Treine sua mira ou valide seu setup. O XENSI te dá o controle em todas as frentes.',
@@ -95,7 +93,6 @@ const copy = {
     sens: 'Sensi',
     edpi: 'eDPI',
     exercises: 'exercícios',
-    ecosystemKicker: 'FEITO PARA SUA EVOLUÇÃO',
     ecosystemTitle: 'Mais que ferramentas. Um ecossistema.',
     ecosystemDescription: 'O XENSI conecta treino, calibração, conversão, análise e diagnóstico para transformar dados soltos em decisões melhores antes de jogar.',
     ecosystemCta: 'Conheça o XENSI',
@@ -105,18 +102,13 @@ const copy = {
       ['Para todos os níveis', 'Útil para quem está começando e para quem já compete.'],
       ['Sempre em desenvolvimento', 'O produto cresce com novas rotinas, diagnósticos e análises.'],
     ],
-    footerLine: 'Feito por jogadores, para jogadores.',
-    feedbackCta: 'Enviar feedback',
-    footerLinks: ['Sobre', 'Privacidade', 'Termos', 'Contato'],
   },
   en: {
-    heroKicker: 'PERFORMANCE, WITH PURPOSE',
     heroTitleOne: 'Train better.',
     heroTitleTwo: 'Play different.',
     heroDescription: 'Tools, training, and analysis to understand your control, improve your aim, and extract more from your performance.',
     primaryCta: 'Start now',
     secondaryCta: 'Test my setup',
-    benefits: ['Free to start', 'No commitment', 'Built for real players'],
     pathKicker: 'CHOOSE YOUR PATH',
     pathTitle: 'Two focuses. One evolution.',
     pathAside: 'Train your aim or validate your setup. XENSI gives you control across every front.',
@@ -151,7 +143,6 @@ const copy = {
     sens: 'Sens',
     edpi: 'eDPI',
     exercises: 'exercises',
-    ecosystemKicker: 'MADE FOR YOUR PROGRESS',
     ecosystemTitle: 'More than tools. An ecosystem.',
     ecosystemDescription: 'XENSI connects training, calibration, conversion, analysis, and diagnostics to turn scattered data into better decisions before playing.',
     ecosystemCta: 'Meet XENSI',
@@ -161,18 +152,13 @@ const copy = {
       ['For every level', 'Useful for beginners and competitive players.'],
       ['Always evolving', 'The product grows with new routines, diagnostics, and analysis.'],
     ],
-    footerLine: 'Made by players, for players.',
-    feedbackCta: 'Send feedback',
-    footerLinks: ['About', 'Privacy', 'Terms', 'Contact'],
   },
   es: {
-    heroKicker: 'RENDIMIENTO, CON PROPÓSITO',
     heroTitleOne: 'Entrena mejor.',
     heroTitleTwo: 'Juega diferente.',
     heroDescription: 'Herramientas, entrenamientos y análisis para entender tu control, mejorar tu mira y sacar más de tu rendimiento.',
     primaryCta: 'Empezar ahora',
     secondaryCta: 'Probar mi setup',
-    benefits: ['Gratis para empezar', 'Sin compromiso', 'Hecho para jugadores reales'],
     pathKicker: 'ELIGE TU CAMINO',
     pathTitle: 'Dos focos. Una evolución.',
     pathAside: 'Entrena tu mira o valida tu setup. XENSI te da control en todos los frentes.',
@@ -207,7 +193,6 @@ const copy = {
     sens: 'Sensi',
     edpi: 'eDPI',
     exercises: 'ejercicios',
-    ecosystemKicker: 'HECHO PARA TU EVOLUCIÓN',
     ecosystemTitle: 'Más que herramientas. Un ecosistema.',
     ecosystemDescription: 'XENSI conecta entrenamiento, calibración, conversión, análisis y diagnóstico para convertir datos sueltos en mejores decisiones antes de jugar.',
     ecosystemCta: 'Conoce XENSI',
@@ -217,9 +202,6 @@ const copy = {
       ['Para todos los niveles', 'Útil para quien empieza y para quien compite.'],
       ['Siempre en desarrollo', 'El producto crece con nuevas rutinas, diagnósticos y análisis.'],
     ],
-    footerLine: 'Hecho por jugadores, para jugadores.',
-    feedbackCta: 'Enviar feedback',
-    footerLinks: ['Sobre', 'Privacidad', 'Términos', 'Contacto'],
   },
 } as const
 
@@ -283,16 +265,12 @@ function HomeHero({ onNavigate }: Props) {
 
   return <section className="xensi-reference-hero xensi-home-v3-hero" aria-labelledby="home-title">
     <div className="xensi-reference-copy xensi-home-v3-hero-copy">
-      <span className="xensi-home-v3-kicker">{current.heroKicker}</span>
       <h1 id="home-title"><span>{current.heroTitleOne}</span><span>{current.heroTitleTwo}</span></h1>
       <p>{current.heroDescription}</p>
       <div className="xensi-home-v3-actions">
         <button type="button" className="xensi-home-v3-primary" onClick={() => onNavigate('warmup')}>{current.primaryCta}<ArrowRight size={18} /></button>
         <button type="button" className="xensi-home-v3-secondary" onClick={() => onNavigate('buttons')}>{current.secondaryCta}<Mouse size={17} /></button>
       </div>
-      <ul className="xensi-home-v3-benefits" aria-label="Benefícios">
-        {current.benefits.map((benefit) => <li key={benefit}><CheckCircle2 size={14} />{benefit}</li>)}
-      </ul>
     </div>
   </section>
 }
@@ -488,7 +466,6 @@ function HomeEcosystem({ onNavigate }: Props) {
   const icons: Array<ComponentType<{ size?: number }>> = [BarChart3, Sparkles, Gamepad2, Zap]
   return <section className="xensi-home-v3-section xensi-home-v3-ecosystem" id="ecossistema" aria-labelledby="home-ecosystem-title">
     <div className="xensi-home-v3-ecosystem-copy">
-      <span>{current.ecosystemKicker}</span>
       <h2 id="home-ecosystem-title">{current.ecosystemTitle}</h2>
       <p>{current.ecosystemDescription}</p>
       <button type="button" onClick={() => onNavigate('analysis')}>{current.ecosystemCta}<ArrowRight size={16} /></button>
@@ -504,22 +481,6 @@ function HomeEcosystem({ onNavigate }: Props) {
       })}
     </div>
   </section>
-}
-
-function HomeFooter({ onFeedback }: { onFeedback: () => void }) {
-  const { locale } = useI18n()
-  const current = copy[locale]
-  return <footer className="xensi-home-v3-footer" id="home-footer">
-    <strong><span>X</span>ENSI</strong>
-    <p>{current.footerLine}</p>
-    <nav aria-label="XENSI footer">
-      {current.footerLinks.map((link) => <a key={link} href="#ecossistema">{link}</a>)}
-    </nav>
-    <div className="xensi-home-v3-footer-release">
-      <span>{APP_RELEASE_LABEL}</span>
-      <button type="button" onClick={onFeedback}>{current.feedbackCta}</button>
-    </div>
-  </footer>
 }
 
 export function Home({ onNavigate }: Props) {
@@ -540,11 +501,13 @@ export function Home({ onNavigate }: Props) {
 
   return <main className="xensi-home xensi-reference xensi-home-v3">
     <div className="xensi-home-v3-shell">
-      <HomeHero onNavigate={onNavigate} />
-      <HomePathways onNavigate={onNavigate} />
-      <HomeProgress summary={stableSummary} onNavigate={onNavigate} />
-      <HomeEcosystem onNavigate={onNavigate} />
-      <HomeFooter onFeedback={() => setFeedbackOpen(true)} />
+      <div className="xensi-home-v3-content">
+        <HomeHero onNavigate={onNavigate} />
+        <HomePathways onNavigate={onNavigate} />
+        <HomeProgress summary={stableSummary} onNavigate={onNavigate} />
+        <HomeEcosystem onNavigate={onNavigate} />
+      </div>
+      <SiteFooter onFeedback={() => setFeedbackOpen(true)} onNavigate={onNavigate} />
     </div>
     <AlphaFeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
   </main>

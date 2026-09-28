@@ -1,5 +1,5 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react'
-import { ArrowRight, BarChart3, CheckCircle2, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw, UserRound } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Eye, EyeOff, Lock, Mail, RotateCcw, UserRound } from 'lucide-react'
 import { XensiLogo } from './AppNavigation'
 import {
   AuthMode,
@@ -99,12 +99,12 @@ function AuthField({ children, icon, id, label }: { children: ReactNode; icon: R
   </div>
 }
 
-function BrandPillar({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
-  return <article>
-    <i>{icon}</i>
-    <b>{title}</b>
-    <span>{text}</span>
-  </article>
+function AuthLayout({ children }: { children: ReactNode }) {
+  return <main className="xensi-auth-page">
+    <div className="xensi-auth-shell">
+      {children}
+    </div>
+  </main>
 }
 
 export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProps) {
@@ -114,7 +114,6 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [remember, setRemember] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [status, setStatus] = useState<AuthStatus>('idle')
@@ -257,25 +256,10 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
     setResendCooldown(60)
   }
 
-  const brand = <section className="xensi-auth-brand-panel" aria-labelledby="auth-brand-title">
-    <div>
-      <h1 id="auth-brand-title">{t('auth.brand.title')} <span>{t('auth.brand.highlight')}</span></h1>
-      <p>{t('auth.brand.description')}</p>
-    </div>
-    <div className="xensi-auth-pillars" aria-label={t('auth.brand.pillarsLabel')}>
-      <BrandPillar icon={<Flame size={18} />} title={t('auth.brand.pillarTrainTitle')} text={t('auth.brand.pillarTrainText')} />
-      <BrandPillar icon={<Crosshair size={18} />} title={t('auth.brand.pillarCalibrateTitle')} text={t('auth.brand.pillarCalibrateText')} />
-      <BrandPillar icon={<BarChart3 size={18} />} title={t('auth.brand.pillarAnalyzeTitle')} text={t('auth.brand.pillarAnalyzeText')} />
-    </div>
-    <div className="xensi-auth-mark" aria-hidden="true"><span>X</span></div>
-  </section>
-
   if (mode === 'auth-callback') {
     const success = callbackState === 'success'
-    return <main className="xensi-auth-shell">
-      {brand}
-      <section className="xensi-auth-card-wrap">
-        <div className="xensi-auth-card xensi-auth-state-card">
+    return <AuthLayout>
+      <div className="xensi-auth-card xensi-auth-state-card">
           <XensiLogo className="xensi-auth-card-logo" />
           <CheckCircle2 size={30} aria-hidden="true" />
           <header>
@@ -286,16 +270,13 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
             {success ? t('auth.callback.continue') : t('auth.signIn')}
             <ArrowRight size={16} />
           </button>
-        </div>
-      </section>
-    </main>
+      </div>
+    </AuthLayout>
   }
 
   if (mode === 'register' && confirmationEmail) {
-    return <main className="xensi-auth-shell">
-      {brand}
-      <section className="xensi-auth-card-wrap">
-        <div className="xensi-auth-card xensi-auth-state-card">
+    return <AuthLayout>
+      <div className="xensi-auth-card xensi-auth-state-card">
           <XensiLogo className="xensi-auth-card-logo" />
           <CheckCircle2 size={30} aria-hidden="true" />
           <header>
@@ -311,15 +292,12 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           <p className="xensi-auth-switch">
             <button type="button" onClick={() => onNavigate('login')}>{t('auth.confirm.backToSignIn')}</button>
           </p>
-        </div>
-      </section>
-    </main>
+      </div>
+    </AuthLayout>
   }
 
-  return <main className="xensi-auth-shell">
-    {brand}
-    <section className="xensi-auth-card-wrap">
-      <form className="xensi-auth-card" onSubmit={submit}>
+  return <AuthLayout>
+    <form className="xensi-auth-card" onSubmit={submit}>
         <XensiLogo className="xensi-auth-card-logo" />
         <header>
           <h2>{t(copy.title)}</h2>
@@ -355,7 +333,6 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
         </AuthField>}
 
         {mode === 'login' && <div className="xensi-auth-options">
-          <label><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /> <span>{t('auth.remember')}</span></label>
           <button type="button" onClick={() => onNavigate('forgot-password')}>{t('auth.forgot')}</button>
         </div>}
 
@@ -366,10 +343,11 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           {mode === 'forgot-password' ? <RotateCcw size={16} /> : <ArrowRight size={16} />}
         </button>
 
+        <button className="xensi-auth-guest" type="button" onClick={onAuthenticated}>{t('auth.continueGuest')}</button>
+
         {mode === 'login'
           ? <p className="xensi-auth-switch">{t('auth.loginSwitch')} <button type="button" onClick={() => onNavigate('register')}>{t('auth.createAccount')}</button></p>
           : <p className="xensi-auth-switch">{t('auth.registerSwitch')} <button type="button" onClick={() => onNavigate('login')}>{t('auth.signIn')}</button></p>}
-      </form>
-    </section>
-  </main>
+    </form>
+  </AuthLayout>
 }

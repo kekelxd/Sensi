@@ -28,12 +28,19 @@ test.describe('XENSI auth routes', () => {
     await page.goto('./login')
 
     await expect(page).toHaveURL(/(\/Sensi)?\/login$/)
-    await expect(page.getByRole('heading', { name: 'TREINE. CALIBRE. EVOLUA.' })).toBeVisible()
+    await expect(page.locator('.xensi-auth-page')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Bem-vindo de volta' })).toBeVisible()
-    await expect(page.getByText('Treine sua mira, calibre sua sensibilidade e acompanhe sua evolução.')).toBeVisible()
-    await expect(page.getByText('TREINE', { exact: true })).toBeVisible()
-    await expect(page.getByText('CALIBRE', { exact: true })).toBeVisible()
-    await expect(page.getByText('ANALISE', { exact: true })).toBeVisible()
+    await expect(page.getByText('Acesse sua conta para sincronizar seu progresso.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continuar sem conta' })).toBeVisible()
+    await expect(page.getByText('Lembrar de mim')).toHaveCount(0)
+    await expect(page.locator('.app-header')).toHaveCount(0)
+
+    const card = await page.locator('.xensi-auth-card').boundingBox()
+    const viewport = page.viewportSize()
+    expect(card).not.toBeNull()
+    expect(viewport).not.toBeNull()
+    expect(Math.abs((card!.x + card!.width / 2) - viewport!.width / 2)).toBeLessThanOrEqual(2)
+    expect(Math.abs((card!.y + card!.height / 2) - viewport!.height / 2)).toBeLessThanOrEqual(2)
 
     const overflow = await page.evaluate(() => ({
       viewportHeight: document.documentElement.clientHeight,
@@ -62,6 +69,17 @@ test.describe('XENSI auth routes', () => {
     })
   })
 
+  test('continues as guest from login without requiring an account', async ({ page }) => {
+    await useStoredLocale(page, 'pt')
+    await page.goto('./login')
+
+    await page.getByRole('button', { name: 'Continuar sem conta' }).click()
+
+    await expect(page).toHaveURL(/(\/Sensi)?\/$/)
+    await expect(page.locator('.xensi-auth-page')).toHaveCount(0)
+    await expect(page.locator('.app-shell')).toBeVisible()
+  })
+
   test('links to register and forgot password routes with the same auth surface', async ({ page }) => {
     await useStoredLocale(page, 'pt')
     await page.goto('./login')
@@ -86,17 +104,19 @@ test.describe('XENSI auth routes', () => {
     await page.goto('./login')
 
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'TRAIN. CALIBRATE. EVOLVE.' })).toBeVisible()
+    await expect(page.getByText('Sign in to sync your progress.')).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Forgot password?' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue without an account' })).toBeVisible()
 
     await page.context().clearCookies()
     await useBrowserLanguage(page, 'es-ES')
     await page.goto('./login')
 
     await expect(page.getByRole('heading', { name: 'Bienvenido de vuelta' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'ENTRENA. CALIBRA. EVOLUCIONA.' })).toBeVisible()
+    await expect(page.getByText('Entra en tu cuenta para sincronizar tu progreso.')).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Contraseña' })).toBeVisible()
     await expect(page.getByRole('button', { name: '¿Olvidaste tu contraseña?' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continuar sin cuenta' })).toBeVisible()
   })
 })

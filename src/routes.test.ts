@@ -14,6 +14,10 @@ describe('application route map', () => {
     ['buttons', '/diagnostics/input'],
     ['refresh-rate', '/diagnostics/refresh-rate'],
     ['controller-drift', '/diagnostics/controller-drift'],
+    ['about', '/sobre'],
+    ['privacy', '/privacidade'],
+    ['terms', '/termos'],
+    ['contact', '/contato'],
   ] as const)('maps %s to %s', (view, path) => {
     expect(viewRoutePath(view)).toBe(path)
   })
@@ -40,6 +44,14 @@ describe('application route map', () => {
     ['diagnostics/input', 'buttons'],
     ['diagnostics/refresh-rate', 'refresh-rate'],
     ['diagnostics/controller-drift', 'controller-drift'],
+    ['sobre', 'about'],
+    ['privacidade', 'privacy'],
+    ['termos', 'terms'],
+    ['contato', 'contact'],
+    ['about', 'about'],
+    ['privacy', 'privacy'],
+    ['terms', 'terms'],
+    ['contact', 'contact'],
     ['train/reaction', 'reflex'],
   ] as const)('parses %s', (path, expected) => {
     const state = routeStateFromPath(path)
