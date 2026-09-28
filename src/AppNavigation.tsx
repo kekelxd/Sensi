@@ -211,7 +211,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
           <i />
           <button type="button" onClick={logout}><span><b>{text.logout}</b></span></button>
         </div>}
-      </div> : <button type="button" className="xensi-login-trigger" onClick={onLogin} disabled={disabled} aria-label="Login"><UserRound size={17} /><span>LOGIN</span><ArrowRight size={16} /></button>}
+      </div> : <button type="button" className="xensi-login-trigger" onClick={onLogin} disabled={disabled} aria-label="Login"><UserRound size={16} /><span>LOGIN</span><ArrowRight size={15} /></button>}
     </div>
   </div>
 }
