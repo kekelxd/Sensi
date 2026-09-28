@@ -56,7 +56,7 @@ const userStorageKeys = ['xensi-auth-user', 'xensi-current-user']
 function readSupabaseConfig(): SupabaseConfig | null {
   const env = (import.meta as ImportMetaWithEnv).env
   const url = env?.VITE_SUPABASE_URL?.trim()
-  const anonKey = env?.VITE_SUPABASE_ANON_KEY?.trim()
+  const anonKey = env?.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? env?.VITE_SUPABASE_ANON_KEY?.trim()
   return url && anonKey ? { url: url.replace(/\/+$/, ''), anonKey } : null
 }
 

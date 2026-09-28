@@ -1,7 +1,7 @@
-import { FormEvent, ReactNode, useState } from 'react'
-import { ArrowRight, BarChart3, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw } from 'lucide-react'
+import { FormEvent, ReactNode, useEffect, useState } from 'react'
+import { ArrowRight, BarChart3, Crosshair, Eye, EyeOff, Flame, Lock, Mail, RotateCcw, UserRound } from 'lucide-react'
 import { XensiLogo } from './AppNavigation'
-import { AuthMode, AuthStatus, registerWithEmail, requestPasswordReset, signInWithEmail } from './authService'
+import { AuthMode, AuthStatus, registerWithEmail, requestPasswordReset, signInWithEmail, updatePassword } from './authService'
 import { useI18n, type Locale } from './i18n'
 
 type AuthScreenProps = {
@@ -18,8 +18,12 @@ const authCopy: Record<Locale, {
   pillars: Array<{ title: string; text: string }>
   emailLabel: string
   emailPlaceholder: string
+  nicknameLabel: string
+  nicknamePlaceholder: string
   passwordLabel: string
+  newPasswordLabel: string
   passwordPlaceholder: string
+  newPasswordPlaceholder: string
   showPassword: string
   hidePassword: string
   remember: string
@@ -48,8 +52,12 @@ const authCopy: Record<Locale, {
     ],
     emailLabel: 'E-mail',
     emailPlaceholder: 'seu@email.com',
+    nicknameLabel: 'Nickname',
+    nicknamePlaceholder: 'seu nick no XENSI',
     passwordLabel: 'Senha',
+    newPasswordLabel: 'Nova senha',
     passwordPlaceholder: 'sua senha',
+    newPasswordPlaceholder: 'nova senha',
     showPassword: 'Mostrar senha',
     hidePassword: 'Ocultar senha',
     remember: 'Lembrar de mim',
@@ -80,6 +88,20 @@ const authCopy: Record<Locale, {
         loading: 'Enviando...',
         complete: 'Instruções enviadas.',
       },
+      'reset-password': {
+        title: 'Definir nova senha',
+        subtitle: 'Escolha uma nova senha para recuperar o acesso.',
+        action: 'Salvar senha',
+        loading: 'Salvando...',
+        complete: 'Senha atualizada.',
+      },
+      'auth-callback': {
+        title: 'Confirmando acesso',
+        subtitle: 'Estamos finalizando sua sessão com segurança.',
+        action: 'Continuar',
+        loading: 'Confirmando...',
+        complete: 'Acesso confirmado.',
+      },
     },
   },
   en: {
@@ -94,8 +116,12 @@ const authCopy: Record<Locale, {
     ],
     emailLabel: 'E-mail',
     emailPlaceholder: 'you@email.com',
+    nicknameLabel: 'Nickname',
+    nicknamePlaceholder: 'your XENSI nick',
     passwordLabel: 'Password',
+    newPasswordLabel: 'New password',
     passwordPlaceholder: 'your password',
+    newPasswordPlaceholder: 'new password',
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     remember: 'Remember me',
@@ -126,6 +152,20 @@ const authCopy: Record<Locale, {
         loading: 'Sending...',
         complete: 'Instructions sent.',
       },
+      'reset-password': {
+        title: 'Set new password',
+        subtitle: 'Choose a new password to recover access.',
+        action: 'Save password',
+        loading: 'Saving...',
+        complete: 'Password updated.',
+      },
+      'auth-callback': {
+        title: 'Confirming access',
+        subtitle: 'We are securely finishing your session.',
+        action: 'Continue',
+        loading: 'Confirming...',
+        complete: 'Access confirmed.',
+      },
     },
   },
   es: {
@@ -140,8 +180,12 @@ const authCopy: Record<Locale, {
     ],
     emailLabel: 'E-mail',
     emailPlaceholder: 'tu@email.com',
+    nicknameLabel: 'Nickname',
+    nicknamePlaceholder: 'tu nick en XENSI',
     passwordLabel: 'Contraseña',
+    newPasswordLabel: 'Nueva contraseña',
     passwordPlaceholder: 'tu contraseña',
+    newPasswordPlaceholder: 'nueva contraseña',
     showPassword: 'Mostrar contraseña',
     hidePassword: 'Ocultar contraseña',
     remember: 'Recordarme',
@@ -172,6 +216,20 @@ const authCopy: Record<Locale, {
         loading: 'Enviando...',
         complete: 'Instrucciones enviadas.',
       },
+      'reset-password': {
+        title: 'Definir nueva contraseña',
+        subtitle: 'Elige una nueva contraseña para recuperar el acceso.',
+        action: 'Guardar contraseña',
+        loading: 'Guardando...',
+        complete: 'Contraseña actualizada.',
+      },
+      'auth-callback': {
+        title: 'Confirmando acceso',
+        subtitle: 'Estamos finalizando tu sesión de forma segura.',
+        action: 'Continuar',
+        loading: 'Confirmando...',
+        complete: 'Acceso confirmado.',
+      },
     },
   },
 }
@@ -196,12 +254,20 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
   const current = authCopy[locale]
   const copy = current.modes[mode]
   const [email, setEmail] = useState('')
+  const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [status, setStatus] = useState<AuthStatus>('idle')
   const [message, setMessage] = useState('')
-  const needsPassword = mode !== 'forgot-password'
+  const needsEmail = mode !== 'reset-password' && mode !== 'auth-callback'
+  const needsPassword = mode !== 'forgot-password' && mode !== 'auth-callback'
+
+  useEffect(() => {
+    if (mode !== 'auth-callback') return
+    const timer = window.setTimeout(onAuthenticated, 600)
+    return () => window.clearTimeout(timer)
+  }, [mode, onAuthenticated])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -211,16 +277,18 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
     const result = mode === 'login'
       ? await signInWithEmail(email, password)
       : mode === 'register'
-        ? await registerWithEmail(email, password)
-        : await requestPasswordReset(email)
+        ? await registerWithEmail(email, password, nickname)
+        : mode === 'reset-password'
+          ? await updatePassword(password)
+          : await requestPasswordReset(email)
     if (!result.ok) {
       setStatus('error')
       setMessage(result.message)
       return
     }
     setStatus('success')
-    setMessage(copy.complete)
-    if (mode === 'login') {
+    setMessage(result.message ?? copy.complete)
+    if (mode === 'login' || mode === 'reset-password') {
       onAuthenticated()
     }
   }
@@ -247,13 +315,17 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           <p>{copy.subtitle}</p>
         </header>
 
-        <AuthField icon={<Mail size={15} />} id="auth-email" label={current.emailLabel}>
+        {needsEmail && <AuthField icon={<Mail size={15} />} id="auth-email" label={current.emailLabel}>
           <input id="auth-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder={current.emailPlaceholder} disabled={status === 'loading'} required />
-        </AuthField>
+        </AuthField>}
 
-        {needsPassword && <AuthField icon={<Lock size={15} />} id="auth-password" label={current.passwordLabel}>
+        {mode === 'register' && <AuthField icon={<UserRound size={15} />} id="auth-nickname" label={current.nicknameLabel}>
+          <input id="auth-nickname" type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} autoComplete="nickname" minLength={3} maxLength={24} placeholder={current.nicknamePlaceholder} disabled={status === 'loading'} required />
+        </AuthField>}
+
+        {needsPassword && <AuthField icon={<Lock size={15} />} id="auth-password" label={mode === 'reset-password' ? current.newPasswordLabel : current.passwordLabel}>
           <div className="xensi-auth-password">
-            <input id="auth-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder={current.passwordPlaceholder} disabled={status === 'loading'} required />
+            <input id="auth-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder={mode === 'reset-password' ? current.newPasswordPlaceholder : current.passwordPlaceholder} disabled={status === 'loading'} required />
             <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? current.hidePassword : current.showPassword} disabled={status === 'loading'}>
               {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
@@ -272,7 +344,7 @@ export function AuthScreen({ mode, onNavigate, onAuthenticated }: AuthScreenProp
           {mode === 'forgot-password' ? <RotateCcw size={16} /> : <ArrowRight size={16} />}
         </button>
 
-        {mode === 'login'
+        {mode === 'auth-callback' ? null : mode === 'login'
           ? <p className="xensi-auth-switch">{current.loginSwitch} <button type="button" onClick={() => onNavigate('register')}>{current.createAccount}</button></p>
           : <p className="xensi-auth-switch">{current.registerSwitch} <button type="button" onClick={() => onNavigate('login')}>{current.signIn}</button></p>}
       </form>

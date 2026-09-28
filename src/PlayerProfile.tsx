@@ -8,6 +8,7 @@ import { calculatePresetCm360, ensureSinglePrimary, writePlayerProfile, type Pla
 import { GameBadge } from './GameBadge'
 import { usePlayerProfile } from './useSensitivityPreset'
 import { normalizeSensitivityForGame } from './sensitivityConversionEngine'
+import { updateAuthenticatedProfile } from './authService'
 
 export type ProfilePresetLaunch = Pick<SensitivityPreset, 'id' | 'gameId' | 'sensitivity' | 'dpi'>
 
@@ -207,8 +208,14 @@ export function PlayerProfile({ onConvert, onCalibrate }: PlayerProfileProps) {
     setIdentityOpen(true)
   }
 
-  const saveIdentity = () => {
-    persist({ ...profile, nickname: identityDraft.nickname.trim() || 'xensi_dev', avatarId: identityDraft.avatarId })
+  const saveIdentity = async () => {
+    const nextIdentity = { nickname: identityDraft.nickname.trim() || 'xensi_dev', avatarId: identityDraft.avatarId }
+    const result = await updateAuthenticatedProfile(nextIdentity)
+    if (!result.ok) {
+      setError(result.message)
+      return
+    }
+    persist({ ...profile, ...nextIdentity })
     setIdentityOpen(false)
   }
 

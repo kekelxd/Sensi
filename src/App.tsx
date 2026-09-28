@@ -26,7 +26,7 @@ import { Analysis } from './Analysis'
 import { AppNavigation } from './AppNavigation'
 import type { WarmupExercise } from './warmupConfig'
 import { AuthScreen } from './AuthPages'
-import type { AuthMode } from './authService'
+import { initializeAuth, type AuthMode } from './authService'
 import {
   APP_BASE_PATH,
   authRoutePath,
@@ -126,6 +126,10 @@ function App() {
     syncRouteFromLocation()
     window.addEventListener('popstate', syncRouteFromLocation)
     return () => window.removeEventListener('popstate', syncRouteFromLocation)
+  }, [])
+
+  useEffect(() => {
+    void initializeAuth()
   }, [])
 
   const active = phase !== 'idle'

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, BarChart3, ChevronDown, Crosshair, Gamepad2, Gauge, Info, Languages, MonitorUp, Mouse, Settings2, SlidersHorizontal, UserRound } from 'lucide-react'
-import { readAuthSessionState, type AuthSessionState } from './authService'
+import { initializeAuth, readAuthSessionState, signOut, type AuthSessionState } from './authService'
 import type { Locale } from './i18n'
 import type { WarmupExercise } from './warmupConfig'
 import { AvatarArtwork } from './AvatarArtwork'
@@ -62,7 +62,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
   const menuTriggerRefs = useRef<Partial<Record<MenuName, HTMLButtonElement | null>>>({})
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
   const [navProfile, setNavProfile] = useState(readNavProfile)
-  const [authState, setAuthState] = useState<AuthSessionState>({ status: 'loading', userId: null })
+  const [authState, setAuthState] = useState<AuthSessionState>({ status: 'loading', userId: null, profile: null })
 
   useEffect(() => {
     const close = (event: PointerEvent) => {
@@ -96,16 +96,32 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
   }, [])
 
   useEffect(() => {
-    let frame = window.requestAnimationFrame(() => setAuthState(readAuthSessionState()))
-    const update = () => setAuthState(readAuthSessionState())
+    let active = true
+    void initializeAuth().then((state) => {
+      if (!active) return
+      setAuthState(state)
+      if (state.status === 'authenticated') setNavProfile(state.profile)
+    })
+    const update = () => {
+      const state = readAuthSessionState()
+      setAuthState(state)
+      if (state.status === 'authenticated') setNavProfile(state.profile)
+      else setNavProfile(readNavProfile())
+    }
     window.addEventListener('storage', update)
     window.addEventListener('xensi-auth-updated', update)
     return () => {
-      window.cancelAnimationFrame(frame)
+      active = false
       window.removeEventListener('storage', update)
       window.removeEventListener('xensi-auth-updated', update)
     }
   }, [])
+
+  const logout = async () => {
+    setOpenMenu(null)
+    await signOut()
+    onNavigate('home')
+  }
 
   const navigate = (next: NavigationView) => {
     setOpenMenu(null)
@@ -193,7 +209,7 @@ export function AppNavigation({ view, analysisSection, locale, disabled, onLocal
           <button type="button" onClick={() => navigate('profile')}><Settings2 size={15} /><span><b>{text.settings}</b></span></button>
           <label><Languages size={15} /><select value={locale} onChange={(event) => onLocaleChange(event.target.value as Locale)} aria-label={text.settings}><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select></label>
           <i />
-          <button type="button" disabled title={text.unavailable}><span><b>{text.logout}</b><small>{text.unavailable}</small></span></button>
+          <button type="button" onClick={logout}><span><b>{text.logout}</b></span></button>
         </div>}
       </div> : <button type="button" className="xensi-login-trigger" onClick={onLogin} disabled={disabled} aria-label="Login"><UserRound size={17} /><span>LOGIN</span><ArrowRight size={16} /></button>}
     </div>

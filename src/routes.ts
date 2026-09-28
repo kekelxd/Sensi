@@ -28,7 +28,13 @@ export type AppRouteState = {
   shouldReplace: boolean
 }
 
-const AUTH_ROUTES: AuthMode[] = ['login', 'register', 'forgot-password']
+const AUTH_ROUTE_PATHS: Record<string, AuthMode> = {
+  login: 'login',
+  register: 'register',
+  'forgot-password': 'forgot-password',
+  'reset-password': 'reset-password',
+  'auth/callback': 'auth-callback',
+}
 
 export const WARMUP_EXERCISE_ROUTES: Record<WarmupExercise, string> = {
   switch: 'target-switch',
@@ -90,6 +96,7 @@ export function getRouteSegmentFromLocation(location: Pick<Location, 'pathname'>
 }
 
 export function authRoutePath(route: AuthMode) {
+  if (route === 'auth-callback') return withBasePath('auth/callback')
   return withBasePath(route)
 }
 
@@ -103,8 +110,8 @@ export function viewRoutePath(view: AppView, options: { warmupEntry?: WarmupExer
 export function routeStateFromPath(route: string): Omit<AppRouteState, 'canonicalPath' | 'shouldReplace'> {
   const cleanRoute = trimRoute(route)
   if (!cleanRoute) return { authRoute: null, view: 'home', analysisSection: 'overview', warmupEntry: null }
-  if (AUTH_ROUTES.includes(cleanRoute as AuthMode)) {
-    return { authRoute: cleanRoute as AuthMode, view: 'home', analysisSection: 'overview', warmupEntry: null }
+  if (AUTH_ROUTE_PATHS[cleanRoute]) {
+    return { authRoute: AUTH_ROUTE_PATHS[cleanRoute], view: 'home', analysisSection: 'overview', warmupEntry: null }
   }
 
   if (cleanRoute === 'train') return { authRoute: null, view: 'warmup', analysisSection: 'overview', warmupEntry: null }
