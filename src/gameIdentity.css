@@ -27,7 +27,7 @@
 .xensi-preset-context label { display: grid; gap: 6px; }
 .xensi-preset-context select { width: 100%; min-width: 0; padding: 9px; border: 1px solid #424951; border-radius: 5px; background: #161b22; color: #e9e5e1; font: inherit; }
 .modal-backdrop:has(.warmup-setup-modal), .modal-backdrop:has(.finder-setup-modal) { z-index: 60; }
-.warmup-setup-modal:has(.xensi-game-picker), .modal.finder-setup-modal { width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; scrollbar-width: thin; }
+.warmup-setup-modal:has(.xensi-game-picker), .modal.finder-setup-modal { width: min(820px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
 .modal .xensi-preset-context label, .modal .xensi-preset-context select { font: 500 13px/1.45 Manrope, sans-serif; }
 .choice-card.game-choice:has(.xensi-game-badge) { display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; }
 .choice-card.game-choice .xensi-game-badge { display: inline-flex; font-weight: 500; font-size: 19px; }
